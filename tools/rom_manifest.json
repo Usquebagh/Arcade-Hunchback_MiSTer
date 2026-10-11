@@ -1,0 +1,158 @@
+{
+  "reference_revision": "c806573e925ce00fe3e8d8fe417eba63f83275ce",
+  "image_bytes": 51232,
+  "roms": [
+    {
+      "name": "hb-gp1.bin",
+      "bytes": 4096,
+      "crc": "af801d54",
+      "sha1": "68e31561e98f7e2caa337dd764941d08f075b559"
+    },
+    {
+      "name": "hb-gp2.bin",
+      "bytes": 4096,
+      "crc": "b448cc8e",
+      "sha1": "ed94f662c0e08a3a0aca073fbec29ae1fbd0328e"
+    },
+    {
+      "name": "hb-gp3.bin",
+      "bytes": 4096,
+      "crc": "57c6ea7b",
+      "sha1": "8c3ba01ab1917a8c24180ed1c0011dbfed36d406"
+    },
+    {
+      "name": "hb-gp4.bin",
+      "bytes": 4096,
+      "crc": "7f91287b",
+      "sha1": "9383d885c142417de73879905cbce272ba9514c7"
+    },
+    {
+      "name": "hb-gp5.bin",
+      "bytes": 4096,
+      "crc": "1dd5755c",
+      "sha1": "b1e158d52bd9a238e3e32ed3024e495df2292dcb"
+    },
+    {
+      "name": "6c.sdp1",
+      "bytes": 4096,
+      "crc": "f9ba2854",
+      "sha1": "d041198e2e8b8c3e668bd1610310f8d25c5b1119"
+    },
+    {
+      "name": "8a.sp1",
+      "bytes": 2048,
+      "crc": "ed1cd201",
+      "sha1": "6cc3842dda1bfddc06ffb436c55d14276286bd67"
+    },
+    {
+      "name": "11a.cp1",
+      "bytes": 2048,
+      "crc": "f256b047",
+      "sha1": "02d79882bad37ffdd58ef478e2658a1369c32ebc"
+    },
+    {
+      "name": "10a.cp2",
+      "bytes": 2048,
+      "crc": "b870c64f",
+      "sha1": "ce4f8de87568782ce02bba754edff85df7f5c393"
+    },
+    {
+      "name": "9a.cp3",
+      "bytes": 2048,
+      "crc": "9a7dab88",
+      "sha1": "cd39a9d4f982a7f49c478db1408d7e07335f2ddc"
+    },
+    {
+      "name": "5b.bin",
+      "bytes": 2048,
+      "crc": "f055a624",
+      "sha1": "5dfe89d7271092e665cdd5cd59d15a2b70f92f43"
+    },
+    {
+      "name": "82s185.10h",
+      "bytes": 2048,
+      "crc": "c205bca6",
+      "sha1": "ec9bd220e75f7b067ede6139763ef8aca0fb7a29"
+    },
+    {
+      "name": "82s123.10k",
+      "bytes": 32,
+      "crc": "b5221cec",
+      "sha1": "71d9830b33b1a8140b0fe1a2ba8024ba8e6e48e0"
+    }
+  ],
+  "regions": [
+    {
+      "name": "audio_cpu",
+      "offset": 32768,
+      "bytes": 4096,
+      "fill": 0,
+      "chunks": [
+        {
+          "name": "6c.sdp1",
+          "offset": 0
+        }
+      ]
+    },
+    {
+      "name": "speech_cpu",
+      "offset": 36864,
+      "bytes": 2048,
+      "fill": 0,
+      "chunks": [
+        {
+          "name": "5b.bin",
+          "offset": 0
+        }
+      ]
+    },
+    {
+      "name": "speech_data",
+      "offset": 38912,
+      "bytes": 4096,
+      "fill": 0,
+      "chunks": [
+        {
+          "name": "8a.sp1",
+          "offset": 0
+        }
+      ]
+    },
+    {
+      "name": "tiles",
+      "offset": 43008,
+      "bytes": 6144,
+      "fill": 0,
+      "chunks": [
+        {
+          "name": "11a.cp1",
+          "offset": 0
+        },
+        {
+          "name": "10a.cp2",
+          "offset": 2048
+        },
+        {
+          "name": "9a.cp3",
+          "offset": 4096
+        }
+      ]
+    },
+    {
+      "name": "proms",
+      "offset": 49152,
+      "bytes": 2080,
+      "fill": 0,
+      "chunks": [
+        {
+          "name": "82s185.10h",
+          "offset": 0
+        },
+        {
+          "name": "82s123.10k",
+          "offset": 2048
+        }
+      ]
+    }
+  ]
+}

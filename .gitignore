@@ -1,0 +1,24 @@
+# Private fixtures, research, observations and generated artifacts.
+*.zip
+*.rom
+*.bin
+*.url
+*.pdf
+*.jed
+*.7z
+*.wav
+*.pcm
+/docs/private/
+/build/
+/results/
+/output_files/
+/db/
+/incremental_db/
+*.qws
+*.qdf
+*.smsg
+*.sof
+*.rbf
+*.vcd
+__pycache__/
+*.pyc

@@ -1,0 +1,269 @@
+{
+  "schema_version": 1,
+  "id": "hunchback-cvs",
+  "version": "0.1.0",
+  "source_roots": [
+    "rtl",
+    "sim",
+    "tools",
+    "releases",
+    "LICENSES",
+    "sys"
+  ],
+  "source_files": [
+    "README.md",
+    "AGENTS.md",
+    "LICENSE",
+    ".gitmodules",
+    "Arcade-Hunchback.sv",
+    "Arcade-Hunchback.qpf",
+    "Arcade-Hunchback.qsf",
+    "Arcade-Hunchback.sdc",
+    "files.qip",
+    "build.sh",
+    "docs/architecture.md",
+    "docs/references.md",
+    "docs/validation.md"
+  ],
+  "required_files": [
+    "rtl/machine/cvs_reset.sv",
+    "rtl/machine/cvs_clock.sv",
+    "rtl/machine/cvs_memory.sv",
+    "tools/rom_manifest.json",
+    "releases/Hunchback (CVS).mra"
+  ],
+  "games": [
+    "Hunchback (CVS set 1)"
+  ],
+  "limitations": [
+    "Only reset/clock/main ROM/system RAM HDL exists; no game execution or MiSTer integration.",
+    "Two-state Verilator does not prove X/Z, CDC, PLL, analog fidelity or board accuracy.",
+    "Synthetic strobes/forwarding are declared implementation contracts, not board measurements.",
+    "ROM identity/layout PASS is not CPU boot, video, input or audio coverage.",
+    "Required missing subsystem/reference/constraints checks block every candidate."
+  ],
+  "checks": [
+    {
+      "id": "hunchback.reset.synthetic",
+      "suite": "smoke",
+      "mode": "reset",
+      "required": true,
+      "tools": [
+        "verilator",
+        "make",
+        "g++"
+      ],
+      "timeout": 180,
+      "expectation": "Async assertion, exactly two-edge release and PLL/loader/image qualification.",
+      "reference": "docs/architecture.md; pinned MAME CVS map/clocks and explicit implementation contract."
+    },
+    {
+      "id": "hunchback.clock.synthetic",
+      "suite": "smoke",
+      "mode": "clock",
+      "required": true,
+      "tools": [
+        "verilator",
+        "make",
+        "g++"
+      ],
+      "timeout": 180,
+      "expectation": "At four-crystal master, main /32 and audio /64 strobes, phase alignment and deterministic restart.",
+      "reference": "docs/architecture.md; pinned MAME CVS map/clocks and explicit implementation contract."
+    },
+    {
+      "id": "hunchback.memory.synthetic",
+      "suite": "smoke",
+      "mode": "memory",
+      "required": true,
+      "tools": [
+        "verilator",
+        "make",
+        "g++"
+      ],
+      "timeout": 180,
+      "expectation": "Exhaustive mapped program bytes, ROM protection, one-edge reads, RAM mirror and explicit forwarding.",
+      "reference": "docs/architecture.md; pinned MAME CVS map/clocks and explicit implementation contract."
+    },
+    {
+      "id": "hunchback.rtl.lint",
+      "suite": "lint",
+      "mode": "lint",
+      "required": true,
+      "tools": [
+        "verilator"
+      ],
+      "timeout": 120,
+      "expectation": "All implemented RTL modules pass -Wall with no unreviewed warnings.",
+      "reference": "Verilator diagnostics; no blanket warning suppression."
+    },
+    {
+      "id": "hunchback.mra.synthetic",
+      "suite": "smoke",
+      "mode": "mra",
+      "required": true,
+      "tools": [
+        "python3"
+      ],
+      "timeout": 60,
+      "expectation": "MRA and ROM preparation independently agree with program address equation, auxiliary placement and padding.",
+      "reference": "Pinned MAME staggering, explicit draft ioctl layout and synthetic chip/quarter-distinguishing bytes."
+    },
+    {
+      "id": "hunchback.rom.layout",
+      "suite": "game",
+      "mode": "rom",
+      "required": true,
+      "tools": [
+        "python3"
+      ],
+      "timeout": 60,
+      "expectation": "13 CVS parent chips match size/CRC/SHA1; synthetic MRA payload equals independent address oracle and auxiliary layout.",
+      "reference": "Pinned MAME ROM_LOAD_STAGGERED and CVS_COMMON_ROMS; metadata in tools/rom_manifest.json.",
+      "rom": "hunchbak.zip",
+      "game": "hunchback",
+      "prepare": "prepare_hunchback.py"
+    },
+    {
+      "id": "hunchback.cpu.coverage",
+      "suite": "reference",
+      "required": true,
+      "skip_reason": "S2650 implementation, instruction/bus/cycle oracle and interrupt tests not developed.",
+      "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
+      "reference": "docs/validation.md; pending evidence."
+    },
+    {
+      "id": "hunchback.banked_memory.coverage",
+      "suite": "reference",
+      "required": true,
+      "skip_reason": "FLAG-banked video/character/palette/S2636 registers not implemented.",
+      "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
+      "reference": "docs/validation.md; pending evidence."
+    },
+    {
+      "id": "hunchback.video.coverage",
+      "suite": "reference",
+      "required": true,
+      "skip_reason": "PAL raster, character/sprite/bullet pixels and collision checks not implemented.",
+      "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
+      "reference": "docs/validation.md; pending evidence."
+    },
+    {
+      "id": "hunchback.input.coverage",
+      "suite": "reference",
+      "required": true,
+      "skip_reason": "Input strobes, DIP switches, coin/start/player/cocktail routing not implemented.",
+      "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
+      "reference": "docs/validation.md; pending evidence."
+    },
+    {
+      "id": "hunchback.audio.coverage",
+      "suite": "reference",
+      "required": true,
+      "skip_reason": "Two audio CPUs, DAC/discrete/TMS5100 speech and directed event/cadence/numerical checks not implemented.",
+      "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
+      "reference": "docs/validation.md; pending evidence."
+    },
+    {
+      "id": "hunchback.audio_reference.coverage",
+      "suite": "reference",
+      "required": true,
+      "skip_reason": "Independent justified audio channel/event references absent; MAME includes approximations/placeholders.",
+      "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
+      "reference": "docs/validation.md; pending evidence."
+    },
+    {
+      "id": "hunchback.game_boot.coverage",
+      "suite": "reference",
+      "required": true,
+      "skip_reason": "Validated ROM fixture does not prove CPU retirement, attract mode or gameplay; connected boot tests absent.",
+      "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
+      "reference": "docs/validation.md; pending evidence."
+    },
+    {
+      "id": "hunchback.mister_integration.coverage",
+      "suite": "reference",
+      "required": true,
+      "skip_reason": "Physical PLL, HPS/download, video/audio output, reset/CDC, framework integration and synthesis inputs absent.",
+      "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
+      "reference": "docs/validation.md; pending evidence."
+    },
+    {
+      "id": "hunchback.constraints.coverage",
+      "suite": "reference",
+      "required": true,
+      "skip_reason": "QPF/QSF/QIP/SDC, inferred RAM, CDC and TimeQuest exception/unconstrained-path review pending.",
+      "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
+      "reference": "docs/validation.md; pending evidence."
+    }
+  ],
+  "mutations": [
+    {
+      "id": "held_reset",
+      "check": "hunchback.reset.synthetic",
+      "file": "rtl/machine/cvs_reset.sv",
+      "old": "else release_pipe <= {release_pipe[0], 1'b0};",
+      "new": "else release_pipe <= {release_pipe[0], 1'b1};",
+      "failure_label": "reset_release",
+      "reason": "Reset can never release."
+    },
+    {
+      "id": "wrong_main_divider",
+      "check": "hunchback.clock.synthetic",
+      "file": "rtl/machine/cvs_clock.sv",
+      "old": "phase[4:0] == 5'd31",
+      "new": "phase[4:0] == 5'd30",
+      "failure_label": "main_cadence",
+      "reason": "Main CPU enable is one master edge early."
+    },
+    {
+      "id": "lost_program_page",
+      "check": "hunchback.memory.synthetic",
+      "file": "rtl/machine/cvs_memory.sv",
+      "old": "program_rom[cpu_addr]",
+      "new": "program_rom[{2'b00,cpu_addr[12:0]}]",
+      "failure_label": "rom_byte",
+      "reason": "All pages read from first bank."
+    },
+    {
+      "id": "lost_ram_mirror",
+      "check": "hunchback.memory.synthetic",
+      "file": "rtl/machine/cvs_memory.sv",
+      "old": "cpu_addr[12:10] == 3'b111",
+      "new": "cpu_addr[14:10] == 5'b00111",
+      "failure_label": "ram_mirror",
+      "reason": "Only lowest RAM window decodes."
+    },
+    {
+      "id": "wrong_mra_quarter",
+      "check": "hunchback.mra.synthetic",
+      "file": "releases/Hunchback (CVS).mra",
+      "old": "name=\"hb-gp1.bin\" crc=\"af801d54\" offset=\"0x0400\"",
+      "new": "name=\"hb-gp1.bin\" crc=\"af801d54\" offset=\"0x0000\"",
+      "failure_label": "mra_program_byte",
+      "reason": "Second CPU page repeats the first EPROM quarter."
+    },
+    {
+      "id": "wrong_preparation_quarter",
+      "check": "hunchback.mra.synthetic",
+      "file": "tools/prepare_hunchback.py",
+      "old": "blob[page * 0x400:(page + 1) * 0x400]",
+      "new": "blob[0:0x400]",
+      "failure_label": "prepare_program_byte",
+      "reason": "Preparation repeats quarter zero in all CPU pages."
+    }
+  ],
+  "build": {
+    "command": [
+      "bash",
+      "build.sh"
+    ],
+    "artifact": "output_files/Arcade-Hunchback.rbf",
+    "project": "Arcade-Hunchback",
+    "revision": "Arcade-Hunchback",
+    "top": "sys_top",
+    "device": "5CSEBA6U23I7",
+    "image": "theypsilon/quartus-lite-c5:17.0.2",
+    "timeout": 3600
+  }
+}
