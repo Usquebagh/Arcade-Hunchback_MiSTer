@@ -1,5 +1,13 @@
 # Validation scope
 
+The user permits a lighter development workflow: focused checks and retained bug
+regressions during implementation, with the full configured regression/mutation
+campaign and Quartus gates reserved for a frozen candidate. The duplicate full
+campaign after the directed scan-pause repair was interrupted deliberately. The
+earlier full campaign proved 81 faults but had one surviving pause mutation; the
+corrected directed pause then detected that fault twice in a targeted run. This
+is not an all-82 current-snapshot mutation qualification.
+
 Initial synthetic checks cover reset assertion/release/qualification, main/audio
 enable count/cadence/phase/reset restart, all 20 KiB mapped program addresses,
 one-edge read latency, ROM write protection, all 1 KiB system RAM addresses and

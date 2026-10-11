@@ -110,3 +110,48 @@ freezes exactly that pending state; the same line-delay assertion must reject
 the unmasked strobe. The original failed campaign is retained. No RTL, assertion
 or expected waveform was changed to pass, and the corrected frozen campaign
 must rerun before this milestone is qualified.
+
+## First real-ROM initialization call
+
+`hunchback.rom.startup` extends coverage through the first initialization
+subroutine and its return fetch. A separate restricted instruction model reads
+the authenticated unchanged image at runtime. Its supported additions are
+immediate register loads, unindexed register stores, absolute call/return,
+decrement-and-branch and extended writes. Unknown registers, alternate banks,
+indirection and unsupported instructions reject preparation. The independent
+synthetic contract manually enumerates increment/decrement store order, FLAG
+transitions, extended I/O and a return, and tests rejected inputs.
+
+The parent produces 4142 memory writes and one extended I/O write: initial 1024
+system clear, 16 palette writes, 1024 attributes, 1024 codes, 1024 bullet/PVI
+clear writes, 18 PVI writes and 12 PVI writes. Every accepted address, FLAG and
+data matches; memory and extended I/O spaces are distinguished. The actual CPU
+then fetches the modeled post-call address. Scan stays paused and interrupts
+stay inhibited. This proves execution of the first initialization routine; it
+does not qualify subsequent routines, polling, IRQ release, a game frame or
+audio/input. Expected streams and ROMs remain private, ignored runtime fixtures.
+
+The user permits focused checks during development. The duplicate full mutation
+campaign was stopped; retain its interrupted state and the earlier failed full
+campaign alongside the passing directed pause proof. The full configured
+campaign remains a candidate prerequisite, rather than a development-step loop.
+
+Two fast model mutations exercise the new oracle's unindexed register source and
+call return address, bringing the configured campaign to 84. Their first run
+survived because a copied adapter imported its adjacent unchanged helper instead
+of the core's mutated model. The oracle and connected startup preparation now
+explicitly import the frozen core's model. Keep the failed experiment; it is not
+successful fault detection. Assertions and expected semantics remain unchanged.
+The first store-source mutant also changed the index register, destroying loop
+control and producing a model-bound ERROR. It was replaced with a data-only
+selection fault; errors are not catches. The corrected source and return faults
+both reach `startup_oracle_order` twice with passing baselines.
+
+A private bounded continuation observed four interrupt acknowledgements and
+known black/coloured RGB samples while startup repeats its frame-wait loop and
+writes its counter to palette entry zero. The ROM counter indicates a
+128-iteration delay; the short probe does not reach its end. Raw
+records contain four unknown PSL-context-save writes. An Icarus diagnostic using
+`$isunknown` on task concatenations miscounted known samples; those counters are
+unreliable and corrected from the raw records, not treated as a core fault or
+coverage PASS. Later IRQ/polling/game/unknown-state qualification remains open.

@@ -72,7 +72,10 @@
     "sim/cpu/cvs_machine_tb.sv",
     "sim/bdsm/bootstrap_model.py",
     "sim/cpu/cvs_cold_cpu_tb.sv",
-    "sim/bdsm/bootstrap_oracle_check.py"
+    "sim/bdsm/bootstrap_oracle_check.py",
+    "sim/bdsm/startup_model.py",
+    "sim/bdsm/startup_oracle_check.py",
+    "sim/cpu/cvs_startup_tb.sv"
   ],
   "games": [
     "Hunchback (CVS set 1)"
@@ -551,6 +554,36 @@
       "timeout": 60,
       "expectation": "Independently specified increment/decrement indexed write orders and alternate blocks agree; unknown opcodes and aliased RAM closure reject preparation.",
       "reference": "docs/video-assembly.md; synthetic restricted-interpreter contract checks, not full CPU or game oracle."
+    },
+    {
+      "id": "hunchback.startup.oracle",
+      "suite": "smoke",
+      "mode": "startup_oracle",
+      "required": true,
+      "tools": [
+        "python3"
+      ],
+      "timeout": 60,
+      "expectation": "Manually enumerated indexed store/FLAG/BDRR/extended-I/O/return stream agrees; unsupported state, indirection and unbounded startup reject preparation.",
+      "reference": "docs/video-assembly.md; independent synthetic restricted-instruction model contracts, not complete CPU emulation."
+    },
+    {
+      "id": "hunchback.rom.startup",
+      "suite": "game",
+      "mode": "startup_connected",
+      "required": true,
+      "tools": [
+        "ghdl",
+        "iverilog",
+        "vvp",
+        "python3"
+      ],
+      "timeout": 180,
+      "rom": "hunchbak.zip",
+      "game": "hunchback",
+      "prepare": "prepare_hunchback.py",
+      "expectation": "Unchanged authenticated parent ROM executes every modeled memory/I/O write through its first initialization subroutine, then fetches the modeled return address.",
+      "reference": "docs/video-assembly.md; independent restricted S2650 semantics. Scan paused and IRQ inhibited; first initialization only, not attract/gameplay/video qualification."
     }
   ],
   "mutations": [
@@ -1291,6 +1324,24 @@
       "new": "IF ri=x\"FF\" THEN",
       "failure_label": "cold_cpu_self_xor",
       "reason": "Reintroduces cold self-XOR unknown-state propagation."
+    },
+    {
+      "id": "startup_wrong_register_source",
+      "check": "hunchback.startup.oracle",
+      "file": "sim/bdsm/startup_model.py",
+      "old": "events.append((1, 0, 0, addr, int(flag), register(source)))",
+      "new": "events.append((1, 0, 0, addr, int(flag), register(0)))",
+      "failure_label": "startup_oracle_order",
+      "reason": "Unindexed store data incorrectly comes from R0; preserve address/index control so the designated data assertion is reachable."
+    },
+    {
+      "id": "startup_wrong_return",
+      "check": "hunchback.startup.oracle",
+      "file": "sim/bdsm/startup_model.py",
+      "old": "pc = stack.pop()",
+      "new": "pc = (stack.pop() + 1) & 0x7fff",
+      "failure_label": "startup_oracle_order",
+      "reason": "Call returns to the following byte instead of the saved address."
     }
   ],
   "build": {

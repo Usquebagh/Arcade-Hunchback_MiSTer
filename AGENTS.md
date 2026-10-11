@@ -9,6 +9,12 @@ user's other arcade cores (rtl, sys, sim, tools, docs, releases, LICENSES).
 
 ## Mandatory development workflow
 
+The user permits avoiding the full testing suite during development. Use focused
+checks for the subsystem being changed and retain bug regressions; do not rerun
+the entire mutation campaign after every development step. Reserve the complete
+configured regression and mutation campaign for a frozen RBF candidate snapshot.
+Targeted mutation proofs remain useful when adding or repairing important checks.
+
 Use the pinned MiSTer-BDSM submodule and `sim/bdsm/adapter.json`; inspect the
 adapter, actual core ports, source inventory, reference provenance, and installed
 tools before edits. A new subsystem has no baseline until demonstrated.
@@ -28,7 +34,8 @@ timeouts and missing fixtures are not successful fault detection. Run framework
 unit tests if changing runner/gate code; keep core-specific behaviour in the adapter.
 
 Before producing an RBF candidate, require all configured required checks and the
-Quartus fitting/constraint/timing gates from one frozen source snapshot. Require
+complete configured mutation campaign and Quartus fitting/constraint/timing gates
+from one frozen source snapshot. Require
 setup, hold, recovery, removal and minimum-pulse-width slack >=0, TNS=0, and no
 unreviewed unconstrained paths. Audit CDC and every timing exception's endpoints.
 Required SKIP/WARNING means incomplete coverage and blocks a candidate. Keep
@@ -97,3 +104,8 @@ never reinstate simulation-only register initialization in the synthesized CPU.
 Keep the runtime-ROM bootstrap oracle independent and its own contract checks
 (`hunchback.bootstrap.oracle`). No game bytes or expected RAM dumps enter Git.
 First RAM-clear PASS does not replace attract/gameplay/reference coverage.
+For startup-model or initialization-fixture changes run `hunchback.startup.oracle`
+and `hunchback.rom.startup` with the authenticated local ROM. Preserve write order,
+FLAG, memory versus extended I/O and the actual post-call return fetch. Scan is
+paused and IRQ is inhibited in this check; it does not qualify the next startup
+routines, input polling, machine IRQ timing, attract frames or gameplay.

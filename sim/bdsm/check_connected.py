@@ -5,17 +5,28 @@ import json
 from pathlib import Path
 import re
 import subprocess
+import sys
 from check_ghdl import emit
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--seed', type=int, default=1)
-    parser.add_argument('--mode', choices=['main_connected','video_connected','s2636_connected','character_connected','assembly_connected','bootstrap_connected','cold_connected'], default='main_connected')
+    parser.add_argument('--mode', choices=['main_connected','video_connected','s2636_connected','character_connected','assembly_connected','bootstrap_connected','startup_connected','cold_connected'], default='main_connected')
     args = parser.parse_args()
     work = Path('build/bdsm-' + args.mode).resolve()
     work.mkdir(parents=True, exist_ok=True)
     bootstrap=False
+    startup=None
+    if args.mode=='startup_connected':
+        # Resolve the model from the frozen core, so source mutations are real.
+        sys.path.insert(0,str(Path.cwd()/'sim/bdsm'))
+        from startup_model import expectations
+        try:
+            startup=expectations('build/roms/hunchback.bin',work/'startup.expect')
+        except (ValueError,OSError) as exc:
+            emit('ERROR',reason='Independent startup preparation failed: '+str(exc))
+            return 2
     if args.mode=='bootstrap_connected':
         from bootstrap_model import expectations
         try:
@@ -43,14 +54,14 @@ def main():
     sources=['rtl/machine/cvs_main.sv','rtl/machine/cvs_main_bus.sv','rtl/machine/cvs_main_io.sv',
              'rtl/machine/cvs_main_memory.sv','rtl/machine/cvs_banked.sv',
              'rtl/machine/cvs_memory.sv','rtl/machine/cvs_clock.sv']
-    top = {'video_connected':'cvs_video_cpu_tb','s2636_connected':'cvs_s2636_cpu_tb','character_connected':'cvs_character_cpu_tb','cold_connected':'cvs_cold_cpu_tb','assembly_connected':'cvs_machine_tb','bootstrap_connected':'cvs_machine_tb'}.get(args.mode,'cvs_main_tb')
+    top = {'video_connected':'cvs_video_cpu_tb','s2636_connected':'cvs_s2636_cpu_tb','character_connected':'cvs_character_cpu_tb','cold_connected':'cvs_cold_cpu_tb','assembly_connected':'cvs_machine_tb','bootstrap_connected':'cvs_machine_tb','startup_connected':'cvs_startup_tb'}.get(args.mode,'cvs_main_tb')
     if args.mode=='video_connected':
         sources += ['rtl/machine/cvs_video_timing.sv','rtl/machine/cvs_vblank_irq.sv']
     if args.mode=='s2636_connected':
         sources += ['rtl/machine/cvs_s2636_objects.sv','rtl/machine/cvs_s2636_bank.sv']
     if args.mode=='character_connected':
         sources += ['rtl/machine/cvs_character_video.sv']
-    if args.mode in ('assembly_connected','bootstrap_connected'):
+    if args.mode in ('assembly_connected','bootstrap_connected','startup_connected'):
         sources += ['rtl/machine/cvs_machine.sv','rtl/machine/cvs_scan.sv','rtl/machine/cvs_video_timing.sv',
                     'rtl/machine/cvs_vblank_irq.sv','rtl/machine/cvs_video_join.sv',
                     'rtl/machine/cvs_s2636_bank.sv','rtl/machine/cvs_s2636_objects.sv','rtl/machine/cvs_character_video.sv']
@@ -67,13 +78,16 @@ def main():
     # exact text in the result/log; every other diagnostic remains unreviewed.
     array_note=re.compile(r"rtl/machine/cvs_s2636_objects\.sv:\d+: warning: @\* is sensitive to all (256 words in array 'registers'|4 words in array '(active_duplicate|duplicate_hc|render_row|scale|active_line|in_object|next_row)')\.")
     for line in (compile_run.stdout+compile_run.stderr).splitlines():
-        if args.mode in ('s2636_connected','assembly_connected','bootstrap_connected') and array_note.fullmatch(line):
+        if args.mode in ('s2636_connected','assembly_connected','bootstrap_connected','startup_connected') and array_note.fullmatch(line):
             reviewed_messages.append({'message':line,'review':'Full-array sensitivity is required for the declared combinational indexed register/engine read; Verilator -Wall finds no latch or sensitivity fault.'})
         else:
             diagnostics += line+'\n'
     command=['vvp',str(work/'test.vvp')]
     if bootstrap:
         command += ['+boot','+image='+str(Path('build/roms/hunchback.bin').resolve()),'+expect='+str(work/'bootstrap.expect')]
+    if startup:
+        command += ['+image='+str(Path('build/roms/hunchback.bin').resolve()),'+expect='+str(work/'startup.expect'),
+                    '+count='+str(startup['writes']),'+resume='+str(startup['resume'])]
     ran=subprocess.run(command,cwd=work,capture_output=True,text=True)
     (work/'run.log').write_text(ran.stdout+ran.stderr)
     events=[json.loads(line[5:]) for line in ran.stdout.splitlines() if line.startswith('BDSM ')]

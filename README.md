@@ -45,6 +45,12 @@ wiring. See [architecture](docs/architecture.md) and [references](docs/reference
 
 Use the existing Ubuntu WSL toolchain. From the project directory in WSL:
 
+During development, run the focused check for the changed subsystem and its
+retained regressions. The user permits deferring the full regression/mutation
+campaign until a frozen candidate; the following commands also show that final
+workflow. Real-ROM initialization can be checked with
+`bash tools/bdsm.sh test --check hunchback.rom.startup --rom-dir "$PWD"`.
+
 ```sh
 git submodule update --init MiSTer-BDSM
 bash tools/bdsm.sh test --suite smoke
