@@ -14,7 +14,7 @@ def emit(status, **details):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('mode', choices=['reset', 'clock', 'memory', 'lint', 'rom', 'mra'])
+    parser.add_argument('mode', choices=['reset', 'clock', 'memory', 'decode', 'lint', 'rom', 'mra'])
     parser.add_argument('--seed', type=int, default=1)
     args = parser.parse_args()
     adapter = Path(__file__).resolve().parent
@@ -29,7 +29,7 @@ def main():
         ran = subprocess.run(command, capture_output=True, text=True)
         print(ran.stdout, end=''); print(ran.stderr, end='', file=sys.stderr)
         return ran.returncode
-    sources = {name: 'rtl/machine/cvs_' + name + '.sv' for name in ['reset', 'clock', 'memory']}
+    sources = {name: 'rtl/machine/cvs_' + name + '.sv' for name in ['reset', 'clock', 'memory', 'decode']}
     if args.mode == 'lint':
         warnings = []
         for name, source in sources.items():

@@ -24,20 +24,22 @@
     "docs/architecture.md",
     "docs/references.md",
     "docs/validation.md",
-    "docs/schematic-audit.md"
+    "docs/schematic-audit.md",
+    "docs/pal-audit.md"
   ],
   "required_files": [
     "rtl/machine/cvs_reset.sv",
     "rtl/machine/cvs_clock.sv",
     "rtl/machine/cvs_memory.sv",
     "tools/rom_manifest.json",
-    "releases/Hunchback (CVS).mra"
+    "releases/Hunchback (CVS).mra",
+    "rtl/machine/cvs_decode.sv"
   ],
   "games": [
     "Hunchback (CVS set 1)"
   ],
   "limitations": [
-    "Only reset/clock/main ROM/system RAM HDL exists; no game execution or MiSTer integration.",
+    "Reset/clock/main ROM/system RAM and standalone U15L pin decode HDL only; no game execution or MiSTer integration.",
     "Two-state Verilator does not prove X/Z, CDC, PLL, analog fidelity or board accuracy.",
     "Synthetic strobes/forwarding are declared implementation contracts, not board measurements.",
     "ROM identity/layout PASS is not CPU boot, video, input or audio coverage.",
@@ -85,6 +87,20 @@
       "timeout": 180,
       "expectation": "Exhaustive mapped program bytes, ROM protection, one-edge reads, RAM mirror and explicit forwarding.",
       "reference": "docs/architecture.md; pinned MAME CVS map/clocks and explicit implementation contract."
+    },
+    {
+      "id": "hunchback.decode.synthetic",
+      "suite": "smoke",
+      "mode": "decode",
+      "required": true,
+      "tools": [
+        "verilator",
+        "make",
+        "g++"
+      ],
+      "timeout": 180,
+      "expectation": "All 32 raw U15L input combinations reproduce its eight active-low output clauses; inactive bus deselects every group.",
+      "reference": "Kevtris CVS_15L CUPL source in user-supplied v1.4 archive, identified in docs/pal-audit.md. Combinational pin model only."
     },
     {
       "id": "hunchback.rtl.lint",
@@ -252,6 +268,15 @@
       "new": "blob[0:0x400]",
       "failure_label": "prepare_program_byte",
       "reason": "Preparation repeats quarter zero in all CPU pages."
+    },
+    {
+      "id": "reversed_address_decode",
+      "check": "hunchback.decode.synthetic",
+      "file": "rtl/machine/cvs_decode.sv",
+      "old": "3'd7 - address_hi",
+      "new": "address_hi",
+      "failure_label": "pal_decode",
+      "reason": "Address group numbering is reversed."
     }
   ],
   "build": {

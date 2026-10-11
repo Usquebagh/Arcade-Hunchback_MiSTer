@@ -63,7 +63,9 @@ precedence over text search results.
 The PDF supplies PAL pin connections and type identifiers, including PAL10L8,
 PAL12L6 and PAL14H4 devices, but not internal logic equations or fuse maps.
 Address decode, RAM/video arbitration, cartridge/protection and collision-related
-logic cannot be fully derived from a PAL outline. The UKVAC thread advertises a
-v1.4 ZIP containing PAL JED files; that package has not yet been supplied.
+logic cannot be fully derived from a PAL outline. The user subsequently supplied
+the v1.4 ZIP with all eight CUPL sources and replacement JED files; see
+[PAL audit](pal-audit.md). The missing-equations gap is now resolved, while
+equivalence, connected implementation and hardware validation remain pending.
 Retain explicit subsystem/reference/constraint blockers until meaningful checks
 replace them. No RBF candidate or timing result is established by this audit.

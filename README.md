@@ -5,8 +5,8 @@ A private development project for **Hunchback (set 1)**, Century Electronics
 conversions are separate boards; their ROMs are not interchangeable with CVS.
 
 > **Status:** foundational HDL only; no working game or RBF candidate yet.
-> Reset, main/audio CPU clock enables, program ROM and mirrored system RAM have
-> directed synthetic tests. CPU, video, inputs, audio and MiSTer integration
+> Reset, main/audio CPU clock enables, program ROM, mirrored system RAM and the
+> standalone U15L address decoder have directed synthetic tests. CPU, video, inputs, audio and MiSTer integration
 > remain to be implemented. Actual MiSTer testing is pending.
 
 ## Original hardware

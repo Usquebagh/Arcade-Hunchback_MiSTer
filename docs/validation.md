@@ -40,6 +40,9 @@ and constraint review. Candidate preflight must return incomplete with no RBF
 artifact. Verilator is predominantly two-state and does not establish X/Z,
 metastability, CDC, physical PLL, analog circuit fidelity or hardware usability.
 Actual tool versions and run results are retained privately in `results/`.
+The v1.4 references additionally support a standalone U15L pin decoder. Its
+32 possible input combinations have explicit expectations; a reversed address
+group mutation must fail `pal_decode` twice. Full banked memory remains pending.
 
 ## Next implementation gates
 
