@@ -120,8 +120,10 @@ is not coverage. The corrected bounded probe uses exact numeric replacement,
 frozen source/dependency identities, tool/fixture hashes and untouched ROMs.
 All reports, binaries, fixtures and traces remain ignored/private.
 
-The next required subsystem is the actual TMS5100 control/direction/LPC engine
-and its serial-ROM consumer, followed by connection to the main machine.
+The normalized TMS command/direction controller now has standalone and actual
+CPU checks; see [command expectations and limits](tms5100-control.md). The next
+required subsystem is the actual TMC0281 LPC datapath and speech ROM consumer,
+followed by connection to the main machine.
 Physical CS/CTL1/PDC/ROM clock/aliases, RC frequency, coefficients, complete
 speech firmware/reference waveforms, analog mixing/filters, CPU power-up and
 MiSTer/Quartus qualification remain missing. No speech or RBF candidate PASS

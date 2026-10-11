@@ -164,3 +164,14 @@ implement a TMS5100. Keep physical CS/CTL1/PDC/ROM-clock/alias, LPC coefficient,
 RC-frequency/voice/reference and three-CPU integration blockers. Native ROM
 probes must freeze sources before compiling and must record exact bounded
 stimulus times; interrupted/unfrozen probes are not coverage.
+
+For normalized TMS command-controller changes run `hunchback.speech.control`,
+`hunchback.speech.control.cpu`,
+the speech bus/CPU baselines and lint. Preserve falling-PDC decode, separate
+armed/output/input CTL directions, CTL read versus external talk status, read-bit
+buffer order, dummy-read/action ordering, one outstanding request with retry,
+busy-edge rejection and shared-reset cancellation. Record command/reference
+expectations before implementation in `docs/tms5100-control.md`. The external
+talk-status fixture and start/reset/address/branch pulses do not implement LPC,
+stop/drain timing or physical ROM-clock/CS/CTL1. Keep those candidate blockers
+until actual datapath and connected CPU/reference checks replace them.

@@ -12,7 +12,7 @@ from check_ghdl import emit
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--seed', type=int, default=1)
-    parser.add_argument('--mode', choices=['main_connected','video_connected','s2636_connected','character_connected','assembly_connected','bootstrap_connected','startup_connected','audio_connected','speech_connected','av_connected','cold_connected'], default='main_connected')
+    parser.add_argument('--mode', choices=['main_connected','video_connected','s2636_connected','character_connected','assembly_connected','bootstrap_connected','startup_connected','audio_connected','speech_connected','tms5100_connected','av_connected','cold_connected'], default='main_connected')
     args = parser.parse_args()
     work = Path('build/bdsm-' + args.mode).resolve()
     work.mkdir(parents=True, exist_ok=True)
@@ -61,6 +61,10 @@ def main():
     if args.mode=='speech_connected':
         top='cvs_speech_cpu_tb'
         sources=['rtl/machine/cvs_speech_cpu.sv','rtl/machine/cvs_speech_bus.sv','rtl/machine/cvs_clock.sv']
+    if args.mode=='tms5100_connected':
+        top='cvs_tms5100_cpu_tb'
+        sources=['rtl/machine/cvs_speech_cpu.sv','rtl/machine/cvs_speech_bus.sv',
+                 'rtl/machine/cvs_tms5100_control.sv','rtl/machine/cvs_clock.sv']
     if args.mode=='video_connected':
         sources += ['rtl/machine/cvs_video_timing.sv','rtl/machine/cvs_vblank_irq.sv']
     if args.mode=='s2636_connected':

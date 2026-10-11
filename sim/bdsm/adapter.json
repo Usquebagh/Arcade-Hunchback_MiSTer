@@ -38,7 +38,8 @@
     "docs/audio-assembly.md",
     "docs/audio-samples.md",
     "docs/audio-wiring.md",
-    "docs/speech-digital.md"
+    "docs/speech-digital.md",
+    "docs/tms5100-control.md"
   ],
   "required_files": [
     "rtl/machine/cvs_reset.sv",
@@ -96,7 +97,10 @@
     "rtl/machine/cvs_speech_bus.sv",
     "rtl/machine/cvs_speech_cpu.sv",
     "sim/bdsm/speech_bus.cpp",
-    "sim/cpu/cvs_speech_cpu_tb.sv"
+    "sim/cpu/cvs_speech_cpu_tb.sv",
+    "rtl/machine/cvs_tms5100_control.sv",
+    "sim/bdsm/tms5100_control.cpp",
+    "sim/cpu/cvs_tms5100_cpu_tb.sv"
   ],
   "games": [
     "Hunchback (CVS set 1)"
@@ -454,7 +458,7 @@
       "id": "hunchback.audio.coverage",
       "suite": "reference",
       "required": true,
-      "skip_reason": "Digital audio/dual-CPU/raw samples and standalone actual speech-CPU/control/serial checks exist. ROM probes remain observations only. TMS5100 CTL-direction/LPC/voice and three-CPU connection, native unknown RAM/index/power-up paths, physical DAC/weights/calibrated mix/filter/discrete audio, serial/PDC/RC clocks/CDC and independent channel references remain incomplete.",
+      "skip_reason": "Digital audio/dual-CPU/raw samples, speech-CPU/control/serial and normalized TMS command/direction/actual-CPU checks exist. Talk status is an external fixture and ROM probes remain observations only. TMC0281 frame/coefficients/LPC/stop/drain/voice and three-CPU connection, native unknown RAM/index/power-up paths, physical DAC/weights/calibrated mix/filter/discrete audio, serial/PDC/RC clocks/CDC and independent channel references remain incomplete.",
       "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
       "reference": "docs/validation.md; pending evidence."
     },
@@ -673,6 +677,26 @@
       "timeout": 120,
       "expectation": "Actual VHDL speech CPU and actual ROM/control bus execute 17 independent signatures, /192, ready stall, SENSE/status, ROM-protection/unmapped reads and serial ROM wrap.",
       "reference": "docs/speech-digital.md; independent synthetic software/signatures and external TMS status/consumer fixtures, no voice or physical protocol accuracy claim."
+    },
+    {
+      "id": "hunchback.speech.control",
+      "suite": "smoke",
+      "mode": "tms5100_control",
+      "required": true,
+      "tools": ["verilator", "make", "g++"],
+      "timeout": 180,
+      "expectation": "Falling-PDC decode, all command/CTL1/address values, three-edge direction transactions, numeric bit buffer, dummy-read ordering, request/response stalls, busy rejection and reset cancellation.",
+      "reference": "docs/tms5100-control.md; pinned MAME command compatibility with independent synthetic transcripts/arithmetic oracle. External talk status is a fixture; no LPC/voice or physical pin timing."
+    },
+    {
+      "id": "hunchback.speech.control.cpu",
+      "suite": "smoke",
+      "mode": "tms5100_connected",
+      "required": true,
+      "tools": ["ghdl", "iverilog", "vvp"],
+      "timeout": 120,
+      "expectation": "Actual VHDL speech CPU/control bus/TMS controller: eight independent status/direction signatures, shared CTL2/8, PDC inversion, two starts/one reset, /192 and a held talk-output read under ready stall.",
+      "reference": "docs/tms5100-control.md; independent synthetic program/signatures. External datapath talk status is a fixture; no LPC voice/completion or physical timing."
     }
   ],
   "mutations": [
@@ -1611,6 +1635,51 @@
       "new": "address==15'h1d81",
       "failure_label": "speech_cpu_signature",
       "reason": "The actual CPU's command read is no longer routed to the status/command byte."
+    },
+    {
+      "id": "tms_rising_pdc",
+      "check": "hunchback.speech.control",
+      "file": "rtl/machine/cvs_tms5100_control.sv",
+      "old": "falling=previous_pdc && !pdc",
+      "new": "falling=!previous_pdc && pdc",
+      "failure_label": "tms_pulse_hold",
+      "reason": "Commands run on the wrong PDC edge."
+    },
+    {
+      "id": "tms_early_talk_output",
+      "check": "hunchback.speech.control",
+      "file": "rtl/machine/cvs_tms5100_control.sv",
+      "old": "3'd7:direction<=ARM_TALK",
+      "new": "3'd7:direction<=TALK_OUTPUT",
+      "failure_label": "tms_talk_arm",
+      "reason": "TEST TALK exposes output without the required additional pulse."
+    },
+    {
+      "id": "tms_buffer_reversed",
+      "check": "hunchback.speech.control",
+      "file": "rtl/machine/cvs_tms5100_control.sv",
+      "old": "read_buffer<={bit_data,read_buffer[3:1]}",
+      "new": "read_buffer<={read_buffer[2:0],bit_data}",
+      "failure_label": "tms_buffer_shift",
+      "reason": "READ BIT shifts the buffer in the opposite direction."
+    },
+    {
+      "id": "tms_request_lost_on_stall",
+      "check": "hunchback.speech.control",
+      "file": "rtl/machine/cvs_tms5100_control.sv",
+      "old": "if(bit_req && bit_ready)waiting<=1'b1",
+      "new": "if(bit_req && (bit_ready || !pdc))waiting<=1'b1",
+      "failure_label": "tms_request_retained",
+      "reason": "An unaccepted serial request is dropped under backpressure."
+    },
+    {
+      "id": "tms_cpu_raw_busy_status",
+      "check": "hunchback.speech.control.cpu",
+      "file": "sim/cpu/cvs_tms5100_cpu_tb.sv",
+      "old": ".ctl_status(ctl_read[0])",
+      "new": ".ctl_status(talk_status)",
+      "failure_label": "tms_cpu_signature",
+      "reason": "Actual CPU reads unconditional talk status instead of the current CTL direction's bit."
     }
   ],
   "build": {

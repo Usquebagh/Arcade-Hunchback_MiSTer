@@ -286,3 +286,17 @@ authenticated game bus audit separately shows only zero four-bit/discrete
 write data under the executed stimuli; no decoder change activates that path.
 See [speech expectations and limitations](speech-digital.md) and
 [pin/wiring audit](audio-wiring.md).
+
+## TMS normalized command controller, 2026-10-12
+
+Standalone command checks now cover PDC edge selection, CTL directions and
+read-bit/dummy/serial handshakes. A separate actual S2650 assembly verifies
+eight firmware status signatures, two starts/one reset, shared CTL2/8 and PDC
+polarity, /192 and a stalled talk-output read. External datapath talk status is
+still synthetic. Five new faults reproduce their assertions twice; an earlier
+noncompiling request mutation remains an excluded ERROR. Full configured
+regression and 109 mutations remain deferred. The pinned runner is unchanged,
+and all 17 framework units pass. See [expectations and coverage](tms5100-control.md).
+TMC0281 frame/coefficients/LPC/stop/drain/voice, physical timing, three-CPU
+machine, analog/audio references, native runtime, MiSTer and Quartus gates
+remain incomplete. No RBF candidate is qualified by these command checks.
