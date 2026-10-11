@@ -14,11 +14,11 @@ def emit(status, **details):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('mode', choices=['reset', 'clock', 'memory', 'banked', 'display', 'scan', 'character', 'character_connected', 'cold_connected', 'assembly_connected', 'bootstrap_connected', 'bootstrap_oracle', 'startup_connected', 'startup_oracle', 'audio_bus', 'audio_connected', 'main_bus', 'main_connected', 'video_connected', 's2636_objects', 's2636_connected', 'vblank_irq', 'video_timing', 'video_timing_alt', 'decode', 'lint', 'rom', 'mra', 'cpu_alu', 'cpu_edges', 'cpu_bus', 'cpu_synth', 'cpu_diagnostics'])
+    parser.add_argument('mode', choices=['reset', 'clock', 'memory', 'banked', 'display', 'scan', 'character', 'character_connected', 'cold_connected', 'assembly_connected', 'bootstrap_connected', 'bootstrap_oracle', 'startup_connected', 'startup_oracle', 'audio_bus', 'audio_connected', 'av_connected', 'main_bus', 'main_connected', 'video_connected', 's2636_objects', 's2636_connected', 'vblank_irq', 'video_timing', 'video_timing_alt', 'decode', 'lint', 'rom', 'mra', 'cpu_alu', 'cpu_edges', 'cpu_bus', 'cpu_synth', 'cpu_diagnostics'])
     parser.add_argument('--seed', type=int, default=1)
     args = parser.parse_args()
     adapter = Path(__file__).resolve().parent
-    if args.mode in ['main_connected','video_connected','s2636_connected','character_connected','assembly_connected','bootstrap_connected','startup_connected','audio_connected','cold_connected']:
+    if args.mode in ['main_connected','video_connected','s2636_connected','character_connected','assembly_connected','bootstrap_connected','startup_connected','audio_connected','av_connected','cold_connected']:
         return subprocess.run([sys.executable, str(adapter / 'check_connected.py'), '--mode', args.mode, '--seed', str(args.seed)]).returncode
     if args.mode=='bootstrap_oracle':
         return subprocess.run([sys.executable,str(adapter/'bootstrap_oracle_check.py')]).returncode

@@ -25,6 +25,7 @@ def main():
     parser.add_argument('--cycles',type=int,default=300_000_000)
     parser.add_argument('--seed',type=int,default=1)
     parser.add_argument('--controls',action='store_true',help='Synthetic coin/start/right/jump input windows; see docs/rom-observation.md')
+    parser.add_argument('--audio',action='store_true',help='Connect actual audio CPU/digital bus; nominal external 380 Hz SENSE, no PCM/speech/analog reference')
     args=parser.parse_args()
     if sys.platform!='linux':parser.error('Run in WSL/Linux with GHDL and Verilator')
     if not 2_000_000<=args.cycles<=1_000_000_000 or not 1<=args.seed<=2147483647:
@@ -41,12 +42,16 @@ def main():
     files=inventory(root,adapter)
     metadata=dict(status='INCOMPLETE_DIAGNOSTIC',candidate=False,hardware_validation='pending',
         source_sha256=input_hash(files),source_files=files,core=git_metadata(root),seed=args.seed,
-        cycles_requested=args.cycles,controls=args.controls,two_state=True,
+        cycles_requested=args.cycles,controls=args.controls,audio=args.audio,two_state=True,
         tools=tools_metadata(['ghdl','verilator','make','g++']),
         provenance='Independent initialization write model; subsequent ROM execution and frames are observations only',
         limitations=['No independent post-initialization CPU/game/frame oracle','Randomized two-state initialization is not X/Z verification',
             'Provisional 227x256 scan window/origins','Raw MAME compatibility switch/input fixtures; no physical wiring audit',
             'Full PVI/PAL/audio/MiSTer/PLL/Quartus gates remain open','Every compiler finding is retained; no warning suppression'])
+    if args.audio:
+        metadata['audio_fixture']=dict(master_hz=57272724,sense_hz=380,
+            provenance='Nominal synchronous enables and external SENSE fixture; not physical oscillator/CDC proof')
+        metadata['limitations'].append('Digital audio-ROM events observed only; no independent firmware/channel/waveform oracle or analog/PCM/speech')
     def save():
         (output/'observation.json').write_text(json.dumps(metadata,indent=2)+'\n')
     save()
@@ -74,8 +79,10 @@ def main():
         metadata['synthesized_cpu_sha256']=hashlib.sha256(cpu.read_bytes()).hexdigest()
         names=['cvs_machine','cvs_main','cvs_main_bus','cvs_main_io','cvs_main_memory','cvs_banked','cvs_memory','cvs_clock',
                'cvs_scan','cvs_video_timing','cvs_vblank_irq','cvs_video_join','cvs_s2636_bank','cvs_s2636_objects','cvs_character_video']
-        command=['verilator','--cc','--exe','--build','-j','4','--top-module','cvs_machine','-Wall','-Wno-fatal',
-            '--x-initial','unique','--x-assign','unique','--Mdir',str(work/'obj'),'-CFLAGS','-O3 -std=c++17',str(cpu),
+        top='cvs_av_machine' if args.audio else 'cvs_machine'
+        if args.audio:names += ['cvs_av_machine','cvs_audio_cpu','cvs_audio_bus']
+        command=['verilator','--cc','--exe','--build','-j','4','--top-module',top,'-Wall','-Wno-fatal',
+            '--x-initial','unique','--x-assign','unique','--Mdir',str(work/'obj'),'-CFLAGS','-O3 -std=c++17'+(' -DAUDIO_OBSERVE' if args.audio else ''),str(cpu),
             *[str(frozen/'rtl/machine'/f'{name}.sv') for name in names],str(frozen/'sim/bdsm/observe_machine.cpp')]
         metadata['compile_command']=command
         with (output/'compile.log').open('w') as log:
@@ -84,7 +91,7 @@ def main():
         save()
         if ran.returncode:raise ValueError('Compiled-machine diagnostic build failed; see compile.log')
         print(f'Running private diagnostic; {len(metadata["unreviewed_compiler_findings"])} retained compiler findings.',flush=True)
-        command=[str(work/'obj/Vcvs_machine'),str(args.cycles),str(args.seed),str(reference['resume']),str(int(args.controls))]
+        command=[str(work/'obj'/('V'+top)),str(args.cycles),str(args.seed),str(reference['resume']),str(int(args.controls))]
         with (output/'run.log').open('w') as log:
             process=subprocess.Popen(command,cwd=output,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
             for line in process.stdout:
@@ -101,6 +108,8 @@ def main():
             return 1
         if returncode or not events:raise ValueError('Diagnostic failed or omitted its bounded observation; see run.log')
         metadata['observations']=events[-1]
+        metadata['event_logs']=[dict(name=p.name,sha256=hashlib.sha256(p.read_bytes()).hexdigest())
+                                for p in sorted(output.glob('*bus.log'))+sorted(output.glob('*events.log'))]
         metadata['captures']=[dict(name=p.name,sha256=hashlib.sha256(p.read_bytes()).hexdigest(),
                                   provenance='Actual machine pixels; observed only, no independent game-frame oracle')
                               for p in sorted(output.glob('frame-*.ppm'))]

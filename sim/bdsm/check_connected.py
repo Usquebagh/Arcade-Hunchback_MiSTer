@@ -12,7 +12,7 @@ from check_ghdl import emit
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--seed', type=int, default=1)
-    parser.add_argument('--mode', choices=['main_connected','video_connected','s2636_connected','character_connected','assembly_connected','bootstrap_connected','startup_connected','audio_connected','cold_connected'], default='main_connected')
+    parser.add_argument('--mode', choices=['main_connected','video_connected','s2636_connected','character_connected','assembly_connected','bootstrap_connected','startup_connected','audio_connected','av_connected','cold_connected'], default='main_connected')
     args = parser.parse_args()
     work = Path('build/bdsm-' + args.mode).resolve()
     work.mkdir(parents=True, exist_ok=True)
@@ -64,10 +64,13 @@ def main():
         sources += ['rtl/machine/cvs_s2636_objects.sv','rtl/machine/cvs_s2636_bank.sv']
     if args.mode=='character_connected':
         sources += ['rtl/machine/cvs_character_video.sv']
-    if args.mode in ('assembly_connected','bootstrap_connected','startup_connected'):
+    if args.mode in ('assembly_connected','bootstrap_connected','startup_connected','av_connected'):
         sources += ['rtl/machine/cvs_machine.sv','rtl/machine/cvs_scan.sv','rtl/machine/cvs_video_timing.sv',
                     'rtl/machine/cvs_vblank_irq.sv','rtl/machine/cvs_video_join.sv',
                     'rtl/machine/cvs_s2636_bank.sv','rtl/machine/cvs_s2636_objects.sv','rtl/machine/cvs_character_video.sv']
+    if args.mode=='av_connected':
+        top='cvs_av_machine_tb'
+        sources += ['rtl/machine/cvs_av_machine.sv','rtl/machine/cvs_audio_cpu.sv','rtl/machine/cvs_audio_bus.sv']
     sources += ['sim/cpu/'+top+'.sv']
     compile_run=subprocess.run(['iverilog','-g2012','-Wall','-s',top,'-o',str(work/'test.vvp'),
                                 str(cpu_file),*sources],capture_output=True,text=True)
@@ -81,7 +84,7 @@ def main():
     # exact text in the result/log; every other diagnostic remains unreviewed.
     array_note=re.compile(r"rtl/machine/cvs_s2636_objects\.sv:\d+: warning: @\* is sensitive to all (256 words in array 'registers'|4 words in array '(active_duplicate|duplicate_hc|render_row|scale|active_line|in_object|next_row)')\.")
     for line in (compile_run.stdout+compile_run.stderr).splitlines():
-        if args.mode in ('s2636_connected','assembly_connected','bootstrap_connected','startup_connected') and array_note.fullmatch(line):
+        if args.mode in ('s2636_connected','assembly_connected','bootstrap_connected','startup_connected','av_connected') and array_note.fullmatch(line):
             reviewed_messages.append({'message':line,'review':'Full-array sensitivity is required for the declared combinational indexed register/engine read; Verilator -Wall finds no latch or sensitivity fault.'})
         else:
             diagnostics += line+'\n'

@@ -231,3 +231,22 @@ its designated assertion twice. Generic framework remains pinned/unchanged;
 unit tests run for connected-adapter work. Required native startup WARNING and
 physical video/PAL/PVI/input/audio/game/MiSTer/PLL/constraint gaps still block RBF.
 See [assembly expectations, regressions and remaining coverage](video-assembly.md).
+
+## Connected digital audio milestone, 2026-10-11
+
+`hunchback.audio.assembly` executes both actual VHDL CPUs with actual main/video
+and audio SV memories. Five main commands under both FLAG states produce exactly
+two audio IRQ/RETE entries, command reads and RAM/DAC signatures. Independent
+ready stalls and neighboring auxiliary image isolation are checked. Two new
+wiring faults each fail the designated assertion twice; the full configured
+campaign is now 92 and was not rerun in full. Focused affected baselines and
+block lint passed; required native unknown-state diagnostics remain WARNING.
+
+The optional private connected-ROM diagnostic observes three real command
+events/reads/acknowledgements during 450 million master edges. All 21 retained
+fields match the prior frozen main-only observation. These are observations and
+regression comparisons, not independent full-game/audio references. The native
+audio trace retains six unknown RAM writes and two unknown indexed addresses.
+No power-up initialization was added. Analog/PCM/speech, physical oscillator/CDC,
+channel references and MiSTer/Quartus gates remain incomplete. See
+[expectations, fault proofs and limits](audio-assembly.md).

@@ -102,3 +102,9 @@ three IRQ acknowledgements, 56 byte-DAC writes, 204 four-bit latch writes and
 writes were unknown; their raw records remain a diagnostic limitation. A prior
 single-pair CB probe had eight unknown RAM writes. Different stimuli are not
 replacement expected streams; neither run has an independent audio-ROM oracle.
+
+The subsequent [connected assembly milestone](audio-assembly.md) executes both
+actual CPUs and unchanged main/audio ROMs together. Its native read trace also
+identifies two unknown indexed addresses behind the work-RAM observation. The
+new wrapper and synthetic connection test do not resolve that power-up/reference
+gap or supply analog, PCM or speech output.

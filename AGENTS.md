@@ -127,3 +127,15 @@ SP_D0 versus MAME bit-7 conflict, physical aliases/resistor weights, separate
 oscillator/CDC and analog/speech blockers in `docs/audio-digital.md`. Digital latch
 PASS or an observed native firmware event is not calibrated sound/reference PASS.
 Main command I/O is independent of FLAG; do not filter recorded commands by RAM bank.
+
+For the combined main/video/audio wrapper run `hunchback.audio.assembly` plus
+affected main/audio/clock/memory/native checks, existing scan/assembly/bootstrap
+checks and lint. Preserve actual dual CPUs, five command updates/two rising-bit-7
+events under both FLAG states, command RAM/DAC signatures, independent ready
+stalls and isolation from neighboring auxiliary downloader windows.
+Use `tools/observe_hunchback.py --audio` for frozen private connected-ROM
+diagnostics; keep both command-event/ACK and accepted audio bus/DAC logs. Nominal
+380 Hz external SENSE and shared-master enables do not qualify physical oscillator
+phase/drift or CDC. Native unknown RAM writes and indexed read addresses remain
+limitations; do not clear RAM or coerce unknown addresses to manufacture PASS.
+Keep analog/PCM/speech/channel-reference and MiSTer/Quartus candidate blockers.

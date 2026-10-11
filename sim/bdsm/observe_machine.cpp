@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Long actual-machine diagnostic. No post-initialization game/video oracle.
+#ifdef AUDIO_OBSERVE
+#include "Vcvs_av_machine.h"
+using Machine=Vcvs_av_machine;
+#else
 #include "Vcvs_machine.h"
+using Machine=Vcvs_machine;
+#endif
 #include "verilated.h"
 #include <array>
 #include <cstdint>
@@ -16,7 +22,7 @@ int main(int argc,char** argv) {
     unsigned seed=std::stoul(argv[2]),resume_pc=std::stoul(argv[3]);
     bool controls=std::stoul(argv[4])!=0;
     VerilatedContext context;context.randReset(2);context.randSeed(seed);
-    Vcvs_machine m(&context);
+    Machine m(&context);
     std::ifstream image("image.bin",std::ios::binary),expected("startup.expect");
     std::vector<unsigned char> bytes((std::istreambuf_iterator<char>(image)),{});
     std::vector<uint32_t> want;std::string line;
@@ -27,6 +33,12 @@ int main(int argc,char** argv) {
     unsigned field_pixels=0,coin_samples=0,start_samples=0,input_reads=0,right_samples=0,jump_samples=0;
     std::array<unsigned char,227*256*3> field{};
     std::ofstream bus("bus.log"),captures("captures.log");
+#ifdef AUDIO_OBSERVE
+    std::ofstream audio_bus("audio-bus.log"),audio_events("audio-events.log");
+    uint64_t audio_acks=0,audio_reads=0,audio_writes=0,dac8_writes=0,dac4_writes=0,discrete_writes=0,command_events=0;
+    bool last_audio_ack=false;
+    m.audio_ready=1;m.audio_sense=0;
+#endif
     auto fail=[&](const char* label,uint64_t expected_value,uint64_t observed_value) {
         std::cout<<"BDSM {\"status\":\"FAIL\",\"label\":\""<<label<<"\",\"cycle\":"<<cycle
                  <<",\"expected\":"<<expected_value<<",\"observed\":"<<observed_value<<"}"<<std::endl;
@@ -44,7 +56,20 @@ int main(int argc,char** argv) {
         bool jump=controls && frames>=306 && frames<309;
         m.in0=255-(coin?8:0)-(start?1:0)-(jump?32:0);
         m.in1=255-(right?16:0);
+#ifdef AUDIO_OBSERVE
+        // Nominal external RC fixture only, not a physical audio clock model.
+        m.audio_sense=((cycle*760ull/57272724ull)&1u);
+#endif
         m.clk=0;m.eval();
+#ifdef AUDIO_OBSERVE
+        bool audio_command_read=!m.reset && m.audio_req && m.audio_ready &&
+            m.audio_memory_space && !m.audio_wr && m.audio_address==0x1800;
+        if(!m.reset && m.audio_req && m.audio_ready && m.audio_wr) {
+            ++audio_writes;
+            audio_bus<<cycle<<" W "<<std::hex<<unsigned(m.audio_address)<<" "<<unsigned(m.audio_write_data)<<std::dec
+                     <<" "<<unsigned(m.audio_memory_space)<<"\n";
+        }
+#endif
         bool resume=false;
         bool io_read=false;
         unsigned io_address=0;
@@ -69,6 +94,25 @@ int main(int argc,char** argv) {
             } else if(!initialized && m.memory_space && m.phase==0 && m.address==resume_pc && stores==want.size())resume=true;
         }
         m.clk=1;m.eval();++cycle;
+#ifdef AUDIO_OBSERVE
+        if(m.reset)last_audio_ack=false;
+        else {
+            if(m.audio_trigger) {
+                ++command_events;audio_events<<cycle<<" COMMAND "<<unsigned(m.audio_command)<<"\n";
+            }
+            if(m.audio_intack && !last_audio_ack) {
+                ++audio_acks;audio_events<<cycle<<" ACK\n";
+            }
+            last_audio_ack=m.audio_intack;
+            if(audio_command_read) {
+                ++audio_reads;
+                audio_bus<<cycle-1<<" R 1800 "<<std::hex<<unsigned(m.audio_read_data)<<std::dec<<"\n";
+            }
+            if(m.dac8_wr) {++dac8_writes;audio_events<<cycle<<" DAC8 "<<unsigned(m.dac8)<<"\n";}
+            if(m.dac4_wr) {++dac4_writes;audio_events<<cycle<<" DAC4 "<<unsigned(m.dac4)<<"\n";}
+            if(m.discrete_wr) {++discrete_writes;audio_events<<cycle<<" DISCRETE "<<unsigned(m.discrete)<<"\n";}
+        }
+#endif
         if(m.reset)last_ack=false;
         else {
             if(m.intack && !last_ack)++irqs;
@@ -111,6 +155,13 @@ int main(int argc,char** argv) {
              <<",\"pixels\":"<<pixels<<",\"writes\":"<<writes<<",\"initialization_writes\":"<<stores
              <<",\"last_bus_address\":"<<m.address<<",\"input_reads\":"<<input_reads
              <<",\"coin_read_samples\":"<<coin_samples<<",\"start_read_samples\":"<<start_samples
-             <<",\"right_read_samples\":"<<right_samples<<",\"jump_read_samples\":"<<jump_samples<<"}"<<std::endl;
+             <<",\"right_read_samples\":"<<right_samples<<",\"jump_read_samples\":"<<jump_samples;
+#ifdef AUDIO_OBSERVE
+    std::cout<<",\"audio_irq_acknowledgements\":"<<audio_acks<<",\"audio_command_events\":"<<command_events
+             <<",\"audio_command_reads\":"<<audio_reads<<",\"audio_writes\":"<<audio_writes
+             <<",\"dac8_writes\":"<<dac8_writes<<",\"dac4_writes\":"<<dac4_writes
+             <<",\"discrete_writes\":"<<discrete_writes;
+#endif
+    std::cout<<"}"<<std::endl;
     m.final();return 0;
 }

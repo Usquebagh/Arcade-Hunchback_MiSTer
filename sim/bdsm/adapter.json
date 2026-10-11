@@ -34,7 +34,8 @@
     "docs/character-video.md",
     "docs/video-assembly.md",
     "docs/rom-observation.md",
-    "docs/audio-digital.md"
+    "docs/audio-digital.md",
+    "docs/audio-assembly.md"
   ],
   "required_files": [
     "rtl/machine/cvs_reset.sv",
@@ -84,7 +85,9 @@
     "rtl/machine/cvs_audio_bus.sv",
     "rtl/machine/cvs_audio_cpu.sv",
     "sim/bdsm/audio_bus.cpp",
-    "sim/cpu/cvs_audio_cpu_tb.sv"
+    "sim/cpu/cvs_audio_cpu_tb.sv",
+    "rtl/machine/cvs_av_machine.sv",
+    "sim/cpu/cvs_av_machine_tb.sv"
   ],
   "games": [
     "Hunchback (CVS set 1)"
@@ -442,7 +445,7 @@
       "id": "hunchback.audio.coverage",
       "suite": "reference",
       "required": true,
-      "skip_reason": "Digital audio CPU/bus/DAC/discrete-control synthetic checks exist; real audio-ROM scenarios, second speech CPU, analog/discrete/PCM/TMS5100 and justified numerical channel/cadence references remain incomplete.",
+      "skip_reason": "Digital audio and actual dual-CPU connection checks exist; connected ROM events are observations only. Native unknown RAM/indexed-read paths, second speech CPU, analog/discrete/PCM/TMS5100, oscillator/CDC and independent channel/cadence references remain incomplete.",
       "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
       "reference": "docs/validation.md; pending evidence."
     },
@@ -621,6 +624,16 @@
       "timeout": 90,
       "expectation": "Actual VHDL audio CPU and actual SV ROM/RAM/latches emit nine independent signatures, /192 cadence, ready stall, SENSE, HALT/vector/RETE and DAC/discrete strobes.",
       "reference": "docs/audio-digital.md; synthetic software and independent digital signature expectations; no analog/speech/physical clock proof."
+    },
+    {
+      "id": "hunchback.audio.assembly",
+      "suite": "smoke",
+      "mode": "av_connected",
+      "required": true,
+      "tools": ["ghdl", "iverilog", "vvp"],
+      "timeout": 180,
+      "expectation": "Both actual CPUs execute five FLAG-independent main commands, two audio IRQ/RETE reads and RAM/DAC signatures, /96 and /192, ready stalls and isolated audio image download.",
+      "reference": "docs/audio-assembly.md; expectations recorded before implementation, actual main/video/audio hierarchy, synthetic software; shared master contract not physical oscillator/CDC proof."
     }
   ],
   "mutations": [
@@ -1433,6 +1446,24 @@
       "new": ".ivec(8'h04)",
       "failure_label": "audio_cpu_signature",
       "reason": "IRQ skips the status save instruction at vector 03."
+    },
+    {
+      "id": "audio_assembly_command_bit",
+      "check": "hunchback.audio.assembly",
+      "file": "rtl/machine/cvs_av_machine.sv",
+      "old": ".command(audio_command),.command_trigger(audio_trigger)",
+      "new": ".command(audio_command ^ 8'h01),.command_trigger(audio_trigger)",
+      "failure_label": "av_audio_command",
+      "reason": "Actual audio CPU receives a corrupted main command byte."
+    },
+    {
+      "id": "audio_assembly_flag_filter",
+      "check": "hunchback.audio.assembly",
+      "file": "rtl/machine/cvs_av_machine.sv",
+      "old": ".command_trigger(audio_trigger)",
+      "new": ".command_trigger(audio_trigger && !flag)",
+      "failure_label": "av_ack_count",
+      "reason": "FLAG-selected main RAM bank incorrectly suppresses a command IRQ."
     }
   ],
   "build": {

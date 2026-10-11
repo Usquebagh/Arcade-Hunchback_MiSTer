@@ -52,7 +52,10 @@ are idle FF. Optional synthetic windows use these pinned active-low bits:
 The bus log records accepted writes and actual registered extended-read responses.
 Input sample counts show reads during the windows; they do not independently
 prove movement/jump physics or the physical switch matrix. No left input is used.
-Audio command output may be written, but there is no implemented sound board.
+The default profile retains main/video execution. Optional `--audio` connects
+the actual digital audio CPU/bus with nominal external SENSE; see
+[connection checks, observations and gaps](audio-assembly.md). It produces raw
+DAC/discrete events, with analog/PCM/speech still missing.
 
 ## Observations and retained counter regression
 
