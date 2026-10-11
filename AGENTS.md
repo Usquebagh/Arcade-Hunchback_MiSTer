@@ -151,3 +151,16 @@ cadence and value agreement with preceding DAC events. WAVs stay private/ignored
 Preview-only mean removal and gain must be explicit. No frame/sample agreement
 may discard native unknown-state or power-up phase differences. A constant real
 channel is missing stimulus coverage even when synthetic scaling checks pass.
+
+For speech CPU/control/serial-ROM changes run `hunchback.speech.bus`,
+`hunchback.speech.cpu` and lint, plus affected audio/main/native CPU/clock/memory
+checks. Preserve the seven-bit command payload and inverted external CTL read
+bit, normalized CTL2/CTL8 sharing, PDC data polarity, all pointer-load equations,
+LSB-first reads/clamp/wrap, ready/hold/reset/download forwarding and explicit
+CPU-pointer-write priority with consumer retry. Keep the 17 actual-CPU signatures;
+no fake RAM or CPU substitutes. `ctl_status` is the engine's CTL read bit, not
+an unconditional busy flag. External status and serial-consumer fixtures do not
+implement a TMS5100. Keep physical CS/CTL1/PDC/ROM-clock/alias, LPC coefficient,
+RC-frequency/voice/reference and three-CPU integration blockers. Native ROM
+probes must freeze sources before compiling and must record exact bounded
+stimulus times; interrupted/unfrozen probes are not coverage.

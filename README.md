@@ -93,3 +93,4 @@ See [private real-ROM observations and their limits](docs/rom-observation.md).
 See [audio CPU/digital control checks and reference gaps](docs/audio-digital.md).
 See [connected main/video/audio expectations and observations](docs/audio-assembly.md).
 See [raw DAC sample checks and private preview limitations](docs/audio-samples.md).
+See [audio wiring audit](docs/audio-wiring.md) and [speech CPU/digital interface](docs/speech-digital.md).

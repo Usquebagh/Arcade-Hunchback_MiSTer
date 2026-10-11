@@ -36,7 +36,9 @@
     "docs/rom-observation.md",
     "docs/audio-digital.md",
     "docs/audio-assembly.md",
-    "docs/audio-samples.md"
+    "docs/audio-samples.md",
+    "docs/audio-wiring.md",
+    "docs/speech-digital.md"
   ],
   "required_files": [
     "rtl/machine/cvs_reset.sv",
@@ -90,7 +92,11 @@
     "rtl/machine/cvs_av_machine.sv",
     "sim/cpu/cvs_av_machine_tb.sv",
     "rtl/machine/cvs_audio_samples.sv",
-    "sim/bdsm/audio_samples.cpp"
+    "sim/bdsm/audio_samples.cpp",
+    "rtl/machine/cvs_speech_bus.sv",
+    "rtl/machine/cvs_speech_cpu.sv",
+    "sim/bdsm/speech_bus.cpp",
+    "sim/cpu/cvs_speech_cpu_tb.sv"
   ],
   "games": [
     "Hunchback (CVS set 1)"
@@ -448,7 +454,7 @@
       "id": "hunchback.audio.coverage",
       "suite": "reference",
       "required": true,
-      "skip_reason": "Digital audio/dual-CPU/raw signed sample checks exist; connected ROM events and preview remain observations only. Native unknown RAM/indexed-read/power-up phase paths, physical DAC bits/weights/calibrated mixing/filter/discrete audio, second speech CPU/TMS5100, oscillator/CDC and independent channel references remain incomplete.",
+      "skip_reason": "Digital audio/dual-CPU/raw samples and standalone actual speech-CPU/control/serial checks exist. ROM probes remain observations only. TMS5100 CTL-direction/LPC/voice and three-CPU connection, native unknown RAM/index/power-up paths, physical DAC/weights/calibrated mix/filter/discrete audio, serial/PDC/RC clocks/CDC and independent channel references remain incomplete.",
       "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
       "reference": "docs/validation.md; pending evidence."
     },
@@ -647,6 +653,26 @@
       "timeout": 180,
       "expectation": "Independent linear-time rational 48k cadence, all 256 by 16 raw signed scaling combinations, output hold, changing inputs and arbitrary-phase resets.",
       "reference": "docs/audio-samples.md; explicit numeric raw-channel contract recorded before implementation, not physical gain/bit order/analog calibration."
+    },
+    {
+      "id": "hunchback.speech.bus",
+      "suite": "smoke",
+      "mode": "speech_bus",
+      "required": true,
+      "tools": ["verilator", "make", "g++"],
+      "timeout": 180,
+      "expectation": "Exhaustive program/decode/command/status/control/PDC, pointer-load equations, LSB-first serial data/wrap, ready/reset/holds/forwarding and explicit pointer-write priority.",
+      "reference": "docs/speech-digital.md; pinned MAME compatibility and independent table/arithmetic oracle; no TMS/LPC or physical bus waveform proof."
+    },
+    {
+      "id": "hunchback.speech.cpu",
+      "suite": "smoke",
+      "mode": "speech_connected",
+      "required": true,
+      "tools": ["ghdl", "iverilog", "vvp"],
+      "timeout": 120,
+      "expectation": "Actual VHDL speech CPU and actual ROM/control bus execute 17 independent signatures, /192, ready stall, SENSE/status, ROM-protection/unmapped reads and serial ROM wrap.",
+      "reference": "docs/speech-digital.md; independent synthetic software/signatures and external TMS status/consumer fixtures, no voice or physical protocol accuracy claim."
     }
   ],
   "mutations": [
@@ -1513,6 +1539,78 @@
       "new": ".reset(reset),.dac8(8'h80),.dac4(dac4)",
       "failure_label": "av_sample8",
       "reason": "Actual byte DAC changes do not reach the sampler input."
+    },
+    {
+      "id": "speech_status_polarity",
+      "check": "hunchback.speech.bus",
+      "file": "rtl/machine/cvs_speech_bus.sv",
+      "old": "dout<={!ctl_status,command}",
+      "new": "dout<={ctl_status,command}",
+      "failure_label": "speech_read",
+      "reason": "The CPU sees the wrong normalized TMS status polarity."
+    },
+    {
+      "id": "speech_ctl8_wrong_latch",
+      "check": "hunchback.speech.bus",
+      "file": "rtl/machine/cvs_speech_bus.sv",
+      "old": "ctl={control_latches[1],control_latches[2],control_latches[1],1'b0}",
+      "new": "ctl={control_latches[0],control_latches[2],control_latches[1],1'b0}",
+      "failure_label": "speech_controls",
+      "reason": "CTL8 no longer shares the declared CTL2 latch."
+    },
+    {
+      "id": "speech_reversed_serial_bits",
+      "check": "hunchback.speech.bus",
+      "file": "rtl/machine/cvs_speech_bus.sv",
+      "old": "serial_byte[bit_address[2:0]]",
+      "new": "serial_byte[3'd7-bit_address[2:0]]",
+      "failure_label": "speech_serial_bit",
+      "reason": "The serial data ROM shifts MSB first instead of LSB first."
+    },
+    {
+      "id": "speech_pointer_wrap_unclamped",
+      "check": "hunchback.speech.bus",
+      "file": "rtl/machine/cvs_speech_bus.sv",
+      "old": "bit_address<={1'b0,bit_address[14:0]}+16'd1",
+      "new": "bit_address<=bit_address+16'd1",
+      "failure_label": "speech_pointer",
+      "reason": "Stored serial index does not clamp before post-increment."
+    },
+    {
+      "id": "speech_low_address_bit_lost",
+      "check": "hunchback.speech.bus",
+      "file": "rtl/machine/cvs_speech_bus.sv",
+      "old": "{bit_address[15:11],din,3'd0}",
+      "new": "{bit_address[15:11],(din & 8'hfe),3'd0}",
+      "failure_label": "speech_pointer",
+      "reason": "A low-byte address bit is lost during CPU pointer loading."
+    },
+    {
+      "id": "speech_pointer_priority_lost",
+      "check": "hunchback.speech.bus",
+      "file": "rtl/machine/cvs_speech_bus.sv",
+      "old": "bit_ready=!reset && !pointer_write",
+      "new": "bit_ready=!reset && (!pointer_write || bit_req)",
+      "failure_label": "speech_pointer_priority",
+      "reason": "A pending consumer ignores the accepted CPU pointer write."
+    },
+    {
+      "id": "speech_pdc_polarity",
+      "check": "hunchback.speech.bus",
+      "file": "rtl/machine/cvs_speech_bus.sv",
+      "old": "pdc<=!din[7]",
+      "new": "pdc<=din[7]",
+      "failure_label": "speech_controls",
+      "reason": "PDC uses the CPU data polarity instead of normalized inversion."
+    },
+    {
+      "id": "speech_cpu_command_route",
+      "check": "hunchback.speech.cpu",
+      "file": "rtl/machine/cvs_speech_bus.sv",
+      "old": "address==15'h1d80",
+      "new": "address==15'h1d81",
+      "failure_label": "speech_cpu_signature",
+      "reason": "The actual CPU's command read is no longer routed to the status/command byte."
     }
   ],
   "build": {

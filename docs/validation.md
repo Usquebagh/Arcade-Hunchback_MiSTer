@@ -267,3 +267,22 @@ byte-DAC event timing are retained, reinforcing power-up/reference limitations.
 Raw scaling and a preview do not qualify physical gain/filter/mixing, discrete
 audio or speech. All native unknown-state/MiSTer/Quartus blockers remain. See
 [raw sample expectations and preview scope](audio-samples.md).
+
+## Speech digital boundary and audio audit, 2026-10-12
+
+`hunchback.speech.bus` exhausts decode/program protection, payload/status/control
+values, pointer loads, serial bit order/wrap and declared ready/reset/forwarding
+priorities. `hunchback.speech.cpu` executes the actual CPU with downloaded ROM,
+17 independent device-write signatures and actual serial memory consumption.
+The external CTL read bit must not be replaced by a raw busy flag. Eight new
+faults reproduce designated assertions twice; the full configured campaign is
+104 and remains deferred. Focused affected checks and lint passed.
+
+A frozen unchanged-ROM probe reaches speech address/control/PDC writes under
+explicit external status/SENSE fixtures, without consuming speech bits or
+generating voice. Native unknown-state, physical bus/protocol, LPC/voice,
+three-CPU machine, analog and MiSTer/Quartus gates remain incomplete. The
+authenticated game bus audit separately shows only zero four-bit/discrete
+write data under the executed stimuli; no decoder change activates that path.
+See [speech expectations and limitations](speech-digital.md) and
+[pin/wiring audit](audio-wiring.md).

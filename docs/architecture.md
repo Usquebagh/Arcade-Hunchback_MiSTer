@@ -17,6 +17,13 @@ integration remain pending; the schematic latch-bit discrepancy is retained.
 See [audio boundary](audio-digital.md), [connection](audio-assembly.md) and
 [raw sampling](audio-samples.md).
 
+`cvs_speech_bus` and `cvs_speech_cpu` add a standalone actual S2650 with 2 KiB
+program, 4 KiB serial data, normalized CTL/PDC and external CTL-status/bit-consumer
+interfaces. Independent exhaustive bus/serial checks and 17 actual-CPU signatures
+pass. The speech engine and connection to the main machine remain pending;
+fixtures do not provide LPC/voice or physical control/ROM clock qualification.
+See [speech boundary](speech-digital.md).
+
 `cvs_reset`: asynchronous reset assertion and two rising edges for synchronous
 release. Reset also holds while PLL lock is absent, ROM download is active, or
 the image is not loaded. PLL/loader flags must be synchronous to the master clock;
