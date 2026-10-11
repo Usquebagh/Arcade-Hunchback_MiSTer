@@ -29,7 +29,8 @@
     "docs/cpu.md",
     "docs/banked-memory.md",
     "docs/main-bus.md",
-    "docs/video-timing.md"
+    "docs/video-timing.md",
+    "docs/s2636.md"
   ],
   "required_files": [
     "rtl/machine/cvs_reset.sv",
@@ -52,13 +53,17 @@
     "sim/bdsm/video_timing.cpp",
     "rtl/machine/cvs_vblank_irq.sv",
     "sim/bdsm/vblank_irq.cpp",
-    "sim/cpu/cvs_video_cpu_tb.sv"
+    "sim/cpu/cvs_video_cpu_tb.sv",
+    "rtl/machine/cvs_s2636_objects.sv",
+    "sim/bdsm/s2636_objects.cpp",
+    "rtl/machine/cvs_s2636_bank.sv",
+    "sim/cpu/cvs_s2636_cpu_tb.sv"
   ],
   "games": [
     "Hunchback (CVS set 1)"
   ],
   "limitations": [
-    "Synthetic reset/clock/main CPU, ROM, FLAG RAM, raw I/O and provisional timing/vblank assembly implemented; no game boot, rendered pixels, sound or MiSTer integration.",
+    "CPU, FLAG RAM, raw I/O, provisional timing and three PVI object/status instances have synthetic tests; no mixed game frame, audio, boot or MiSTer integration.",
     "Two-state Verilator does not prove X/Z, CDC, PLL, analog fidelity or board accuracy.",
     "Synthetic strobes/forwarding are declared implementation contracts, not board measurements.",
     "ROM identity/layout PASS is not CPU boot, video, input or audio coverage.",
@@ -162,6 +167,34 @@
       "timeout": 180,
       "expectation": "All 32 raw U15L input combinations reproduce its eight active-low output clauses; inactive bus deselects every group.",
       "reference": "Kevtris CVS_15L CUPL source in user-supplied v1.4 archive, identified in docs/pal-audit.md. Combinational pin model only."
+    },
+    {
+      "id": "hunchback.s2636.objects",
+      "suite": "smoke",
+      "mode": "s2636_objects",
+      "required": true,
+      "tools": [
+        "verilator",
+        "make",
+        "g++"
+      ],
+      "timeout": 180,
+      "expectation": "Independent expanded-bit geometry matches every object pixel/colour/presence at all scales and analytic duplicate rows; six collision pairs, status/read-clear/aliases/IRQ and VC/HCB/VCB latch cadence are correct.",
+      "reference": "docs/s2636.md; visually inspected manufacturer object/status rules, normalized FPGA contracts and pinned MAME cross-check; full PVI and physical phases excluded."
+    },
+    {
+      "id": "hunchback.s2636.cpu",
+      "suite": "smoke",
+      "mode": "s2636_connected",
+      "required": true,
+      "tools": [
+        "ghdl",
+        "iverilog",
+        "vvp"
+      ],
+      "timeout": 180,
+      "expectation": "Actual CPU downloads and executes synthetic initialization of all three PVI instances; 18 register/status signatures, FLAG isolation and independently specified sampled pixels pass.",
+      "reference": "docs/s2636.md; real VHDL CPU/FLAG memory/PVI bank, normalized scan and fixture IRQ; no physical board phase or mixed-game claim."
     },
     {
       "id": "hunchback.video.irq",
@@ -330,7 +363,7 @@
       "id": "hunchback.banked_memory.coverage",
       "suite": "reference",
       "required": true,
-      "skip_reason": "CPU-side FLAG RAM, IO bank latch and synthetic CPU connection checked; S2636 register behaviour and display ports/arbitration remain unimplemented.",
+      "skip_reason": "CPU/FLAG memory and three object/status instances are checked; full PVI semantics, display ports/arbitration and physical bus timing remain incomplete.",
       "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
       "reference": "docs/validation.md; pending evidence."
     },
@@ -338,7 +371,7 @@
       "id": "hunchback.video.coverage",
       "suite": "reference",
       "required": true,
-      "skip_reason": "312-line timing, synthetic parameter stress and vblank/CPU checks implemented; physical clock/display phases, S2636/character/bullet pixels and collisions remain unqualified.",
+      "skip_reason": "312 timing and normalized S2636 object pixels/status pass synthetic checks; physical clocks/origins, PVI grid/score, CVS character/bullet/mixer/colour and inter-chip/background collisions remain unqualified.",
       "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
       "reference": "docs/validation.md; pending evidence."
     },
@@ -697,6 +730,150 @@
       "new": "vblank || previous_blank",
       "failure_label": "vblank_pending",
       "reason": "A held blank level overrides acknowledgement and retriggers the event."
+    },
+    {
+      "id": "pvi_reversed_pattern",
+      "check": "hunchback.s2636.objects",
+      "file": "rtl/machine/cvs_s2636_objects.sv",
+      "old": "shape[3'd7-column]",
+      "new": "shape[column]",
+      "failure_label": "object_pixel",
+      "reason": "Pattern bits are rendered LSB first."
+    },
+    {
+      "id": "pvi_wrong_vertical_scale",
+      "check": "hunchback.s2636.objects",
+      "file": "rtl/machine/cvs_s2636_objects.sv",
+      "old": "render_row[i] >> scale[i]",
+      "new": "render_row[i] >> (scale[i] ^ 2'd1)",
+      "failure_label": "object_pixel",
+      "reason": "Expanded rows use the wrong scale."
+    },
+    {
+      "id": "pvi_wrong_horizontal_scale",
+      "check": "hunchback.s2636.objects",
+      "file": "rtl/machine/cvs_s2636_objects.sv",
+      "old": "distance >> scale[i]",
+      "new": "distance >> (scale[i] ^ 2'd1)",
+      "failure_label": "object_pixel",
+      "reason": "Expanded columns use the wrong scale."
+    },
+    {
+      "id": "pvi_xor_colour",
+      "check": "hunchback.s2636.objects",
+      "file": "rtl/machine/cvs_s2636_objects.sv",
+      "old": "mixed_colour=mixed_colour | colour;",
+      "new": "mixed_colour=mixed_colour ^ colour;",
+      "failure_label": "object_colour",
+      "reason": "Shared object colour bits cancel rather than wire-OR."
+    },
+    {
+      "id": "pvi_uncleared_collision",
+      "check": "hunchback.s2636.objects",
+      "file": "rtl/machine/cvs_s2636_objects.sv",
+      "old": "if (cpu_rd && bus_addr==8'hcb) cb_next=8'd0;",
+      "new": "if (cpu_rd && bus_addr==8'hcb) cb_next=status_cb;",
+      "failure_label": "status_read_clear",
+      "reason": "Reading CB fails to clear the previous status."
+    },
+    {
+      "id": "pvi_wrong_vrle_bit",
+      "check": "hunchback.s2636.objects",
+      "file": "rtl/machine/cvs_s2636_objects.sv",
+      "old": "cb_next=cb_next | 8'h40;",
+      "new": "cb_next=cb_next | 8'h80;",
+      "failure_label": "vertical_leading_flag",
+      "reason": "Vertical leading edge sets the wrong status bit."
+    },
+    {
+      "id": "pvi_short_duplicate_gap",
+      "check": "hunchback.s2636.objects",
+      "file": "rtl/machine/cvs_s2636_objects.sv",
+      "old": "wait_lines[i]<={1'b0,registers[base_address(i)+8'hd]}+9'd1;",
+      "new": "wait_lines[i]<={1'b0,registers[base_address(i)+8'hd]};",
+      "failure_label": "object_pixel",
+      "reason": "Duplicate starts after VCB lines instead of VCB+1."
+    },
+    {
+      "id": "pvi_live_duplicate_hc",
+      "check": "hunchback.s2636.objects",
+      "file": "rtl/machine/cvs_s2636_objects.sv",
+      "old": "hc=active_duplicate[i] ? duplicate_hc[i] : registers[base+8'ha];",
+      "new": "hc=active_duplicate[i] ? duplicate_hc[i]+((registers[base+8'hb]^duplicate_hc[i])&8'h01) : registers[base+8'ha];",
+      "failure_label": "latch_cadence",
+      "reason": "One duplicate coordinate bit changes after line-start sampling."
+    },
+    {
+      "id": "pvi_live_primary_vc",
+      "check": "hunchback.s2636.objects",
+      "file": "rtl/machine/cvs_s2636_objects.sv",
+      "old": "end else if (line_start && field_valid) begin",
+      "new": "end else if (cpu_wr && bus_addr==8'h0c && field_valid) begin\n                wait_lines[0]<={1'b0,cpu_din};\n            end else if (line_start && field_valid) begin",
+      "failure_label": "latch_cadence",
+      "reason": "Primary VC write improperly changes the current field countdown."
+    },
+    {
+      "id": "pvi_reversed_completion",
+      "check": "hunchback.s2636.objects",
+      "file": "rtl/machine/cvs_s2636_objects.sv",
+      "old": "complete_events[3-i]=1'b1;",
+      "new": "complete_events[i]=1'b1;",
+      "failure_label": "object_completion",
+      "reason": "Completion bits use reversed object numbering."
+    },
+    {
+      "id": "pvi_black_disappears",
+      "check": "hunchback.s2636.objects",
+      "file": "rtl/machine/cvs_s2636_objects.sv",
+      "old": "assign pixel_present = |object_mask;",
+      "new": "assign pixel_present = |pixel_colour;",
+      "failure_label": "black_object_presence",
+      "reason": "A black object loses presence while its shape is drawn."
+    },
+    {
+      "id": "pvi_read_loses_new_event",
+      "check": "hunchback.s2636.objects",
+      "file": "rtl/machine/cvs_s2636_objects.sv",
+      "old": "ca_next=ca_next | {4'd0,complete_events};",
+      "new": "ca_next=(cpu_rd && bus_addr==8'hca)?8'd0:(ca_next | {4'd0,complete_events});",
+      "failure_label": "completion_event_retained",
+      "reason": "Read-clear discards a simultaneous new completion."
+    },
+    {
+      "id": "pvi_wrong_collision_pair",
+      "check": "hunchback.s2636.objects",
+      "file": "rtl/machine/cvs_s2636_objects.sv",
+      "old": "collision_events={hits[0]&hits[1],hits[0]&hits[2],hits[0]&hits[3],\n                          hits[1]&hits[2],hits[1]&hits[3],hits[2]&hits[3]};",
+      "new": "collision_events={hits[2]&hits[3],hits[0]&hits[2],hits[0]&hits[3],\n                          hits[1]&hits[2],hits[1]&hits[3],hits[0]&hits[1]};",
+      "failure_label": "object_collision",
+      "reason": "Pair 1/2 and 3/4 collision status bits are swapped."
+    },
+    {
+      "id": "pvi_lost_control_alias",
+      "check": "hunchback.s2636.objects",
+      "file": "rtl/machine/cvs_s2636_objects.sv",
+      "old": "cpu_addr[7:6] == 2'b11 ?",
+      "new": "cpu_addr[7:6] == 2'b11 && !cpu_addr[4] ?",
+      "failure_label": "control_alias",
+      "reason": "Odd control alias banks do not decode."
+    },
+    {
+      "id": "pvi_swapped_chip_readback",
+      "check": "hunchback.s2636.cpu",
+      "file": "rtl/machine/cvs_s2636_bank.sv",
+      "old": "3'b001: cpu_dout=read_bytes[7:0];\n            3'b010: cpu_dout=read_bytes[15:8];\n            3'b100: cpu_dout=read_bytes[23:16];",
+      "new": "3'b001: cpu_dout=read_bytes[23:16];\n            3'b010: cpu_dout=read_bytes[15:8];\n            3'b100: cpu_dout=read_bytes[7:0];",
+      "failure_label": "pvi_cpu_readback",
+      "reason": "Chip 1 and chip 3 return each other's descriptor bytes."
+    },
+    {
+      "id": "pvi_cross_chip_read_clear",
+      "check": "hunchback.s2636.cpu",
+      "file": "rtl/machine/cvs_s2636_bank.sv",
+      "old": "cpu_rd(cpu_rd && chip_select[i])",
+      "new": "cpu_rd(cpu_rd && (chip_select[i] || chip_select[(i+1)%3]))",
+      "failure_label": "pvi_cpu_readback",
+      "reason": "Reading one chip clears a neighbouring chip's status."
     }
   ],
   "build": {

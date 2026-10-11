@@ -60,3 +60,14 @@ supported datasheet line count is 312; the retained .317 check is synthetic
 parameter stress coverage, not an alternate board hypothesis. Board
 PCK/PIXCLK/display phases remain unaudited. A timing-test PASS must not remove
 those gaps, graphics/collision coverage or candidate blockers.
+
+For S2636 object/register/bank changes run `hunchback.s2636.objects`,
+`hunchback.s2636.cpu` and lint, plus affected main/native CPU/memory baselines.
+Keep the independent geometric pixel oracle, duplicate/field/line latch checks,
+black-object presence and read/event priority regressions. Synthetic P3 pixel
+diagnostics are retained as .log; render with tools/render_sprite_diag.py using
+the retained independent reference. Images are private and ignored. A normalized
+object PASS does not qualify PVI grid/score/sound/ADC, physical OPACK/pixel phases,
+mid-object scale changes or the CVS mixed frame and collision circuit.
+The connected adapter retains narrowly reviewed Icarus full-array sensitivity
+notices with exact messages/reasons; every other finding remains unreviewed.

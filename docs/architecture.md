@@ -28,6 +28,14 @@ rising blank event until CPU acknowledgement. A synthetic actual-CPU assembly
 tests SENSE, vector 03, HALT/RETE and rearm; there are no rendered pixels yet.
 See [video timing and qualification gaps](video-timing.md).
 
+`cvs_s2636_objects` implements four normalized object engines, pattern/colour
+mixing, duplicates and completion/collision/VRLE status, with a combinational CPU
+read boundary and synchronous read-to-clear. `cvs_s2636_bank` has three instances
+in existing 1500/1600/1700 chip-index order. A downloaded synthetic CPU program
+initializes them through actual FLAG memory and checks eighteen readbacks and
+sampled pixels. Full PVI features and physical/mixed game video remain incomplete;
+see [S2636 contract](s2636.md). No fake sprite RAM replaces status side effects.
+
 `cvs_memory`: 32 KiB downloadable program storage, synchronous one-edge reads;
 ROM selected when address bits 12:0 < 0x1400 in each 8 KiB CPU page. ROM is not
 CPU-writable. System RAM at 0x1c00..0x1fff mirrors into all four CPU pages. Same

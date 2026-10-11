@@ -10,6 +10,8 @@
 | [MAME JEDEC parser](https://github.com/mamedev/mame/blob/c806573e925ce00fe3e8d8fe417eba63f83275ce/src/lib/util/jedparse.cpp) | Same pinned MAME revision | Transmission and fuse checksum semantics; used for local integrity audit, not copied into project code |
 | [MiSTer-BDSM](https://github.com/Usquebagh/MiSTer-BDSM) | 5c8988540c3a1c50cec9ccb06fc3f923e959b61a | MIT, generic frozen snapshot runner, mutation and candidate gates |
 | [Signetics 2621 preliminary datasheet](https://amigan.yatho.com/2621USG.pdf) | Inspected 2026-10-11; SHA-256 89600ad2677f3c2a92bb7d7ad76030d2b6fef98b856193af39a95832881ce8ac | Manufacturer timing/pin diagrams; supported vertical total 312, corrected blurred-label reading in video timing notes; physical phase audit pending |
+| [Valvo/Signetics 2636I preliminary datasheet](https://www.valoroso.it/file-share/documenti-manuali/Signetics-2636-PVI.pdf) | Relevant pages visually inspected 2026-10-11; SHA-256 5d5d24ace87a723b5f4a3d6ccb72a0451dafa75b07619a7903d4492ea12988da | Object/register/duplicate/status rules; board timing and full PVI remain incomplete |
+| [MAME S2636 source](https://github.com/mamedev/mame/blob/c806573e925ce00fe3e8d8fe417eba63f83275ce/src/devices/machine/s2636.cpp) | Same pinned MAME revision; SHA-256 aef1f712c36809c2c35393fedeb9501f419d9c6ac2a973b1151b83ce5515d54d | BSD-3-Clause, Vas Crabb; compatibility cross-check, not copied renderer or independent physical proof |
 
 Private raw MAME research is excluded from Git. ROM identity constants contain
 metadata only; game bytes never enter source. The draft MRA embeds only padding.

@@ -11,7 +11,7 @@ from check_ghdl import emit
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--seed', type=int, default=1)
-    parser.add_argument('--mode', choices=['main_connected','video_connected'], default='main_connected')
+    parser.add_argument('--mode', choices=['main_connected','video_connected','s2636_connected'], default='main_connected')
     args = parser.parse_args()
     work = Path('build/bdsm-' + args.mode).resolve()
     work.mkdir(parents=True, exist_ok=True)
@@ -34,9 +34,11 @@ def main():
     sources=['rtl/machine/cvs_main.sv','rtl/machine/cvs_main_bus.sv','rtl/machine/cvs_main_io.sv',
              'rtl/machine/cvs_main_memory.sv','rtl/machine/cvs_banked.sv',
              'rtl/machine/cvs_memory.sv','rtl/machine/cvs_clock.sv']
-    top = 'cvs_video_cpu_tb' if args.mode=='video_connected' else 'cvs_main_tb'
+    top = {'video_connected':'cvs_video_cpu_tb','s2636_connected':'cvs_s2636_cpu_tb'}.get(args.mode,'cvs_main_tb')
     if args.mode=='video_connected':
         sources += ['rtl/machine/cvs_video_timing.sv','rtl/machine/cvs_vblank_irq.sv']
+    if args.mode=='s2636_connected':
+        sources += ['rtl/machine/cvs_s2636_objects.sv','rtl/machine/cvs_s2636_bank.sv']
     sources += ['sim/cpu/'+top+'.sv']
     compile_run=subprocess.run(['iverilog','-g2012','-Wall','-s',top,'-o',str(work/'test.vvp'),
                                 str(cpu_file),*sources],capture_output=True,text=True)
@@ -44,7 +46,16 @@ def main():
     if compile_run.returncode:
         emit('ERROR',reason='Connected simulation compilation failed',diagnostics=[str(work/'compile.log')])
         return 2
-    diagnostics += compile_run.stdout+compile_run.stderr
+    reviewed_messages=[]
+    # These individually reviewed notices describe correct implicit sensitivity:
+    # a variable-index combinational read must react to every entry. Keep their
+    # exact text in the result/log; every other diagnostic remains unreviewed.
+    array_note=re.compile(r"rtl/machine/cvs_s2636_objects\.sv:\d+: warning: @\* is sensitive to all (256 words in array 'registers'|4 words in array '(active_duplicate|duplicate_hc|render_row|scale|active_line|in_object|next_row)')\.")
+    for line in (compile_run.stdout+compile_run.stderr).splitlines():
+        if args.mode=='s2636_connected' and array_note.fullmatch(line):
+            reviewed_messages.append({'message':line,'review':'Full-array sensitivity is required for the declared combinational indexed register/engine read; Verilator -Wall finds no latch or sensitivity fault.'})
+        else:
+            diagnostics += line+'\n'
     command=['vvp',str(work/'test.vvp')]
     ran=subprocess.run(command,cwd=work,capture_output=True,text=True)
     (work/'run.log').write_text(ran.stdout+ran.stderr)
@@ -55,11 +66,14 @@ def main():
         emit('ERROR',reason='Connected run failed or did not complete',diagnostics=[str(work/'run.log')])
         return 2
     event=events[-1]
+    if reviewed_messages:
+        event['reviewed_diagnostics']=reviewed_messages
     if event['status']=='FAIL':
         trace_start=max(1,event['cycle']-1024)
         replay=subprocess.run(command+['+trace_start='+str(trace_start)],cwd=work,capture_output=True,text=True)
         replay_events=[json.loads(line[5:]) for line in replay.stdout.splitlines() if line.startswith('BDSM ')]
-        if replay.returncode or not replay_events or replay_events[-1]!=event:
+        assertion_event={k:v for k,v in event.items() if k!='reviewed_diagnostics'}
+        if replay.returncode or not replay_events or replay_events[-1]!=assertion_event:
             emit('ERROR',reason='Connected assertion did not reproduce during bounded trace replay')
             return 2
         event['diagnostics']=[str(work/'failure.vcd')]

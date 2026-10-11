@@ -133,3 +133,35 @@ character/bullet drawing, colour lookup and collisions remain unqualified.
 The required video coverage blocker remains, as do physical input/audio/game/
 MiSTer/PLL/constraint gaps and native CPU startup WARNING. Candidate preflight
 must continue to block without invoking Quartus or producing an RBF.
+
+## S2636 object/status and three-chip CPU milestone, 2026-10-11
+
+Affected banked memory, main bus/connected, native CPU and fixed memory baselines
+passed before new wiring. `hunchback.s2636.objects` implements an independent
+geometric expanded-bit oracle, analytic duplicate starts and all six collision
+pairs. It checks all objects/scales, zero-colour presence, zero-pattern completion,
+read-clear/readonly/alias rules, VRLE/IRQ, field/line/last-line sampling, held pixels
+and simultaneous read/event/ack contracts. Seventeen complete synthetic fields
+are sampled pixel by pixel, with retained RTL/reference pixel diagnostics.
+
+`hunchback.s2636.cpu` compiles the actual VHDL CPU and actual SV FLAG memory plus
+three object/status engines. A downloaded synthetic program initializes every
+used register through CPU instructions and produces eighteen expected readbacks,
+checking chip selection, FLAG-high character isolation, VRLE/completion read-clear
+and independently specified sampled pixels. Normalized scan timing and an IRQ to
+resume HALT are fixtures, not physical board phase/IRQ claims. These baselines
+and unsuppressed Verilator lint passed; Icarus indexed-array sensitivity notices
+were individually reviewed and are retained, with all other findings blocking.
+
+The first alias-test bookkeeping error and unsupported Icarus break statements
+were classified FAIL/ERROR and corrected in the harness; they do not count as
+mutation detection. The strengthened event-retention cases passed. Sixteen new
+faults bring the campaign to fifty; each must hit its designated assertion twice.
+The unchanged generic framework's unit tests are rerun for connected-adapter work.
+
+Full PVI grid/score/sound/ADC and physical bus timing remain incomplete, as do
+mid-object size changes, chip timing/origins, display arbitration, CVS characters/
+bullets/colour mixer and cross-chip/background/bullet collisions. Native CPU
+startup WARNING and required subsystem/physical input/audio/game/MiSTer/PLL/
+constraint gaps remain. No functional game frame, ROM boot or Quartus candidate
+is established by a synthetic sprite image. See [S2636 details](s2636.md).

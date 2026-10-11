@@ -14,11 +14,11 @@ def emit(status, **details):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('mode', choices=['reset', 'clock', 'memory', 'banked', 'main_bus', 'main_connected', 'video_connected', 'vblank_irq', 'video_timing', 'video_timing_alt', 'decode', 'lint', 'rom', 'mra', 'cpu_alu', 'cpu_edges', 'cpu_bus', 'cpu_synth', 'cpu_diagnostics'])
+    parser.add_argument('mode', choices=['reset', 'clock', 'memory', 'banked', 'main_bus', 'main_connected', 'video_connected', 's2636_objects', 's2636_connected', 'vblank_irq', 'video_timing', 'video_timing_alt', 'decode', 'lint', 'rom', 'mra', 'cpu_alu', 'cpu_edges', 'cpu_bus', 'cpu_synth', 'cpu_diagnostics'])
     parser.add_argument('--seed', type=int, default=1)
     args = parser.parse_args()
     adapter = Path(__file__).resolve().parent
-    if args.mode in ['main_connected','video_connected']:
+    if args.mode in ['main_connected','video_connected','s2636_connected']:
         return subprocess.run([sys.executable, str(adapter / 'check_connected.py'), '--mode', args.mode, '--seed', str(args.seed)]).returncode
     if args.mode.startswith('cpu_'):
         return subprocess.run([sys.executable, str(adapter / 'check_ghdl.py'), args.mode, '--seed', str(args.seed)]).returncode
@@ -33,13 +33,14 @@ def main():
         ran = subprocess.run(command, capture_output=True, text=True)
         print(ran.stdout, end=''); print(ran.stderr, end='', file=sys.stderr)
         return ran.returncode
-    sources = {name: 'rtl/machine/cvs_' + name + '.sv' for name in ['reset', 'clock', 'memory', 'decode', 'video_timing', 'vblank_irq']}
+    sources = {name: 'rtl/machine/cvs_' + name + '.sv' for name in ['reset', 'clock', 'memory', 'decode', 'video_timing', 'vblank_irq', 's2636_objects']}
     banked_sources = ['rtl/machine/cvs_main_memory.sv','rtl/machine/cvs_banked.sv','rtl/machine/cvs_memory.sv']
     bus_sources = ['rtl/machine/cvs_main_bus.sv','rtl/machine/cvs_main_io.sv',*banked_sources]
     if args.mode == 'lint':
         warnings = []
         lint_sources = {**{('cvs_'+k):[v] for k,v in sources.items()}, 'cvs_main_memory':banked_sources,
-                        'cvs_main_bus':bus_sources}
+                        'cvs_main_bus':bus_sources,
+                        'cvs_s2636_bank':['rtl/machine/cvs_s2636_bank.sv',sources['s2636_objects']]}
         for name, source in lint_sources.items():
             logfile = work / (name + '.log')
             with logfile.open('w') as log:
@@ -70,6 +71,12 @@ def main():
         emit('ERROR', reason='Simulation crashed or omitted valid assertion result', observed=ran.stderr)
         return 2
     event = events[-1]
+    if event['status'] == 'PASS' and mode == 's2636_objects':
+        captures=[work/'synthetic-sprite-frame.log',work/'expected-sprite-frame.log']
+        if any(not p.is_file() for p in captures):
+            emit('ERROR', reason='Synthetic pixel diagnostic is missing')
+            return 2
+        event['diagnostics']=[str(p) for p in captures]
     if event['status'] == 'FAIL':
         replay = subprocess.run(command + ['--trace-start', str(max(0, event['cycle'] - 1024))], cwd=work, capture_output=True, text=True)
         replay_events = [json.loads(line[5:]) for line in replay.stdout.splitlines() if line.startswith('BDSM ')]

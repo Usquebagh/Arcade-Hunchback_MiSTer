@@ -40,7 +40,13 @@ selection/read/write/idle isolation, held responses, program routing and FLAG-
 independent system RAM. Mutations select the wrong FLAG view, alias character
 pages, reverse sprite chip selection, and use a live response selector.
 
-Missing: display-side ports/arbitration, S2636 semantics and Quartus memory
+The new three-instance S2636 object/status bank now attaches to these sprite
+ports in an actual-CPU synthetic assembly; eighteen readback signatures check
+distinct chips, FLAG isolation, VRLE and completion read-clear. Normalized object
+pixels and six within-chip collision pairs are checked separately. Full PVI
+features and physical board timing remain unqualified; see [S2636](s2636.md).
+
+Missing: display-side ports/arbitration, full S2636 semantics and Quartus memory
 inference/CDC/timing. The required banked
 memory coverage gap remains active until those pieces have meaningful checks.
 
