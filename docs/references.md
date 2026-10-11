@@ -9,6 +9,7 @@
 | User-supplied v1.4 technical archive from the same thread | Received 2026-10-11; SHA-256 2e7f8ae87b01316d4cfedf10333acab402d26b703311ea8cc350079bf6dcba96 | Eight CUPL sources and replacement JEDs, two PROMs, revised PDF and audio designator photo; see PAL audit |
 | [MAME JEDEC parser](https://github.com/mamedev/mame/blob/c806573e925ce00fe3e8d8fe417eba63f83275ce/src/lib/util/jedparse.cpp) | Same pinned MAME revision | Transmission and fuse checksum semantics; used for local integrity audit, not copied into project code |
 | [MiSTer-BDSM](https://github.com/Usquebagh/MiSTer-BDSM) | 5c8988540c3a1c50cec9ccb06fc3f923e959b61a | MIT, generic frozen snapshot runner, mutation and candidate gates |
+| [Signetics 2621 preliminary datasheet](https://amigan.yatho.com/2621USG.pdf) | Inspected 2026-10-11; SHA-256 89600ad2677f3c2a92bb7d7ad76030d2b6fef98b856193af39a95832881ce8ac | Manufacturer timing/pin diagrams; unresolved vertical-total discrepancy, see video timing notes |
 
 Private raw MAME research is excluded from Git. ROM identity constants contain
 metadata only; game bytes never enter source. The draft MRA embeds only padding.

@@ -102,3 +102,30 @@ the uncertain three-versus-four-bit port decode or MiSTer controls. Sprite routi
 does not implement S2636 registers or graphics. Command latches do not implement
 sound or collisions. Required coverage gaps remain; no game boot or RBF candidate
 is claimed. Reports retain source/dependency hashes, versions and observations.
+
+## Provisional video and vblank CPU milestone, 2026-10-11
+
+New checks `hunchback.video.timing.312`/`.317` compare every master edge against
+an independent linear-time waveform oracle over two frames, run stalls and an
+arbitrary-phase reset. `hunchback.video.irq` exercises the pending event latch
+and all 1024 five-event blank/ack histories. `hunchback.video.cpu` connects the
+actual synthesized VHDL CPU, actual SV memory/clock/timing/IRQ and a downloaded
+synthetic program. It verifies PSU outside/inside blank, vector 03 ISR status,
+HALT resume and two-frame rearm at fixed raster deadlines. Tool failures,
+fixture noncompletion and timeouts remain ERROR, not successful mutation catches.
+
+The first VS decode failed both profiles' continuous oracle at master cycle
+41247, despite retaining the total VS width. Its wrap gap is now fixed and
+retained as a deliberate mutation. All corrected focused baselines and lint
+passed. See [video expectations, observations and gaps](video-timing.md).
+The campaign adds ten faults (34 total); every fault still requires its exact
+designated assertion twice. The generic framework is unchanged; its unit tests
+are rerun after the core-specific connected adapter gains a video mode.
+
+These tests establish a provisional timing/CPU boundary, not visible game video.
+The manufacturer scan conflicts on 312/317 vertical total. Original CVS pixel
+clocks/display counters, arbitration, S2636 objects/register side effects,
+character/bullet drawing, colour lookup and collisions remain unqualified.
+The required video coverage blocker remains, as do physical input/audio/game/
+MiSTer/PLL/constraint gaps and native CPU startup WARNING. Candidate preflight
+must continue to block without invoking Quartus or producing an RBF.

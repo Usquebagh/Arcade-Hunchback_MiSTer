@@ -19,6 +19,14 @@ and are sampled on rising master edges. The tests inspect the settled strobe
 before its consuming edge. This module does not establish PLL frequency or video
 timing. An exact legal PLL configuration must be selected and checked later.
 
+`cvs_video_timing`: a separately tested 2621 waveform subset with position /16,
+horizontal reset, provisional 312/317 line profiles, blanking and internal HS/VS
+interpretations. The preliminary datasheet has a vertical-total discrepancy;
+board PCK/PIXCLK and display phases remain unaudited. `cvs_vblank_irq` latches a
+rising blank event until CPU acknowledgement. A synthetic actual-CPU assembly
+tests SENSE, vector 03, HALT/RETE and rearm; there are no rendered pixels yet.
+See [video timing and qualification gaps](video-timing.md).
+
 `cvs_memory`: 32 KiB downloadable program storage, synchronous one-edge reads;
 ROM selected when address bits 12:0 < 0x1400 in each 8 KiB CPU page. ROM is not
 CPU-writable. System RAM at 0x1c00..0x1fff mirrors into all four CPU pages. Same
@@ -52,8 +60,9 @@ control scroll. Nonextended control reads return collision flags; writes latch
 audio commands. Nonextended data reads clear collisions; writes select video
 effects. Vblank drives main sense and interrupt; sound CPUs use an approximate
 380 Hz sense oscillator. A synthetic main CPU connection now checks the declared
-one-edge memory/I/O protocol and /96 machine-step transfers; physical bus timing,
-vblank generation and sound-board timing remain pending. See [main bus](main-bus.md).
+one-edge memory/I/O protocol and /96 machine-step transfers; provisional vblank
+connection also has synthetic CPU checks. Physical bus/video timing and
+sound-board timing remain pending. See [main bus](main-bus.md).
 
 ## Draft ioctl index-0 layout
 

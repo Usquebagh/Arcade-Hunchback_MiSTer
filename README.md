@@ -10,7 +10,8 @@ conversions are separate boards; their ROMs are not interchangeable with CVS.
 > ALU and directed CPU/bus regressions; startup diagnostics remain unresolved.
 > CPU-side FLAG-banked RAM and memory routing now have exhaustive synthetic checks.
 > The connected CPU runs a synthetic program through actual ROM/RAM and raw I/O;
-> video, physical input mapping, audio and MiSTer integration remain unfinished.
+> provisional raster profiles and CPU vblank/interrupt checks also pass.
+> Rendered video, physical input mapping, audio and MiSTer integration remain unfinished.
 > Actual MiSTer testing is pending.
 
 ## Original hardware
@@ -19,7 +20,7 @@ conversions are separate boards; their ROMs are not interchangeable with CVS.
 | --- | --- | --- |
 | Main CPU | Signetics S2650A, crystal / 8 | Connected synthetic ROM/RAM/I/O program passes; full CPU and game coverage pending |
 | Audio/speech CPUs | Two S2650As, crystal / 16 | CPU implementation available; sound-board instances pending |
-| Video | Signetics 2621 PAL timing, three S2636 sprite chips, character ROM/RAM | Pending |
+| Video | Signetics 2621 PAL timing, three S2636 sprite chips, character ROM/RAM | Provisional timing and vblank CPU tests; timing reference conflict, pixels and collisions pending |
 | Program | Five 4 KiB EPROMs, staggered in four 8 KiB pages | Downloadable ROM and mirrored 1 KiB system RAM |
 | Sound | 8/4-bit DAC, discrete circuits, TMS5100 speech | Pending |
 
@@ -69,3 +70,4 @@ Imported Arcadia CPU/packages retain original notices and the supplied upstream
 GPL-2.0 license; see the vendor README. Future imports retain their licenses.
 See [CPU tests and gaps](docs/cpu.md).
 See [main bus and I/O tests](docs/main-bus.md).
+See [provisional video timing and remaining gaps](docs/video-timing.md).

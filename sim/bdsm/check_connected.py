@@ -11,8 +11,9 @@ from check_ghdl import emit
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--seed', type=int, default=1)
+    parser.add_argument('--mode', choices=['main_connected','video_connected'], default='main_connected')
     args = parser.parse_args()
-    work = Path('build/bdsm-main_connected').resolve()
+    work = Path('build/bdsm-' + args.mode).resolve()
     work.mkdir(parents=True, exist_ok=True)
     cpu_sources = ['rtl/vendor/arcadia/base_pack.vhd', 'rtl/vendor/arcadia/sgs2650_pack.vhd',
                    'rtl/vendor/arcadia/sgs2650.vhd']
@@ -32,8 +33,12 @@ def main():
     cpu_file.write_text(generated)
     sources=['rtl/machine/cvs_main.sv','rtl/machine/cvs_main_bus.sv','rtl/machine/cvs_main_io.sv',
              'rtl/machine/cvs_main_memory.sv','rtl/machine/cvs_banked.sv',
-             'rtl/machine/cvs_memory.sv','rtl/machine/cvs_clock.sv','sim/cpu/cvs_main_tb.sv']
-    compile_run=subprocess.run(['iverilog','-g2012','-Wall','-s','cvs_main_tb','-o',str(work/'test.vvp'),
+             'rtl/machine/cvs_memory.sv','rtl/machine/cvs_clock.sv']
+    top = 'cvs_video_cpu_tb' if args.mode=='video_connected' else 'cvs_main_tb'
+    if args.mode=='video_connected':
+        sources += ['rtl/machine/cvs_video_timing.sv','rtl/machine/cvs_vblank_irq.sv']
+    sources += ['sim/cpu/'+top+'.sv']
+    compile_run=subprocess.run(['iverilog','-g2012','-Wall','-s',top,'-o',str(work/'test.vvp'),
                                 str(cpu_file),*sources],capture_output=True,text=True)
     (work/'compile.log').write_text(compile_run.stdout+compile_run.stderr)
     if compile_run.returncode:

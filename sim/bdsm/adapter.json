@@ -28,7 +28,8 @@
     "docs/pal-audit.md",
     "docs/cpu.md",
     "docs/banked-memory.md",
-    "docs/main-bus.md"
+    "docs/main-bus.md",
+    "docs/video-timing.md"
   ],
   "required_files": [
     "rtl/machine/cvs_reset.sv",
@@ -46,13 +47,18 @@
     "rtl/machine/cvs_main_bus.sv",
     "rtl/machine/cvs_main.sv",
     "sim/cpu/cvs_main_tb.sv",
-    "sim/bdsm/check_connected.py"
+    "sim/bdsm/check_connected.py",
+    "rtl/machine/cvs_video_timing.sv",
+    "sim/bdsm/video_timing.cpp",
+    "rtl/machine/cvs_vblank_irq.sv",
+    "sim/bdsm/vblank_irq.cpp",
+    "sim/cpu/cvs_video_cpu_tb.sv"
   ],
   "games": [
     "Hunchback (CVS set 1)"
   ],
   "limitations": [
-    "Synthetic reset/clock/main CPU, ROM, FLAG RAM and raw I/O boundaries implemented; no game boot, display/sound or MiSTer integration.",
+    "Synthetic reset/clock/main CPU, ROM, FLAG RAM, raw I/O and provisional timing/vblank assembly implemented; no game boot, rendered pixels, sound or MiSTer integration.",
     "Two-state Verilator does not prove X/Z, CDC, PLL, analog fidelity or board accuracy.",
     "Synthetic strobes/forwarding are declared implementation contracts, not board measurements.",
     "ROM identity/layout PASS is not CPU boot, video, input or audio coverage.",
@@ -156,6 +162,62 @@
       "timeout": 180,
       "expectation": "All 32 raw U15L input combinations reproduce its eight active-low output clauses; inactive bus deselects every group.",
       "reference": "Kevtris CVS_15L CUPL source in user-supplied v1.4 archive, identified in docs/pal-audit.md. Combinational pin model only."
+    },
+    {
+      "id": "hunchback.video.irq",
+      "suite": "smoke",
+      "mode": "vblank_irq",
+      "required": true,
+      "tools": [
+        "verilator",
+        "make",
+        "g++"
+      ],
+      "timeout": 180,
+      "expectation": "Pending interrupt survives until acknowledgement, does not retrigger while blank stays high, rearms on another edge and retains simultaneous new edge/ack; all 1024 five-event histories.",
+      "reference": "docs/video-timing.md; pinned MAME vblank/ack compatibility plus explicit FPGA simultaneous-event contract."
+    },
+    {
+      "id": "hunchback.video.cpu",
+      "suite": "smoke",
+      "mode": "video_connected",
+      "required": true,
+      "tools": [
+        "ghdl",
+        "iverilog",
+        "vvp"
+      ],
+      "timeout": 180,
+      "expectation": "Actual CPU with provisional raster executes downloaded program: SENSE outside/inside blank, vector 03 ISR status/marker, HALT resume and exactly two acknowledged frame interrupts.",
+      "reference": "docs/video-timing.md; synthetic fixture sequencing and pinned CPU/MAME expectations, not physical video timing qualification."
+    },
+    {
+      "id": "hunchback.video.timing.317",
+      "suite": "smoke",
+      "mode": "video_timing_alt",
+      "required": true,
+      "tools": [
+        "verilator",
+        "make",
+        "g++"
+      ],
+      "timeout": 180,
+      "expectation": "Provisional 317-line profile matches independent linear-time oracle at every master edge, all sync/reset/burst/blank intervals, /16 enables, frame/line cadence, stalls and arbitrary-phase reset.",
+      "reference": "docs/video-timing.md; visually transcribed Signetics preliminary waveform and explicit FPGA contracts; unresolved 312/317 discrepancy, no board timing qualification."
+    },
+    {
+      "id": "hunchback.video.timing.312",
+      "suite": "smoke",
+      "mode": "video_timing",
+      "required": true,
+      "tools": [
+        "verilator",
+        "make",
+        "g++"
+      ],
+      "timeout": 180,
+      "expectation": "Provisional 312-line profile matches independent linear-time oracle at every master edge, all sync/reset/burst/blank intervals, /16 enables, frame/line cadence, stalls and arbitrary-phase reset.",
+      "reference": "docs/video-timing.md; visually transcribed Signetics preliminary waveform and explicit FPGA contracts; unresolved 312/317 discrepancy, no board timing qualification."
     },
     {
       "id": "hunchback.cpu.alu",
@@ -276,7 +338,7 @@
       "id": "hunchback.video.coverage",
       "suite": "reference",
       "required": true,
-      "skip_reason": "PAL raster, character/sprite/bullet pixels and collision checks not implemented.",
+      "skip_reason": "Provisional 312/317 timing profiles and synthetic vblank/CPU checks implemented; datasheet line-count conflict, physical clock/display phases, S2636/character/bullet pixels and collisions remain unqualified.",
       "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
       "reference": "docs/validation.md; pending evidence."
     },
@@ -545,6 +607,96 @@
       "new": ".data_port(data_port),.flag(1'b0),.address(address)",
       "failure_label": "connected_sprite_write",
       "reason": "Disconnected CPU FLAG routes a character RAM write to the external sprite interface."
+    },
+    {
+      "id": "early_position_tick",
+      "check": "hunchback.video.timing.312",
+      "file": "rtl/machine/cvs_video_timing.sv",
+      "old": "phase == 4'd15",
+      "new": "phase == 4'd14",
+      "failure_label": "position_enable",
+      "reason": "Position enable is one master edge early."
+    },
+    {
+      "id": "short_horizontal_line",
+      "check": "hunchback.video.timing.312",
+      "file": "rtl/machine/cvs_video_timing.sv",
+      "old": "h_count == 8'd226 ? 8'd0",
+      "new": "h_count == 8'd225 ? 8'd0",
+      "failure_label": "horizontal_position",
+      "reason": "Horizontal period loses one position."
+    },
+    {
+      "id": "short_vertical_frame",
+      "check": "hunchback.video.timing.312",
+      "file": "rtl/machine/cvs_video_timing.sv",
+      "old": "v_count <= v_count == 9'(V_LINES) ?",
+      "new": "v_count <= v_count == 9'(V_LINES-1) ?",
+      "failure_label": "vertical_position",
+      "reason": "Diagram-profile frame loses one line."
+    },
+    {
+      "id": "short_alternate_frame",
+      "check": "hunchback.video.timing.317",
+      "file": "rtl/machine/cvs_video_timing.sv",
+      "old": "v_count <= v_count == 9'(V_LINES) ?",
+      "new": "v_count <= v_count == 9'(V_LINES-1) ?",
+      "failure_label": "vertical_position",
+      "reason": "Alternate-profile frame loses one line."
+    },
+    {
+      "id": "short_vertical_reset",
+      "check": "hunchback.video.timing.312",
+      "file": "rtl/machine/cvs_video_timing.sv",
+      "old": "v_count < 9'd43",
+      "new": "v_count < 9'd42",
+      "failure_label": "vertical_reset",
+      "reason": "Vertical reset ends one line early."
+    },
+    {
+      "id": "blanking_requires_both",
+      "check": "hunchback.video.timing.312",
+      "file": "rtl/machine/cvs_video_timing.sv",
+      "old": "assign blank = hrst || vrst;",
+      "new": "assign blank = hrst && vrst;",
+      "failure_label": "composite_blank",
+      "reason": "Composite blank fails during isolated vertical or horizontal blank."
+    },
+    {
+      "id": "vsync_wrap_gap",
+      "check": "hunchback.video.timing.312",
+      "file": "rtl/machine/cvs_video_timing.sv",
+      "old": "v_count == 9'd11 && (h_count >= 8'd28 || h_count < 8'd6)",
+      "new": "v_count == 9'd11 && h_count >= 8'd28",
+      "failure_label": "vertical_sync",
+      "reason": "Reintroduce the reproduced six-position VSYNC gap at horizontal wrap."
+    },
+    {
+      "id": "late_horizontal_sync",
+      "check": "hunchback.video.timing.312",
+      "file": "rtl/machine/cvs_video_timing.sv",
+      "old": "h_count >= 8'd11 && h_count < 8'd28",
+      "new": "h_count >= 8'd12 && h_count < 8'd28",
+      "failure_label": "horizontal_sync",
+      "reason": "Horizontal sync begins one position late."
+    },
+    {
+      "id": "missed_vblank_edge",
+      "check": "hunchback.video.irq",
+      "file": "rtl/machine/cvs_vblank_irq.sv",
+      "old": "vblank && !previous_blank",
+      "new": "vblank && previous_blank",
+      "failure_label": "vblank_pending",
+      "reason": "Initial vblank rising edge is missed."
+    },
+    {
+      "id": "vblank_level_retrigger",
+      "check": "hunchback.video.irq",
+      "file": "rtl/machine/cvs_vblank_irq.sv",
+      "old": "vblank && !previous_blank",
+      "new": "vblank || previous_blank",
+      "failure_label": "vblank_pending",
+      "reason": "A held blank level overrides acknowledgement and retriggers the event."
     }
   ],
   "build": {

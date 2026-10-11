@@ -51,3 +51,11 @@ identifier escape for the VHDL `int` port is lexical, not a logic substitution.
 Do not replace this assembly test with a mock CPU or inferred RAM initialization.
 Keep physical input decode and native CPU unknown-state diagnostics as blockers
 until independently audited and checked.
+
+For video timing or vblank wiring changes, run `hunchback.video.timing.312`,
+`hunchback.video.timing.317`, `hunchback.video.irq`, `hunchback.video.cpu` and lint,
+plus the main-bus/native CPU/memory checks when CPU wiring is affected. Preserve
+the independent linear-time waveform oracle and VSYNC-wrap regression. These
+profiles are provisional: the Signetics scan conflicts on vertical total and
+board PCK/PIXCLK/display phases remain unaudited. A timing-test PASS must not
+remove that reference gap, graphics/collision coverage or candidate blockers.
