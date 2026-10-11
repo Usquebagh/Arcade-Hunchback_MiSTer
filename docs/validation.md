@@ -165,3 +165,26 @@ bullets/colour mixer and cross-chip/background/bullet collisions. Native CPU
 startup WARNING and required subsystem/physical input/audio/game/MiSTer/PLL/
 constraint gaps remain. No functional game frame, ROM boot or Quartus candidate
 is established by a synthetic sprite image. See [S2636 details](s2636.md).
+
+## Normalized character/bullet/mixer milestone, 2026-10-11
+
+`hunchback.memory.display` checks every actual shared RAM display word, independent
+CPU state, held reads and simultaneous CPU forwarding. `hunchback.video.character`
+uses an independent geometric decoder with five complete fields, every attribute/
+raw-pixel/presence combination, bullet position, sprite nibble and palette byte.
+Valid bubbles, back-to-back metadata, blanking, reset flush/retention and new
+collision events during clear are retained regressions. Original HDL and oracle
+implement a documented pinned-MAME compatibility boundary, not a completed
+physical PAL/display-clock reproduction.
+
+`hunchback.video.character.cpu` executes the actual synthesized VHDL CPU with
+actual FLAG memory and renderer. CPU instructions initialize codes, attributes,
+palette, bullets and distinct glyph pages. The fixture checks 192 pixels and
+actual CPU collision FF/00 read-clear signatures after a HALT/IRQ resume. Raster,
+sprite pixels and IRQ are explicit fixtures. There is no fake memory or mock CPU.
+
+Twenty added mutations bring the configured campaign to 70 faults, each requiring
+its designated assertion twice. Earlier compile/selection errors remain errors,
+not mutation catches. Full PVI, board phases/origins, PAL equivalence, arbitration,
+Quartus RAM inference, stars/effects, game boot, input/audio, integration and
+timing gates remain incomplete. Required WARNING/SKIP still blocks every RBF.

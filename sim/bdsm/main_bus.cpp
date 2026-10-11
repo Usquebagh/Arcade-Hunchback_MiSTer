@@ -3,6 +3,8 @@
 int main(int argc,char** argv){
     setup(argc,argv);Bench<Vcvs_main_bus> b(argc,argv);
     try{
+        b.rtl.video_tile_rd=0;b.rtl.video_tile_addr=0;b.rtl.video_bullet_addr=0;
+        b.rtl.video_glyph_rd=0;b.rtl.video_glyph_addr=0;b.rtl.video_palette_rd=0;b.rtl.video_palette_addr=0;
         b.rtl.reset=1;b.rtl.ready=1;b.rtl.req=0;b.rtl.wr=0;b.rtl.memory_space=0;
         b.rtl.extended=0;b.rtl.data_port=0;b.rtl.flag=0;b.rtl.address=0;b.rtl.din=0;
         b.rtl.dl_wr=0;b.rtl.dl_addr=0;b.rtl.dl_data=0;b.rtl.sprite_din=0x8b;

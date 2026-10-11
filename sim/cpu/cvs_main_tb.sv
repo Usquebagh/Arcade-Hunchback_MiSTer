@@ -21,7 +21,8 @@ module cvs_main_tb;
         .in0(8'h91),.in1(8'h26),.in2(8'he3),.in3(8'h58),.dsw1(8'had),.dsw2(8'h72),
         .collision(8'h39),.char_page(char_page),.char_mode(char_mode),.scroll(scroll),
         .video_fx(video_fx),.audio_command(audio_command),.collision_clear(collision_clear),
-        .audio_trigger(audio_trigger),.sprite_din(8'h8b),.sprite_select(sprite_select),
+        .audio_trigger(audio_trigger),.video_tile_rd(1'b0),.video_tile_addr(10'd0),.video_bullet_addr(8'd0),.video_glyph_rd(1'b0),.video_glyph_addr(10'd0),.video_palette_rd(1'b0),.video_palette_addr(4'd0),
+        .sprite_din(8'h8b),.sprite_select(sprite_select),
         .sprite_rd(sprite_rd),.sprite_wr(sprite_wr),.sprite_addr(sprite_addr),.sprite_dout(sprite_dout),
         .req(req),.wr(wr),.memory_space(memory_space),.extended(extended),.data_port(data_port),
         .flag(flag),.address(address),.write_data(write_data),.read_data(read_data),.phase(phase));

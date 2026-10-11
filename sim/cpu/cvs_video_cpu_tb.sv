@@ -20,7 +20,8 @@ module cvs_video_cpu_tb;
         .dl_wr(dl_wr),.dl_addr(dl_addr),.dl_data(dl_data),
         .in0(8'hff),.in1(8'hff),.in2(8'hff),.in3(8'hff),.dsw1(8'hff),.dsw2(8'hff),
         .collision(8'h00),.char_page(),.char_mode(),.scroll(),.video_fx(),.audio_command(),
-        .collision_clear(),.audio_trigger(),.sprite_din(8'h00),.sprite_select(),
+        .collision_clear(),.audio_trigger(),.video_tile_rd(1'b0),.video_tile_addr(10'd0),.video_bullet_addr(8'd0),.video_glyph_rd(1'b0),.video_glyph_addr(10'd0),.video_palette_rd(1'b0),.video_palette_addr(4'd0),
+        .sprite_din(8'h00),.sprite_select(),
         .sprite_rd(),.sprite_wr(),.sprite_addr(),.sprite_dout(),.req(req),.wr(wr),
         .memory_space(memory_space),.extended(),.data_port(),.flag(),.address(address),
         .write_data(write_data),.read_data(),.phase());

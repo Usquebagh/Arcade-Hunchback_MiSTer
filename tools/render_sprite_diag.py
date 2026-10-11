@@ -11,15 +11,18 @@ parser.add_argument('observed',type=Path)
 parser.add_argument('--expected',type=Path,required=True)
 parser.add_argument('--output',type=Path,required=True)
 parser.add_argument('--scale',type=int,default=2,choices=range(1,9))
+parser.add_argument('--kind',choices=['sprite','character'],default='sprite')
 args=parser.parse_args()
 observed=Image.open(args.observed).convert('RGB')
 expected=Image.open(args.expected).convert('RGB')
-if observed.size!=(227,256) or expected.size!=observed.size or observed.tobytes()!=expected.tobytes():
+dimensions=(227,256) if args.kind=='sprite' else (256,256)
+if observed.size!=dimensions or expected.size!=observed.size or observed.tobytes()!=expected.tobytes():
     raise SystemExit('Synthetic RTL/reference image mismatch')
 args.output.parent.mkdir(parents=True,exist_ok=True)
-observed.resize((227*args.scale,256*args.scale),Image.Resampling.NEAREST).save(args.output)
-metadata={'provenance':'Synthetic S2636 geometric fixture, no game ROM; colour-bit RGB diagnostic mapping only',
-          'source_dimensions':[227,256],'scale':args.scale,'pillow_version':Image.__version__,
+observed.resize(tuple(n*args.scale for n in dimensions),Image.Resampling.NEAREST).save(args.output)
+provenance='Synthetic S2636 geometric fixture, no game ROM; colour-bit RGB diagnostic mapping only' if args.kind=='sprite' else 'Synthetic normalized character/bullet fixture, no game ROM; digital palette RGB, not calibrated analog output'
+metadata={'provenance':provenance,
+          'source_dimensions':list(dimensions),'scale':args.scale,'pillow_version':Image.__version__,
           'inputs':{str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in [args.observed,args.expected]},
           'output_sha256':hashlib.sha256(args.output.read_bytes()).hexdigest()}
 args.output.with_suffix('.json').write_text(json.dumps(metadata,indent=2)+'\n')

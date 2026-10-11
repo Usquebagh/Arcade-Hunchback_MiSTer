@@ -14,11 +14,11 @@ def emit(status, **details):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('mode', choices=['reset', 'clock', 'memory', 'banked', 'main_bus', 'main_connected', 'video_connected', 's2636_objects', 's2636_connected', 'vblank_irq', 'video_timing', 'video_timing_alt', 'decode', 'lint', 'rom', 'mra', 'cpu_alu', 'cpu_edges', 'cpu_bus', 'cpu_synth', 'cpu_diagnostics'])
+    parser.add_argument('mode', choices=['reset', 'clock', 'memory', 'banked', 'display', 'character', 'character_connected', 'main_bus', 'main_connected', 'video_connected', 's2636_objects', 's2636_connected', 'vblank_irq', 'video_timing', 'video_timing_alt', 'decode', 'lint', 'rom', 'mra', 'cpu_alu', 'cpu_edges', 'cpu_bus', 'cpu_synth', 'cpu_diagnostics'])
     parser.add_argument('--seed', type=int, default=1)
     args = parser.parse_args()
     adapter = Path(__file__).resolve().parent
-    if args.mode in ['main_connected','video_connected','s2636_connected']:
+    if args.mode in ['main_connected','video_connected','s2636_connected','character_connected']:
         return subprocess.run([sys.executable, str(adapter / 'check_connected.py'), '--mode', args.mode, '--seed', str(args.seed)]).returncode
     if args.mode.startswith('cpu_'):
         return subprocess.run([sys.executable, str(adapter / 'check_ghdl.py'), args.mode, '--seed', str(args.seed)]).returncode
@@ -36,11 +36,14 @@ def main():
     sources = {name: 'rtl/machine/cvs_' + name + '.sv' for name in ['reset', 'clock', 'memory', 'decode', 'video_timing', 'vblank_irq', 's2636_objects']}
     banked_sources = ['rtl/machine/cvs_main_memory.sv','rtl/machine/cvs_banked.sv','rtl/machine/cvs_memory.sv']
     bus_sources = ['rtl/machine/cvs_main_bus.sv','rtl/machine/cvs_main_io.sv',*banked_sources]
+    character_sources = ['sim/cpu/cvs_character_tb.sv','rtl/machine/cvs_character_video.sv','rtl/machine/cvs_banked.sv']
     if args.mode == 'lint':
         warnings = []
         lint_sources = {**{('cvs_'+k):[v] for k,v in sources.items()}, 'cvs_main_memory':banked_sources,
                         'cvs_main_bus':bus_sources,
-                        'cvs_s2636_bank':['rtl/machine/cvs_s2636_bank.sv',sources['s2636_objects']]}
+                        'cvs_s2636_bank':['rtl/machine/cvs_s2636_bank.sv',sources['s2636_objects']],
+                        'cvs_character_tb':character_sources,
+                        'cvs_character_video':['rtl/machine/cvs_character_video.sv']}
         for name, source in lint_sources.items():
             logfile = work / (name + '.log')
             with logfile.open('w') as log:
@@ -52,8 +55,8 @@ def main():
         emit('WARNING' if warnings else 'PASS', observed=warnings or 'All implemented modules have zero -Wall findings')
         return 0
     mode = 'video_timing' if args.mode == 'video_timing_alt' else args.mode
-    top = 'cvs_main_memory' if mode == 'banked' else 'cvs_' + mode
-    mode_sources = bus_sources if mode == 'main_bus' else banked_sources if mode == 'banked' else [sources[mode]]
+    top = 'cvs_main_memory' if mode in ('banked','display') else 'cvs_character_tb' if mode=='character' else 'cvs_' + mode
+    mode_sources = character_sources if mode=='character' else bus_sources if mode == 'main_bus' else banked_sources if mode in ('banked','display') else [sources[mode]]
     extra_options = ['-GV_LINES=317'] if args.mode == 'video_timing_alt' else []
     extra_cflags = ' -DV_LINES_EXPECTED=317' if args.mode == 'video_timing_alt' else ''
     with (work / 'compile.log').open('w') as log:
@@ -71,8 +74,9 @@ def main():
         emit('ERROR', reason='Simulation crashed or omitted valid assertion result', observed=ran.stderr)
         return 2
     event = events[-1]
-    if event['status'] == 'PASS' and mode == 's2636_objects':
-        captures=[work/'synthetic-sprite-frame.log',work/'expected-sprite-frame.log']
+    if event['status'] == 'PASS' and mode in ('s2636_objects','character'):
+        kind='sprite' if mode=='s2636_objects' else 'character'
+        captures=[work/('synthetic-'+kind+'-frame.log'),work/('expected-'+kind+'-frame.log')]
         if any(not p.is_file() for p in captures):
             emit('ERROR', reason='Synthetic pixel diagnostic is missing')
             return 2

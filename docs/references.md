@@ -23,3 +23,9 @@ are yet available. The user-supplied six-sheet PDF is now available privately;
 [schematic audit](schematic-audit.md) distinguishes inspected circuits from
 remaining PAL-equivalence, timing and measurement gaps. The subsequent
 [v1.4 PAL audit](pal-audit.md) records the newly supplied equations and checksum evidence.
+
+The pinned MAME [graphics decoder](https://github.com/mamedev/mame/blob/c806573e925ce00fe3e8d8fe417eba63f83275ce/src/emu/drawgfx.cpp)
+was inspected to establish plane weights, MSB-first columns and scroll-copy
+translation. SHA-256 4b10a23600c1babd40cf0faa1b681de861c23c28f21d874f512f44d8ff03c27b.
+It supports the normalized compatibility model in [character video](character-video.md),
+not physical phase or calibrated DAC accuracy; original HDL/oracle are separate.

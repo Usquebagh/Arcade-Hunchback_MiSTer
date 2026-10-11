@@ -71,3 +71,15 @@ object PASS does not qualify PVI grid/score/sound/ADC, physical OPACK/pixel phas
 mid-object scale changes or the CVS mixed frame and collision circuit.
 The connected adapter retains narrowly reviewed Icarus full-array sensitivity
 notices with exact messages/reasons; every other finding remains unreviewed.
+
+For display RAM or character/bullet/mixer changes run `hunchback.memory.display`,
+`hunchback.video.character`, `hunchback.video.character.cpu` and lint, as well as
+affected main/native CPU/memory and video/PVI checks. Preserve the independent
+coordinate/bitplane/palette oracle, all mode thresholds, exhaustive bullet and
+presence/colour combinations, foreground masks, valid bubbles, reset retention
+and collision clear/event priority. The actual CPU must write the shared RAM and
+read/clear real collision state; no hierarchical initialization or mock RAM.
+Render retained character diagnostics with tools/render_sprite_diag.py --kind
+character, comparing the reference before producing an ignored image. Normalized
+MAME compatibility does not qualify physical phases/origins, PAL equivalence,
+RAM inference/arbitration, stars/effects or full PVI/composed game coverage.

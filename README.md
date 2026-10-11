@@ -12,7 +12,9 @@ conversions are separate boards; their ROMs are not interchangeable with CVS.
 > The connected CPU runs a synthetic program through actual ROM/RAM and raw I/O;
 > provisional raster profiles and CPU vblank/interrupt checks also pass.
 > Four-object S2636 rendering/status and a three-chip CPU assembly have synthetic
-> pixel tests. Mixed game video, physical inputs, audio and MiSTer integration remain unfinished.
+> pixel tests. Shared display RAM and a normalized character/bullet/palette/mixer
+> pipeline pass independent pixel and actual-CPU collision read/clear checks.
+> Mixed game video, physical inputs, audio and MiSTer integration remain unfinished.
 > Actual MiSTer testing is pending.
 
 ## Original hardware
@@ -21,7 +23,7 @@ conversions are separate boards; their ROMs are not interchangeable with CVS.
 | --- | --- | --- |
 | Main CPU | Signetics S2650A, crystal / 8 | Connected synthetic ROM/RAM/I/O program passes; full CPU and game coverage pending |
 | Audio/speech CPUs | Two S2650As, crystal / 16 | CPU implementation available; sound-board instances pending |
-| Video | Signetics 2621 PAL timing, three S2636 sprite chips, character ROM/RAM | Timing, normalized S2636 objects/status and three-chip CPU tests; physical phases, complete PVI and mixed game pixels/collisions pending |
+| Video | Signetics 2621 PAL timing, three S2636 sprite chips, character ROM/RAM | Timing, S2636 objects/status, character/bullet/mixer and shared-memory CPU checks; physical phases, complete PVI and composed game coverage pending |
 | Program | Five 4 KiB EPROMs, staggered in four 8 KiB pages | Downloadable ROM and mirrored 1 KiB system RAM |
 | Sound | 8/4-bit DAC, discrete circuits, TMS5100 speech | Pending |
 
@@ -73,3 +75,4 @@ See [CPU tests and gaps](docs/cpu.md).
 See [main bus and I/O tests](docs/main-bus.md).
 See [provisional video timing and remaining gaps](docs/video-timing.md).
 See [S2636 objects, status, pixel expectations and gaps](docs/s2636.md).
+See [character/bullet/mixer expectations and gaps](docs/character-video.md).

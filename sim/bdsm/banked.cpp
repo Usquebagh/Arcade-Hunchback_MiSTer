@@ -4,6 +4,8 @@ static unsigned pattern(unsigned a,unsigned flag,unsigned page=0){return (a*29+(
 int main(int argc,char** argv){
     setup(argc,argv);Bench<Vcvs_main_memory> b(argc,argv);
     try{
+        b.rtl.video_tile_rd=0;b.rtl.video_tile_addr=0;b.rtl.video_bullet_addr=0;
+        b.rtl.video_glyph_rd=0;b.rtl.video_glyph_addr=0;b.rtl.video_palette_rd=0;b.rtl.video_palette_addr=0;
         b.rtl.dl_wr=0;b.rtl.cpu_rd=0;b.rtl.cpu_wr=0;b.rtl.cpu_flag=0;b.rtl.char_page=0;b.rtl.sprite_din=0xe7;
         auto access=[&](unsigned addr,unsigned flag,unsigned page,unsigned data,bool write){
             b.rtl.cpu_addr=addr;b.rtl.cpu_flag=flag;b.rtl.char_page=page;b.rtl.cpu_din=data;

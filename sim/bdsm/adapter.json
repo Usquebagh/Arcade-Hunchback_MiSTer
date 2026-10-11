@@ -30,7 +30,8 @@
     "docs/banked-memory.md",
     "docs/main-bus.md",
     "docs/video-timing.md",
-    "docs/s2636.md"
+    "docs/s2636.md",
+    "docs/character-video.md"
   ],
   "required_files": [
     "rtl/machine/cvs_reset.sv",
@@ -57,7 +58,12 @@
     "rtl/machine/cvs_s2636_objects.sv",
     "sim/bdsm/s2636_objects.cpp",
     "rtl/machine/cvs_s2636_bank.sv",
-    "sim/cpu/cvs_s2636_cpu_tb.sv"
+    "sim/cpu/cvs_s2636_cpu_tb.sv",
+    "rtl/machine/cvs_character_video.sv",
+    "sim/cpu/cvs_character_tb.sv",
+    "sim/bdsm/character.cpp",
+    "sim/bdsm/display.cpp",
+    "sim/cpu/cvs_character_cpu_tb.sv"
   ],
   "games": [
     "Hunchback (CVS set 1)"
@@ -125,6 +131,34 @@
       "timeout": 180,
       "expectation": "All CPU RAM FLAG views, character pages, 16-byte palette aliases and four CPU-page mirrors retain independent bytes; sprite routing and registered response selection are correct.",
       "reference": "Pinned MAME cvs.cpp main_cpu_map, palette/character handlers and supplied PAL source; sprite behaviour/display arbitration excluded."
+    },
+    {
+      "id": "hunchback.memory.display",
+      "suite": "smoke",
+      "mode": "display",
+      "required": true,
+      "tools": [
+        "verilator",
+        "make",
+        "g++"
+      ],
+      "timeout": 180,
+      "expectation": "Actual FLAG RAM display ports read every tile/glyph/bullet/palette byte independent of CPU page; one-edge reads, hold and simultaneous write forwarding pass.",
+      "reference": "docs/character-video.md; independent synthetic address/byte oracle and declared FPGA memory contract."
+    },
+    {
+      "id": "hunchback.video.character",
+      "suite": "smoke",
+      "mode": "character",
+      "required": true,
+      "tools": [
+        "verilator",
+        "make",
+        "g++"
+      ],
+      "timeout": 180,
+      "expectation": "Independent normalized geometry, bitplanes, mode thresholds, scrolling, PROM/palette, bullet clipping, sprite mixing, collisions, pipeline stalls/valid and reset match actual shared FLAG memory.",
+      "reference": "docs/character-video.md; pinned MAME compatibility, independent analytic oracle and explicit FPGA pipeline contract; physical board timing excluded."
     },
     {
       "id": "hunchback.main.bus",
@@ -363,7 +397,7 @@
       "id": "hunchback.banked_memory.coverage",
       "suite": "reference",
       "required": true,
-      "skip_reason": "CPU/FLAG memory and three object/status instances are checked; full PVI semantics, display ports/arbitration and physical bus timing remain incomplete.",
+      "skip_reason": "CPU/FLAG RAM, synthetic display ports and three object/status instances are checked; full PVI, physical arbitration and Quartus memory inference remain unqualified.",
       "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
       "reference": "docs/validation.md; pending evidence."
     },
@@ -371,7 +405,7 @@
       "id": "hunchback.video.coverage",
       "suite": "reference",
       "required": true,
-      "skip_reason": "312 timing and normalized S2636 object pixels/status pass synthetic checks; physical clocks/origins, PVI grid/score, CVS character/bullet/mixer/colour and inter-chip/background collisions remain unqualified.",
+      "skip_reason": "312 timing, normalized S2636 objects and MAME-compatible character/bullet/mixing pipeline pass synthetic checks; physical phases/origins, full PVI, PAL equivalence, stars/effects, composed game and board reference remain unqualified.",
       "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
       "reference": "docs/validation.md; pending evidence."
     },
@@ -422,6 +456,20 @@
       "skip_reason": "QPF/QSF/QIP/SDC, inferred RAM, CDC and TimeQuest exception/unconstrained-path review pending.",
       "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
       "reference": "docs/validation.md; pending evidence."
+    },
+    {
+      "id": "hunchback.video.character.cpu",
+      "suite": "smoke",
+      "mode": "character_connected",
+      "required": true,
+      "tools": [
+        "ghdl",
+        "iverilog",
+        "vvp"
+      ],
+      "timeout": 180,
+      "expectation": "Actual CPU initializes shared video memory and two glyph pages; 192 independently specified pixels and collision FF/00 read-clear signatures pass.",
+      "reference": "docs/character-video.md; actual VHDL CPU and shared SV memory/renderer with fixture coordinates/sprites/IRQ."
     }
   ],
   "mutations": [
@@ -874,6 +922,186 @@
       "new": "cpu_rd(cpu_rd && (chip_select[i] || chip_select[(i+1)%3]))",
       "failure_label": "pvi_cpu_readback",
       "reason": "Reading one chip clears a neighbouring chip's status."
+    },
+    {
+      "id": "display_cpu_glyph_page",
+      "file": "rtl/machine/cvs_banked.sv",
+      "check": "hunchback.memory.display",
+      "old": "char0[video_glyph_addr]",
+      "new": "char0[{char_page,video_glyph_addr[7:0]}]",
+      "failure_label": "display_glyph",
+      "reason": "Display accidentally follows current CPU writable page."
+    },
+    {
+      "id": "display_corrupt_write_forward",
+      "file": "rtl/machine/cvs_banked.sv",
+      "check": "hunchback.memory.display",
+      "old": "video_code <= write_screen && cpu_addr[9:0]==video_tile_addr ? cpu_din : screen[video_tile_addr];",
+      "new": "video_code <= write_screen && cpu_addr[9:0]==video_tile_addr ? (cpu_din ^ 8'h01) : screen[video_tile_addr];",
+      "failure_label": "display_forward",
+      "reason": "Accepted simultaneous CPU byte is forwarded with a corrupt low bit."
+    },
+    {
+      "id": "display_no_hold",
+      "file": "rtl/machine/cvs_banked.sv",
+      "check": "hunchback.memory.display",
+      "old": "if (video_tile_rd) begin",
+      "new": "if (video_tile_rd || cpu_wr) begin",
+      "failure_label": "display_hold",
+      "reason": "Disabled display read changes while the CPU writes."
+    },
+    {
+      "id": "character_reverse_scroll",
+      "file": "rtl/machine/cvs_character_video.sv",
+      "check": "hunchback.video.character",
+      "old": "pixel_y-scroll : pixel_y",
+      "new": "pixel_y+scroll : pixel_y",
+      "failure_label": "character_pixel",
+      "reason": "Normalized scroll translates in the wrong direction."
+    },
+    {
+      "id": "character_scrolled_edge_strip",
+      "file": "rtl/machine/cvs_character_video.sv",
+      "check": "hunchback.video.character",
+      "old": "pixel_x>=8'd32 && pixel_x<8'd192",
+      "new": "pixel_x<8'd192",
+      "failure_label": "character_pixel",
+      "reason": "Fixed left strip is scrolled."
+    },
+    {
+      "id": "character_threshold_equality",
+      "file": "rtl/machine/cvs_character_video.sv",
+      "check": "hunchback.video.character",
+      "old": "video_code>=8'he0",
+      "new": "video_code>8'he0",
+      "failure_label": "character_pixel",
+      "reason": "Boundary code E0 wrongly reads ROM."
+    },
+    {
+      "id": "character_mode2_ram",
+      "file": "rtl/machine/cvs_character_video.sv",
+      "check": "hunchback.video.character",
+      "old": "video_code>=8'h80 : 1'b0",
+      "new": "video_code>=8'h80 : video_code>=8'h80",
+      "failure_label": "character_pixel",
+      "reason": "ROM-only mode 2 selects writable characters."
+    },
+    {
+      "id": "character_reversed_columns",
+      "file": "rtl/machine/cvs_character_video.sv",
+      "check": "hunchback.video.character",
+      "old": "{plane0[3'd7-column1],plane1[3'd7-column1],plane2[3'd7-column1]}",
+      "new": "{plane0[column1],plane1[column1],plane2[column1]}",
+      "failure_label": "character_pixel",
+      "reason": "Glyph bytes are decoded LSB first."
+    },
+    {
+      "id": "character_reversed_planes",
+      "file": "rtl/machine/cvs_character_video.sv",
+      "check": "hunchback.video.character",
+      "old": "{plane0[3'd7-column1],plane1[3'd7-column1],plane2[3'd7-column1]}",
+      "new": "{plane2[3'd7-column1],plane1[3'd7-column1],plane0[3'd7-column1]}",
+      "failure_label": "character_pixel",
+      "reason": "First and third plane weights are swapped."
+    },
+    {
+      "id": "character_prom_address",
+      "file": "rtl/machine/cvs_character_video.sv",
+      "check": "hunchback.video.character",
+      "old": "lookup[{glyph_pixel,attr1}]",
+      "new": "lookup[{attr1,glyph_pixel}]",
+      "failure_label": "character_palette_index",
+      "reason": "PROM address attribute and pixel fields are swapped."
+    },
+    {
+      "id": "character_prom_bit_order",
+      "file": "rtl/machine/cvs_character_video.sv",
+      "check": "hunchback.video.character",
+      "old": "{1'b0,lookup_pixel[0],lookup_pixel[1],lookup_pixel[2]}",
+      "new": "{1'b0,lookup_pixel[2],lookup_pixel[1],lookup_pixel[0]}",
+      "failure_label": "character_palette_index",
+      "reason": "PROM colour bits are not reversed into palette wiring."
+    },
+    {
+      "id": "character_sprite_xor",
+      "file": "rtl/machine/cvs_character_video.sv",
+      "check": "hunchback.video.character",
+      "old": "sprites2[2:0] | sprites2[6:4] | sprites2[10:8]",
+      "new": "sprites2[2:0] ^ sprites2[6:4] ^ sprites2[10:8]",
+      "failure_label": "character_palette_index",
+      "reason": "Shared sprite colour bits cancel."
+    },
+    {
+      "id": "character_bullet_wrap",
+      "file": "rtl/machine/cvs_character_video.sv",
+      "check": "hunchback.video.character",
+      "old": "{1'b0,x0}+{1'b0,video_bullet}",
+      "new": "({1'b0,x0}+{1'b0,video_bullet}) & 9'h0ff",
+      "failure_label": "character_bullet",
+      "reason": "Negative bullet coordinates wrap into the right edge."
+    },
+    {
+      "id": "character_bullet_early_rows",
+      "file": "rtl/machine/cvs_character_video.sv",
+      "check": "hunchback.video.character",
+      "old": "y0>=8'd8 && video_bullet!=0",
+      "new": "video_bullet!=0",
+      "failure_label": "character_bullet",
+      "reason": "Bullet output is enabled on reserved top rows."
+    },
+    {
+      "id": "character_wrong_foreground",
+      "file": "rtl/machine/cvs_character_video.sv",
+      "check": "hunchback.video.character",
+      "old": "|(glyph_pixel & 3'd6)",
+      "new": "|(glyph_pixel & 3'd1)",
+      "failure_label": "character_foreground",
+      "reason": "Attribute high-bit collision uses the wrong glyph mask."
+    },
+    {
+      "id": "character_palette_polarity",
+      "file": "rtl/machine/cvs_character_video.sv",
+      "check": "hunchback.video.character",
+      "old": "wire [7:0] active_palette = ~video_palette;",
+      "new": "wire [7:0] active_palette = video_palette;",
+      "failure_label": "character_rgb",
+      "reason": "Active-low palette storage is treated as active high."
+    },
+    {
+      "id": "character_clear_loses_event",
+      "file": "rtl/machine/cvs_character_video.sv",
+      "check": "hunchback.video.character",
+      "old": "collision <= (collision_clear ? 8'd0 : collision) |\n                         (v3 && visible3 ? events_next : 8'd0);",
+      "new": "collision <= collision_clear ? 8'd0 : (collision |\n                         (v3 && visible3 ? events_next : 8'd0));",
+      "failure_label": "character_collision_latch",
+      "reason": "Simultaneous clear discards a new collision event."
+    },
+    {
+      "id": "character_cpu_clear_disconnected",
+      "file": "sim/cpu/cvs_character_cpu_tb.sv",
+      "check": "hunchback.video.character.cpu",
+      "old": ".collision_clear(collision_clear),.dl_wr(graphics_dl_wr)",
+      "new": ".collision_clear(1'b0),.dl_wr(graphics_dl_wr)",
+      "failure_label": "character_cpu_collision",
+      "reason": "CPU clear output does not reach pixel collision state."
+    },
+    {
+      "id": "character_valid_early",
+      "file": "rtl/machine/cvs_character_video.sv",
+      "check": "hunchback.video.character",
+      "old": "v3<=v2;pixel_valid<=v3;",
+      "new": "v3<=v1;pixel_valid<=v3;",
+      "failure_label": "character_latency",
+      "reason": "Output valid advances one stage before its payload."
+    },
+    {
+      "id": "character_live_x",
+      "file": "rtl/machine/cvs_character_video.sv",
+      "check": "hunchback.video.character",
+      "old": "x1<=x0;y1<=y0;",
+      "new": "x1<=pixel_x;y1<=y0;",
+      "failure_label": "character_coordinates",
+      "reason": "Glyph-stage metadata follows the next request instead of the accepted pixel."
     }
   ],
   "build": {

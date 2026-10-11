@@ -46,7 +46,13 @@ distinct chips, FLAG isolation, VRLE and completion read-clear. Normalized objec
 pixels and six within-chip collision pairs are checked separately. Full PVI
 features and physical board timing remain unqualified; see [S2636](s2636.md).
 
-Missing: display-side ports/arbitration, full S2636 semantics and Quartus memory
+Separate synchronous tile/code/attribute/bullet, three-plane glyph and palette
+display ports now pass exhaustive reads, hold and CPU write-forwarding checks.
+They do not follow the CPU char_page or FLAG. A normalized character pipeline
+uses these actual memories; an actual CPU scene checks distinct glyph pages and
+collision I/O. See [display contract and remaining gaps](character-video.md).
+
+Missing: physical display arbitration, full S2636 semantics and Quartus memory
 inference/CDC/timing. The required banked
 memory coverage gap remains active until those pieces have meaningful checks.
 

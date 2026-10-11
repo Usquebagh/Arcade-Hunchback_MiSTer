@@ -11,7 +11,7 @@ from check_ghdl import emit
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--seed', type=int, default=1)
-    parser.add_argument('--mode', choices=['main_connected','video_connected','s2636_connected'], default='main_connected')
+    parser.add_argument('--mode', choices=['main_connected','video_connected','s2636_connected','character_connected'], default='main_connected')
     args = parser.parse_args()
     work = Path('build/bdsm-' + args.mode).resolve()
     work.mkdir(parents=True, exist_ok=True)
@@ -34,11 +34,13 @@ def main():
     sources=['rtl/machine/cvs_main.sv','rtl/machine/cvs_main_bus.sv','rtl/machine/cvs_main_io.sv',
              'rtl/machine/cvs_main_memory.sv','rtl/machine/cvs_banked.sv',
              'rtl/machine/cvs_memory.sv','rtl/machine/cvs_clock.sv']
-    top = {'video_connected':'cvs_video_cpu_tb','s2636_connected':'cvs_s2636_cpu_tb'}.get(args.mode,'cvs_main_tb')
+    top = {'video_connected':'cvs_video_cpu_tb','s2636_connected':'cvs_s2636_cpu_tb','character_connected':'cvs_character_cpu_tb'}.get(args.mode,'cvs_main_tb')
     if args.mode=='video_connected':
         sources += ['rtl/machine/cvs_video_timing.sv','rtl/machine/cvs_vblank_irq.sv']
     if args.mode=='s2636_connected':
         sources += ['rtl/machine/cvs_s2636_objects.sv','rtl/machine/cvs_s2636_bank.sv']
+    if args.mode=='character_connected':
+        sources += ['rtl/machine/cvs_character_video.sv']
     sources += ['sim/cpu/'+top+'.sv']
     compile_run=subprocess.run(['iverilog','-g2012','-Wall','-s',top,'-o',str(work/'test.vvp'),
                                 str(cpu_file),*sources],capture_output=True,text=True)

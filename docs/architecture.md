@@ -25,7 +25,7 @@ horizontal reset, 312 lines, blanking and internal HS/VS interpretations. The
 has been resolved as 312; board PCK/PIXCLK and display phases remain unaudited.
 `cvs_vblank_irq` latches a
 rising blank event until CPU acknowledgement. A synthetic actual-CPU assembly
-tests SENSE, vector 03, HALT/RETE and rearm; there are no rendered pixels yet.
+tests SENSE, vector 03, HALT/RETE and rearm; phase-connected game video is pending.
 See [video timing and qualification gaps](video-timing.md).
 
 `cvs_s2636_objects` implements four normalized object engines, pattern/colour
@@ -35,6 +35,13 @@ in existing 1500/1600/1700 chip-index order. A downloaded synthetic CPU program
 initializes them through actual FLAG memory and checks eighteen readbacks and
 sampled pixels. Full PVI features and physical/mixed game video remain incomplete;
 see [S2636 contract](s2636.md). No fake sprite RAM replaces status side effects.
+
+`cvs_character_video` is a normalized five-edge character/bullet/PROM/palette
+pipeline. Separate synchronous ports read actual shared FLAG RAM. Synthetic
+pixels and actual CPU initialization/collision reads have independent checks.
+The renderer accepts already aligned sprite nibbles; physical PVI/raster alignment,
+CVS PAL equivalence, arbitration, stars/effects and composed game frames remain
+unqualified. See [character video contract](character-video.md).
 
 `cvs_memory`: 32 KiB downloadable program storage, synchronous one-edge reads;
 ROM selected when address bits 12:0 < 0x1400 in each 8 KiB CPU page. ROM is not
