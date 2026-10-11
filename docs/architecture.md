@@ -29,6 +29,12 @@ holds with read enable low. RAM power-up contents are unspecified. Tests always
 write RAM before reading. 0x1400..0x1bff returns FF at this boundary; this is
 temporary unimplemented video memory, not a claim that the board has open bus there.
 
+The supplied six-sheet Kevtris schematic is indexed in
+[schematic audit](schematic-audit.md). It shows separate main-board and audio-board
+14.318 MHz oscillators. The current shared-master enable phase alignment is an
+FPGA contract, not a property of the original boards. CPU frequency expectations
+remain MAME-derived until the full divider/timing paths have been audited.
+
 ## Planned full map
 
 | Window in each page | FLAG low | FLAG high |

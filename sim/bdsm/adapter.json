@@ -23,7 +23,8 @@
     "build.sh",
     "docs/architecture.md",
     "docs/references.md",
-    "docs/validation.md"
+    "docs/validation.md",
+    "docs/schematic-audit.md"
   ],
   "required_files": [
     "rtl/machine/cvs_reset.sv",
