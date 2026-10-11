@@ -1,5 +1,11 @@
 # Validation scope
 
+The standalone digital audio bus and actual audio CPU have exhaustive decode/data
+and directed clock/IRQ/RAM/signature baselines. Six added sound faults each hit
+their designated assertion twice; the full configured campaign is now 90 and is
+deferred until a frozen candidate. Analog/speech/connected audio and the physical
+latch-data-bit/reference gaps remain required. See [audio digital boundary](audio-digital.md).
+
 The user permits a lighter development workflow: focused checks and retained bug
 regressions during implementation, with the full configured regression/mutation
 campaign and Quartus gates reserved for a frozen candidate. The duplicate full

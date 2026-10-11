@@ -6,6 +6,12 @@ not independent proof of physical board timing or analog audio fidelity.
 
 ## Implemented modules
 
+`cvs_audio_bus` and `cvs_audio_cpu` provide a standalone MAME-compatible digital
+sound-CPU boundary: actual 4 KiB ROM/128-byte RAM, command IRQ/read, byte DAC and
+four DAC/discrete latches. Exhaustive bus and actual CPU/clock/IRQ checks pass.
+Analog output, speech and main-machine/physical clock integration remain pending;
+the schematic latch-bit discrepancy is retained. See [audio boundary](audio-digital.md).
+
 `cvs_reset`: asynchronous reset assertion and two rising edges for synchronous
 release. Reset also holds while PLL lock is absent, ROM download is active, or
 the image is not loaded. PLL/loader flags must be synchronous to the master clock;

@@ -19,6 +19,8 @@ conversions are separate boards; their ROMs are not interchangeable with CVS.
 > writes and its return. Longer two-state diagnostics display the title and game
 > field after coin/start; independent attract/gameplay verification remains open.
 > Mixed game video, physical inputs, audio and MiSTer integration remain unfinished.
+> A standalone audio CPU and digital DAC/discrete controls pass synthetic checks;
+> analog sound, speech and connected machine audio remain unfinished.
 > Actual MiSTer testing is pending.
 
 ## Original hardware
@@ -88,3 +90,4 @@ See [S2636 objects, status, pixel expectations and gaps](docs/s2636.md).
 See [character/bullet/mixer expectations and gaps](docs/character-video.md).
 See [provisional scan, composed assembly and early bootstrap](docs/video-assembly.md).
 See [private real-ROM observations and their limits](docs/rom-observation.md).
+See [audio CPU/digital control checks and reference gaps](docs/audio-digital.md).

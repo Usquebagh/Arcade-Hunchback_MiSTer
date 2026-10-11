@@ -118,3 +118,12 @@ pin values must not enter diagnostic IRQ counts. OBSERVED_ONLY and cross-seed
 capture agreement are not game/reference or unknown-state PASS. Physical input,
 pixel placement and native CPU blockers remain. Render only hash-matching completed
 captures with `tools/render_rom_observation.py`; previews stay ignored/private.
+
+For the digital audio CPU/bus run `hunchback.audio.bus`, `hunchback.audio.cpu`
+and lint, plus affected native CPU/clock/memory/main-bus checks. Preserve exhaustive
+data-bit/decode/ready/hold/reset checks, rising-ack event priority, nine actual-CPU
+signatures, audio /192 cadence and HALT/IRQ/RETE. Retain the explicit schematic
+SP_D0 versus MAME bit-7 conflict, physical aliases/resistor weights, separate
+oscillator/CDC and analog/speech blockers in `docs/audio-digital.md`. Digital latch
+PASS or an observed native firmware event is not calibrated sound/reference PASS.
+Main command I/O is independent of FLAG; do not filter recorded commands by RAM bank.
