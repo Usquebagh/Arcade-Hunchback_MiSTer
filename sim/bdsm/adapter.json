@@ -1340,7 +1340,7 @@
       "file": "sim/bdsm/startup_model.py",
       "old": "pc = stack.pop()",
       "new": "pc = (stack.pop() + 1) & 0x7fff",
-      "failure_label": "startup_oracle_order",
+      "failure_label": "startup_oracle_return",
       "reason": "Call returns to the following byte instead of the saved address."
     }
   ],

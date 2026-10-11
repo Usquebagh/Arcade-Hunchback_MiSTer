@@ -145,7 +145,8 @@ successful fault detection. Assertions and expected semantics remain unchanged.
 The first store-source mutant also changed the index register, destroying loop
 control and producing a model-bound ERROR. It was replaced with a data-only
 selection fault; errors are not catches. The corrected source and return faults
-both reach `startup_oracle_order` twice with passing baselines.
+reach `startup_oracle_order` and `startup_oracle_return` twice with passing
+baselines. Return mismatch diagnostics report the expected and actual addresses.
 
 A private bounded continuation observed four interrupt acknowledgements and
 known black/coloured RGB samples while startup repeats its frame-wait loop and

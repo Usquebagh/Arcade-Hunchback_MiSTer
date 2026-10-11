@@ -24,9 +24,17 @@ want = [(1,0,0,0x1411,1,0xaa),(1,0,0,0x1410,1,0xaa),
         (1,0,0,0x1710,0,0xff),(0,1,1,0,0,0xbb)]
 try:
     events, metadata = model(image(prefix, routine))
-    if events != want or metadata['resume'] != len(prefix) or not metadata['interrupts_inhibited']:
+    if events != want:
         print('BDSM '+json.dumps(dict(status='FAIL',label='startup_oracle_order',cycle=0,
                                      expected=str(want),observed=str(events))))
+        raise SystemExit(1)
+    if metadata['resume'] != len(prefix):
+        print('BDSM '+json.dumps(dict(status='FAIL',label='startup_oracle_return',cycle=0,
+                                     expected=len(prefix),observed=metadata['resume'])))
+        raise SystemExit(1)
+    if not metadata['interrupts_inhibited']:
+        print('BDSM '+json.dumps(dict(status='FAIL',label='startup_oracle_status',cycle=0,
+                                     expected=1,observed=0)))
         raise SystemExit(1)
     for bad_prefix, bad_routine in [(prefix,[0x40]),
                                     (prefix,[0xcd,0xd4,0x10]),
