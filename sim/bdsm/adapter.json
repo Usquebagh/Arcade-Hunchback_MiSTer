@@ -25,7 +25,8 @@
     "docs/references.md",
     "docs/validation.md",
     "docs/schematic-audit.md",
-    "docs/pal-audit.md"
+    "docs/pal-audit.md",
+    "docs/cpu.md"
   ],
   "required_files": [
     "rtl/machine/cvs_reset.sv",
@@ -33,7 +34,10 @@
     "rtl/machine/cvs_memory.sv",
     "tools/rom_manifest.json",
     "releases/Hunchback (CVS).mra",
-    "rtl/machine/cvs_decode.sv"
+    "rtl/machine/cvs_decode.sv",
+    "rtl/vendor/arcadia/base_pack.vhd",
+    "rtl/vendor/arcadia/sgs2650_pack.vhd",
+    "rtl/vendor/arcadia/sgs2650.vhd"
   ],
   "games": [
     "Hunchback (CVS set 1)"
@@ -71,7 +75,7 @@
         "g++"
       ],
       "timeout": 180,
-      "expectation": "At four-crystal master, main /32 and audio /64 strobes, phase alignment and deterministic restart.",
+      "expectation": "Crystal-derived CPU strobes /32 and /64; adapted CPU machine-step strobes /96 and /192, phase/count/restart.",
       "reference": "docs/architecture.md; pinned MAME CVS map/clocks and explicit implementation contract."
     },
     {
@@ -103,6 +107,66 @@
       "reference": "Kevtris CVS_15L CUPL source in user-supplied v1.4 archive, identified in docs/pal-audit.md. Combinational pin model only."
     },
     {
+      "id": "hunchback.cpu.alu",
+      "suite": "smoke",
+      "mode": "cpu_alu",
+      "required": true,
+      "tools": [
+        "ghdl"
+      ],
+      "timeout": 180,
+      "expectation": "4194304 full ALU operand/C/COM/WC cases match independent integer results and flags.",
+      "reference": "Pinned MAME s2650.cpp ALU macros and manufacturer instruction descriptions; all operands synthetic."
+    },
+    {
+      "id": "hunchback.cpu.bus",
+      "suite": "smoke",
+      "mode": "cpu_bus",
+      "required": true,
+      "tools": [
+        "ghdl"
+      ],
+      "timeout": 120,
+      "expectation": "Synthetic register banks, addressing, subroutine, memory/IO, stall, sense/FLAG and HALT/interrupt resume signatures match pinned instruction expectations.",
+      "reference": "MAME S2650 and Signetics user manual; prime opcode bus contract and software initialization explicitly modeled."
+    },
+    {
+      "id": "hunchback.cpu.edge_regressions",
+      "suite": "smoke",
+      "mode": "cpu_edges",
+      "required": true,
+      "tools": [
+        "ghdl"
+      ],
+      "timeout": 90,
+      "expectation": "All three reproduced upstream arithmetic counterexamples retain exact result and PSL expectations.",
+      "reference": "docs/cpu.md; failing exhaustive baseline evidence and pinned MAME arithmetic."
+    },
+    {
+      "id": "hunchback.cpu.synthesis",
+      "suite": "lint",
+      "mode": "cpu_synth",
+      "required": true,
+      "tools": [
+        "ghdl"
+      ],
+      "timeout": 120,
+      "expectation": "Adapted VHDL CPU/packages synthesize; only individually reviewed ROM 256x70 and stack RAM 8x15 notes accepted.",
+      "reference": "GHDL synthesis, upstream design and docs/cpu.md; not Quartus timing qualification."
+    },
+    {
+      "id": "hunchback.cpu.runtime_diagnostics",
+      "suite": "lint",
+      "mode": "cpu_diagnostics",
+      "required": true,
+      "tools": [
+        "ghdl"
+      ],
+      "timeout": 120,
+      "expectation": "No unreviewed numeric_std runtime unknown-value warnings; required WARNING blocks candidates.",
+      "reference": "Native GHDL multivalue simulation; initial/register/stack-state review remains open."
+    },
+    {
       "id": "hunchback.rtl.lint",
       "suite": "lint",
       "mode": "lint",
@@ -111,7 +175,7 @@
         "verilator"
       ],
       "timeout": 120,
-      "expectation": "All implemented RTL modules pass -Wall with no unreviewed warnings.",
+      "expectation": "Implemented SystemVerilog modules pass -Wall with no unreviewed warnings. VHDL has separate synthesis/runtime checks.",
       "reference": "Verilator diagnostics; no blanket warning suppression."
     },
     {
@@ -145,7 +209,7 @@
       "id": "hunchback.cpu.coverage",
       "suite": "reference",
       "required": true,
-      "skip_reason": "S2650 implementation, instruction/bus/cycle oracle and interrupt tests not developed.",
+      "skip_reason": "Imported/adapted S2650 has exhaustive ALU and directed bus checks; complete opcode/cycle/interrupt-vector oracle, boot and hardware timing equivalence remain unverified.",
       "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
       "reference": "docs/validation.md; pending evidence."
     },
@@ -277,6 +341,78 @@
       "new": "address_hi",
       "failure_label": "pal_decode",
       "reason": "Address group numbering is reversed."
+    },
+    {
+      "id": "wrong_add_interdigit",
+      "check": "hunchback.cpu.edge_regressions",
+      "file": "rtl/vendor/arcadia/sgs2650_pack.vhd",
+      "old": "pslo_idc:=vt(4) XOR vi1(4) XOR vi2(4);",
+      "new": "pslo_idc:=to_std_logic(vt(3 DOWNTO 0)<vi1(3 DOWNTO 0));",
+      "failure_label": "alu_add_idc",
+      "reason": "Reintroduce reproduced add-with-carry interdigit fault."
+    },
+    {
+      "id": "wrong_sub_interdigit",
+      "check": "hunchback.cpu.edge_regressions",
+      "file": "rtl/vendor/arcadia/sgs2650_pack.vhd",
+      "old": "pslo_idc:=NOT (vt(4) XOR vi1(4) XOR vi2(4));",
+      "new": "pslo_idc:=to_std_logic(vt(3 DOWNTO 0)<=vi1(3 DOWNTO 0));",
+      "failure_label": "alu_sub_idc",
+      "reason": "Reintroduce reproduced subtract-with-borrow interdigit fault."
+    },
+    {
+      "id": "wrong_signed_comparison",
+      "check": "hunchback.cpu.edge_regressions",
+      "file": "rtl/vendor/arcadia/sgs2650_pack.vhd",
+      "old": "signed(vi1)<signed(vi2)",
+      "new": "signed(vi1)>signed(vi2)",
+      "failure_label": "alu_signed_compare",
+      "reason": "Negative operand comparison condition is reversed."
+    },
+    {
+      "id": "lost_cpu_page_wrap",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "RETURN base(14 DOWNTO 13) & (base(12 DOWNTO 0)+offset(12 DOWNTO 0));",
+      "new": "RETURN base+offset;",
+      "failure_label": "relative_page",
+      "reason": "Relative/sequential arithmetic leaks into the next 8 KiB page."
+    },
+    {
+      "id": "skipped_halt_resume",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "-- that advance to resume exactly at the instruction after HALT.\n            iar_c<=page_add(iar,to_unsigned(32767,15));",
+      "new": "-- Mutant: retain the already incremented HALT address.\n            iar_c<=iar;",
+      "failure_label": "halt_resume",
+      "reason": "Interrupt return skips the first opcode after HALT."
+    },
+    {
+      "id": "ignored_cpu_enable",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "IF ce='1' OR reset='1' THEN",
+      "new": "IF ce='1' OR ce='0' OR reset='1' THEN",
+      "failure_label": "disabled_state",
+      "reason": "CPU state advances even while the machine-step enable is low."
+    },
+    {
+      "id": "stale_io_qualifier",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "ene_c<=dr(2);",
+      "new": "ene_c<=ri(2);",
+      "failure_label": "extended_read_address",
+      "reason": "Immediate I/O request uses the previous opcode extended qualifier."
+    },
+    {
+      "id": "early_main_machine_step",
+      "check": "hunchback.clock.synthetic",
+      "file": "rtl/machine/cvs_clock.sv",
+      "old": "assign ce_main_step = ce_main && (main_step == 2'd2);",
+      "new": "assign ce_main_step = ce_main && (main_step == 2'd1);",
+      "failure_label": "main_step_cadence",
+      "reason": "CPU machine-step enable is one physical CPU period group early."
     }
   ],
   "build": {

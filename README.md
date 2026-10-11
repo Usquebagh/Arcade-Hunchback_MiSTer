@@ -6,15 +6,17 @@ conversions are separate boards; their ROMs are not interchangeable with CVS.
 
 > **Status:** foundational HDL only; no working game or RBF candidate yet.
 > Reset, main/audio CPU clock enables, program ROM, mirrored system RAM and the
-> standalone U15L address decoder have directed synthetic tests. CPU, video, inputs, audio and MiSTer integration
-> remain to be implemented. Actual MiSTer testing is pending.
+> standalone U15L decoder have synthetic tests. An adapted S2650A passes exhaustive
+> ALU and directed CPU/bus regressions; startup diagnostics remain unresolved.
+> Connected memory, video, inputs, audio and MiSTer integration remain unfinished.
+> Actual MiSTer testing is pending.
 
 ## Original hardware
 
 | Subsystem | Reference hardware | Current implementation |
 | --- | --- | --- |
-| Main CPU | Signetics S2650A, crystal / 8 | Clock enable only; CPU pending |
-| Audio/speech CPUs | Two S2650As, crystal / 16 | Clock enable only; CPUs pending |
+| Main CPU | Signetics S2650A, crystal / 8 | Adapted CPU and step enables tested separately; connection pending |
+| Audio/speech CPUs | Two S2650As, crystal / 16 | CPU implementation available; sound-board instances pending |
 | Video | Signetics 2621 PAL timing, three S2636 sprite chips, character ROM/RAM | Pending |
 | Program | Five 4 KiB EPROMs, staggered in four 8 KiB pages | Downloadable ROM and mirrored 1 KiB system RAM |
 | Sound | 8/4-bit DAC, discrete circuits, TMS5100 speech | Pending |
@@ -60,5 +62,7 @@ regressions and reviewed timing/constraint evidence from one frozen snapshot.
 
 No pushes, publication, PRs, binaries or test-result uploads until the user confirms
 hardware testing. Local commits are permitted. See [agent workflow](AGENTS.md).
-Original project code is BSD-3-Clause. MiSTer-BDSM is MIT and pinned as a submodule;
-future imported MiSTer/CPU/IP components retain their own licenses and credits.
+Original code is BSD-3-Clause. MiSTer-BDSM is MIT and pinned as a submodule.
+Imported Arcadia CPU/packages retain original notices and the supplied upstream
+GPL-2.0 license; see the vendor README. Future imports retain their licenses.
+See [CPU tests and gaps](docs/cpu.md).

@@ -22,3 +22,4 @@
 *.vcd
 __pycache__/
 *.pyc
+/trace.log

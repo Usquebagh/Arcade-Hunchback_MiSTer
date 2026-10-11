@@ -1,0 +1,168 @@
+-- SPDX-License-Identifier: BSD-3-Clause
+-- Synthetic programs; software initializes status/registers before use.
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use std.textio.all;
+use std.env.all;
+use work.base_pack.all;
+
+entity s2650_bus_tb is end;
+architecture test of s2650_bus_tb is
+  signal clk : std_logic := '0';
+  signal reset, reset_na : std_logic := '1';
+  signal ack, irq, sense : std_logic := '0';
+  signal ce : std_logic := '1';
+  signal req, wr, mio, ene, dc, intack, flag : std_logic;
+  signal ad : uv15;
+  signal dw, dr : uv8 := (others=>'0');
+  signal ph : uv2;
+begin
+  cpu : entity work.sgs2650
+    generic map(VER_B=>false)
+    port map(req=>req,ack=>ack,ad=>ad,wr=>wr,dw=>dw,dr=>dr,mio=>mio,
+      ene=>ene,dc=>dc,ph=>ph,int=>irq,intack=>intack,ivec=>x"30",
+      sense=>sense,flag=>flag,reset=>reset,ce=>ce,clk=>clk,reset_na=>reset_na);
+  process
+    type memory_type is array(0 to 32767) of uv8;
+    type byte_list is array(natural range <>) of natural;
+    variable memory : memory_type := (others=>x"40");
+    variable clocks, io_writes, irq_acks : natural := 0;
+    variable first_store, second_store : natural := 0;
+    variable branch_armed, branch_next, branch_seen : boolean := false;
+    variable line_out : line;
+    procedure check(condition : boolean; label_text : string; want, got : integer) is
+    begin
+      if not condition then
+        write(line_out,string'("BDSM {""status"":""FAIL"",""label"":"""));write(line_out,label_text);
+        write(line_out,string'(""",""cycle"":"));write(line_out,clocks);
+        write(line_out,string'(",""expected"":"));write(line_out,want);
+        write(line_out,string'(",""observed"":"));write(line_out,got);
+        write(line_out,string'("}"));writeline(output,line_out);stop(1);wait;
+      end if;
+    end procedure;
+    procedure program(base : natural; bytes : byte_list) is
+    begin
+      for n in bytes'range loop memory(base+n-bytes'low):=to_unsigned(bytes(n),8);end loop;
+    end procedure;
+    procedure tick(ready : std_logic := '1'; enable : std_logic := '1') is
+      variable address : natural;
+      variable read_value : uv8;
+      variable update_read : boolean;
+    begin
+      clk<='0';ack<=ready;ce<=enable;wait for 5 ns;
+      update_read:=false;
+      if intack='1' then irq<='0';irq_acks:=irq_acks+1;end if;
+      if reset='1' then
+        if reset_na='1' then
+          check(ad=0 and mio='1' and wr='0' and req='1',"reset_bus",0,to_integer(ad));
+          read_value:=memory(to_integer(ad));update_read:=true;
+        end if;
+      elsif req='1' and ready='1' then
+        address:=to_integer(ad);
+        if mio='1' then
+          if branch_next then
+            check(address=2,"relative_page",2,address);branch_seen:=true;branch_next:=false;
+          elsif branch_armed and address=16#1ffe# then
+            branch_next:=true;
+          end if;
+          if wr='1' then
+            memory(address):=dw;
+            if address=16#1c00# and first_store=0 then first_store:=clocks;end if;
+            if address=16#1c01# and second_store=0 then second_store:=clocks;end if;
+          else read_value:=memory(address);update_read:=true;end if;
+        elsif wr='0' then
+          if ene='1' then
+            check(address=16#a7#,"extended_read_address",16#a7#,address);read_value:=x"d2";update_read:=true;
+          else
+            check(dc='0',"control_read",0,1);read_value:=x"6d";update_read:=true;
+          end if;
+        else
+          io_writes:=io_writes+1;
+          if ene='1' then
+            check(address=16#a8#,"extended_write_address",16#a8#,address);
+            check(dw=x"d2","extended_write_byte",16#d2#,to_integer(dw));
+          else
+            check(dc='1',"data_write",1,0);
+            check(dw=x"6d","data_write_byte",16#6d#,to_integer(dw));
+          end if;
+        end if;
+      end if;
+      clk<='1';wait for 0 ns;
+      -- Like a separate synchronous RAM process, data arrives after sampling.
+      if update_read then dr<=read_value;end if;
+      wait for 5 ns;clocks:=clocks+1;
+    end procedure;
+    procedure start is
+    begin
+      irq<='0';reset<='1';reset_na<='0';tick;
+      reset_na<='1';for n in 1 to 4 loop tick;end loop;
+      reset<='0';
+      wait for 1 ns; -- settle the reset-address mux before sampling bus outputs
+    end procedure;
+    variable held_address : uv15;
+  begin
+    program(0,(
+      16#75#,16#ff#,16#77#,16#0a#, -- explicit status initialization
+      16#04#,16#12#,16#05#,16#34#,16#06#,16#56#,16#07#,16#78#,
+      16#01#,16#cc#,16#1c#,0,
+      16#04#,16#ff#,16#84#,1,16#cc#,16#1c#,1,
+      16#13#,16#cc#,16#1c#,2,
+      16#77#,16#10#,16#05#,16#a5#,16#75#,16#10#,16#01#,16#cc#,16#1c#,3,
+      16#77#,16#10#,16#01#,16#cc#,16#1c#,4,16#75#,16#10#,
+      16#05#,3,16#0d#,16#61#,0,16#cc#,16#1c#,5,
+      16#0d#,16#21#,0,16#cc#,16#1c#,6,
+      16#0d#,16#41#,0,16#cc#,16#1c#,7,
+      16#0c#,16#81#,16#30#,16#cc#,16#1c#,8,
+      16#3f#,0,16#c0#,16#cc#,16#1c#,9,
+      16#30#,16#f0#,16#55#,16#a7#,16#d5#,16#a8#,
+      16#76#,16#40#,16#12#,16#cc#,16#1c#,10,16#40#));
+    program(16#c0#,(16#04#,16#bc#,16#17#));
+    memory(16#103#):=x"9a";memory(16#104#):=x"a7";
+    memory(16#130#):=x"41";memory(16#131#):=x"40";memory(16#4140#):=x"5c";
+    sense<='1';start;
+    held_address:=ad;
+    for n in 1 to 10 loop
+      tick('1','0');check(req='0',"disabled_request",0,1);
+      check(ad=held_address,"disabled_state",to_integer(held_address),to_integer(ad));
+    end loop;
+    ack<='0';wait for 1 ns;held_address:=ad;
+    for n in 1 to 10 loop tick('0');check(ad=held_address,"bus_stall_address",to_integer(held_address),to_integer(ad));end loop;
+    for n in 1 to 400 loop tick;end loop;
+    check(memory(16#1c00#)=x"34","register_load",16#34#,to_integer(memory(16#1c00#)));
+    check(memory(16#1c01#)=x"00","immediate_add",0,to_integer(memory(16#1c01#)));
+    check(memory(16#1c02#)=x"2b","status_flags",16#2b#,to_integer(memory(16#1c02#)));
+    check(memory(16#1c03#)=x"34","bank_zero",16#34#,to_integer(memory(16#1c03#)));
+    check(memory(16#1c04#)=x"a5","bank_one",16#a5#,to_integer(memory(16#1c04#)));
+    check(memory(16#1c05#)=x"9a","absolute_index",16#9a#,to_integer(memory(16#1c05#)));
+    check(memory(16#1c06#)=x"a7","preincrement",16#a7#,to_integer(memory(16#1c06#)));
+    check(memory(16#1c07#)=x"9a","predecrement",16#9a#,to_integer(memory(16#1c07#)));
+    check(memory(16#1c08#)=x"5c","indirect_page",16#5c#,to_integer(memory(16#1c08#)));
+    check(memory(16#1c09#)=x"bc","subroutine_return",16#bc#,to_integer(memory(16#1c09#)));
+    check(memory(16#1c0a#)=x"c0","sense_flag",16#c0#,to_integer(memory(16#1c0a#)));
+    check(io_writes=2,"io_write_count",2,io_writes);check(flag='1',"flag_pin",1,0);
+    check(second_store-first_store=8,"instruction_cadence",8,second_store-first_store);
+
+    -- HALT wake, interrupt entry/RETE and resume at the next instruction.
+    memory:=(others=>x"40");io_writes:=0;irq_acks:=0;
+    program(0,(16#1f#,0,16#60#));
+    program(16#30#,(16#04#,16#d7#,16#cc#,16#1c#,2,16#37#));
+    program(16#60#,(16#75#,16#ff#,16#77#,16#0a#,16#04#,16#11#,16#cc#,16#1c#,0,
+      16#40#,16#04#,16#22#,16#cc#,16#1c#,1,16#40#));
+    start;for n in 1 to 50 loop tick;end loop;
+    check(memory(16#1c00#)=x"11","before_halt",16#11#,to_integer(memory(16#1c00#)));
+    irq<='1';for n in 1 to 150 loop tick;end loop;
+    check(memory(16#1c02#)=x"d7","interrupt_handler",16#d7#,to_integer(memory(16#1c02#)));
+    check(memory(16#1c01#)=x"22","halt_resume",16#22#,to_integer(memory(16#1c01#)));
+    check(irq_acks=1,"interrupt_ack_count",1,irq_acks);
+
+    -- Relative branch wraps inside its current 8 KiB page, not into page 1.
+    memory:=(others=>x"40");
+    program(0,(16#1f#,16#1f#,16#fb#));
+    program(16#1ffb#,(16#75#,16#ff#,16#1b#,3));
+    branch_armed:=true;start;for n in 1 to 25 loop tick;end loop;
+    check(branch_seen,"relative_branch_progress",1,0);
+    write(line_out,string'("BDSM {""status"":""PASS"",""observed"":""Synthetic CPU register/status/addressing/bus/IO/subroutine/HALT interrupt scenarios""}"));
+    writeline(output,line_out);stop(0);wait;
+  end process;
+end;

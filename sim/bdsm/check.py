@@ -14,10 +14,12 @@ def emit(status, **details):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('mode', choices=['reset', 'clock', 'memory', 'decode', 'lint', 'rom', 'mra'])
+    parser.add_argument('mode', choices=['reset', 'clock', 'memory', 'decode', 'lint', 'rom', 'mra', 'cpu_alu', 'cpu_edges', 'cpu_bus', 'cpu_synth', 'cpu_diagnostics'])
     parser.add_argument('--seed', type=int, default=1)
     args = parser.parse_args()
     adapter = Path(__file__).resolve().parent
+    if args.mode.startswith('cpu_'):
+        return subprocess.run([sys.executable, str(adapter / 'check_ghdl.py'), args.mode, '--seed', str(args.seed)]).returncode
     core = Path.cwd()
     work = core / 'build' / ('bdsm-' + args.mode)
     work.mkdir(parents=True, exist_ok=True)
