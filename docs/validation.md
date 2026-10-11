@@ -49,7 +49,8 @@ group mutation must fail `pal_decode` twice. Full banked memory remains pending.
 1. Audit a complete S2650 core or implement one against pinned instruction and
    cycle references, including indirect/indexed addressing, alternate registers,
    PSU/PSL, page wrap, stack, sense/flag, interrupts and all bus spaces.
-2. Add FLAG/bank memory, input DIP/strobe wiring, S2636 registers and raster/
+2. Complete display-side FLAG/bank memory, physical input DIP/strobe wiring,
+   S2636 registers and raster/
    character/sprite/bullet rendering with collision and independent pixel checks.
 3. Add two audio CPUs, command interrupts, DAC/discrete and TMS5100 speech with
    justified timing/numerical expectations and explicit fidelity gaps.
@@ -57,3 +58,47 @@ group mutation must fail `pal_decode` twice. Full banked memory remains pending.
    inventory/QIP dependencies, QPF/QSF/SDC, CDC and TimeQuest endpoint review.
 5. Pass the complete configured suite, mutation campaign and strict Quartus gates
    from one frozen snapshot before retaining a candidate for hardware testing.
+
+## Connected main CPU milestone, 2026-10-11
+
+The existing banked-memory and native CPU bus baselines passed before changes.
+`hunchback.main.bus` now checks all 256 raw input addresses, read-only bank latch
+side effects, request acceptance, scroll inversion, collision command pulses,
+audio bit-7 edges, memory/I/O isolation and held responses. The connected check
+uses GHDL synthesis of the actual adapted CPU plus actual SV ROM, FLAG RAM, I/O
+and clock divider in Icarus. It downloads a synthetic program, initializes status
+in software and checks 24 expected CPU writes including 12 actual RAM readbacks,
+character pages, FLAG views, raw inputs, sense, collision/audio/video commands
+and external sprite routing. A 250-master-edge readiness stall and /96 request
+qualification are checked. The tests are deterministic; seed is recorded but
+does not select random stimuli. Four-state comparisons reject unknown signatures;
+this is not a complete CPU unknown-state audit.
+
+GHDL's generated Verilog uses `int` as a bare port identifier, a SystemVerilog
+keyword. The adapter escapes that identifier only; no CPU logic is patched or
+committed as generated Verilog. Native synthesis diagnostics and Icarus -Wall
+findings remain candidate-blocking if unreviewed. SystemVerilog bus/memory modules
+also have unsuppressed Verilator -Wall lint. Native CPU diagnostics remain a
+required WARNING; physical synthesis and timing are still absent.
+
+The first connected-stall experiment captured the live address before the
+ready-low combinational mux had settled and failed `connected_stall`. The harness
+now waits for that mux to settle before capturing the pending address, as the
+native CPU bench already does. The assertion remains and no HDL was changed to
+make it pass. The new program and exhaustive bus checks passed after correction.
+Five new deliberate faults target I/O page bits, write-latched banking, repeated
+audio triggers, live response-space selection and disconnected CPU FLAG. The
+total campaign contains 24 faults, each requiring the designated assertion twice.
+The initial disconnected-FLAG designation expected a later signature failure;
+both runs instead failed the earlier sprite-write assertion at master cycle 5103
+(expected 155, observed 180). That campaign entry correctly remained FAIL despite
+detecting the fault. Its designation is now `connected_sprite_write`, reflecting
+the first wrong external transaction; no assertion or HDL was changed. The
+original report is retained and the final campaign must rerun from the revised
+frozen snapshot.
+
+Raw port compatibility does not establish physical input polarity/bit mapping,
+the uncertain three-versus-four-bit port decode or MiSTer controls. Sprite routing
+does not implement S2636 registers or graphics. Command latches do not implement
+sound or collisions. Required coverage gaps remain; no game boot or RBF candidate
+is claimed. Reports retain source/dependency hashes, versions and observations.

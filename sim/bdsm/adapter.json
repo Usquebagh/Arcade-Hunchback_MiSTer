@@ -27,7 +27,8 @@
     "docs/schematic-audit.md",
     "docs/pal-audit.md",
     "docs/cpu.md",
-    "docs/banked-memory.md"
+    "docs/banked-memory.md",
+    "docs/main-bus.md"
   ],
   "required_files": [
     "rtl/machine/cvs_reset.sv",
@@ -40,13 +41,18 @@
     "rtl/vendor/arcadia/sgs2650_pack.vhd",
     "rtl/vendor/arcadia/sgs2650.vhd",
     "rtl/machine/cvs_banked.sv",
-    "rtl/machine/cvs_main_memory.sv"
+    "rtl/machine/cvs_main_memory.sv",
+    "rtl/machine/cvs_main_io.sv",
+    "rtl/machine/cvs_main_bus.sv",
+    "rtl/machine/cvs_main.sv",
+    "sim/cpu/cvs_main_tb.sv",
+    "sim/bdsm/check_connected.py"
   ],
   "games": [
     "Hunchback (CVS set 1)"
   ],
   "limitations": [
-    "Reset/clock/main ROM/system RAM and standalone U15L pin decode HDL only; no game execution or MiSTer integration.",
+    "Synthetic reset/clock/main CPU, ROM, FLAG RAM and raw I/O boundaries implemented; no game boot, display/sound or MiSTer integration.",
     "Two-state Verilator does not prove X/Z, CDC, PLL, analog fidelity or board accuracy.",
     "Synthetic strobes/forwarding are declared implementation contracts, not board measurements.",
     "ROM identity/layout PASS is not CPU boot, video, input or audio coverage.",
@@ -108,6 +114,34 @@
       "timeout": 180,
       "expectation": "All CPU RAM FLAG views, character pages, 16-byte palette aliases and four CPU-page mirrors retain independent bytes; sprite routing and registered response selection are correct.",
       "reference": "Pinned MAME cvs.cpp main_cpu_map, palette/character handlers and supplied PAL source; sprite behaviour/display arbitration excluded."
+    },
+    {
+      "id": "hunchback.main.bus",
+      "suite": "smoke",
+      "mode": "main_bus",
+      "required": true,
+      "tools": [
+        "verilator",
+        "make",
+        "g++"
+      ],
+      "timeout": 180,
+      "expectation": "All 256 input-port addresses, bank read side effects, stalls, event pulses, memory isolation and held responses match declared contract.",
+      "reference": "docs/main-bus.md; pinned MAME CVS compatibility and explicit synchronous implementation contract."
+    },
+    {
+      "id": "hunchback.main.connected",
+      "suite": "smoke",
+      "mode": "main_connected",
+      "required": true,
+      "tools": [
+        "ghdl",
+        "iverilog",
+        "vvp"
+      ],
+      "timeout": 180,
+      "expectation": "Actual adapted CPU executes downloaded synthetic program using /96 enable and real SV FLAG/character/system RAM; 24 signatures/readbacks, stalled request, input/command/sprite-routing events are correct.",
+      "reference": "docs/main-bus.md; pinned CPU instructions and MAME map; no game or physical-board claim."
     },
     {
       "id": "hunchback.decode.synthetic",
@@ -234,7 +268,7 @@
       "id": "hunchback.banked_memory.coverage",
       "suite": "reference",
       "required": true,
-      "skip_reason": "CPU-side banked RAM/routing implemented; S2636 register behaviour, display ports/arbitration, IO-latched character bank and CPU-to-memory integration remain unimplemented.",
+      "skip_reason": "CPU-side FLAG RAM, IO bank latch and synthetic CPU connection checked; S2636 register behaviour and display ports/arbitration remain unimplemented.",
       "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
       "reference": "docs/validation.md; pending evidence."
     },
@@ -250,7 +284,7 @@
       "id": "hunchback.input.coverage",
       "suite": "reference",
       "required": true,
-      "skip_reason": "Input strobes, DIP switches, coin/start/player/cocktail routing not implemented.",
+      "skip_reason": "Raw MAME-compatible ports are tested with synthetic CPU reads; physical decode, DIP meaning, coin/start/player/cocktail mapping and MiSTer input routing remain unverified.",
       "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
       "reference": "docs/validation.md; pending evidence."
     },
@@ -466,6 +500,51 @@
       "new": "assign cpu_dout = (response_banked && banked) ? banked_data : fixed_data;",
       "failure_label": "response_hold",
       "reason": "Changing address switches the preceding read response before another read."
+    },
+    {
+      "id": "wrong_io_page",
+      "check": "hunchback.main.bus",
+      "file": "rtl/machine/cvs_main_io.sv",
+      "old": "char_page <= address[7:6];",
+      "new": "char_page <= {address[6],address[7]};",
+      "failure_label": "io_page",
+      "reason": "Extended read selects the wrong character page."
+    },
+    {
+      "id": "bank_latch_on_write",
+      "check": "hunchback.main.bus",
+      "file": "rtl/machine/cvs_main_io.sv",
+      "old": "if (io_rd) begin",
+      "new": "if (io_rd || io_wr) begin",
+      "failure_label": "write_bank_hold",
+      "reason": "An extended write improperly changes the input-read bank latches."
+    },
+    {
+      "id": "repeated_audio_trigger",
+      "check": "hunchback.main.bus",
+      "file": "rtl/machine/cvs_main_io.sv",
+      "old": "audio_trigger <= !audio_command[7] && din[7];",
+      "new": "audio_trigger <= din[7];",
+      "failure_label": "audio_edge",
+      "reason": "High bit 7 retriggers without a low-to-high transition."
+    },
+    {
+      "id": "live_bus_response",
+      "check": "hunchback.main.bus",
+      "file": "rtl/machine/cvs_main_bus.sv",
+      "old": "assign dout = response_io ? io_data : memory_data;",
+      "new": "assign dout = (response_io || !memory_space) ? io_data : memory_data;",
+      "failure_label": "bus_response_hold",
+      "reason": "Next bus-space selection changes the preceding memory response."
+    },
+    {
+      "id": "disconnected_cpu_flag",
+      "check": "hunchback.main.connected",
+      "file": "rtl/machine/cvs_main.sv",
+      "old": ".data_port(data_port),.flag(flag),.address(address)",
+      "new": ".data_port(data_port),.flag(1'b0),.address(address)",
+      "failure_label": "connected_sprite_write",
+      "reason": "Disconnected CPU FLAG routes a character RAM write to the external sprite interface."
     }
   ],
   "build": {

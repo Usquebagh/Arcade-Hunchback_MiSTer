@@ -9,14 +9,15 @@ conversions are separate boards; their ROMs are not interchangeable with CVS.
 > standalone U15L decoder have synthetic tests. An adapted S2650A passes exhaustive
 > ALU and directed CPU/bus regressions; startup diagnostics remain unresolved.
 > CPU-side FLAG-banked RAM and memory routing now have exhaustive synthetic checks.
-> CPU connection, video, inputs, audio and MiSTer integration remain unfinished.
+> The connected CPU runs a synthetic program through actual ROM/RAM and raw I/O;
+> video, physical input mapping, audio and MiSTer integration remain unfinished.
 > Actual MiSTer testing is pending.
 
 ## Original hardware
 
 | Subsystem | Reference hardware | Current implementation |
 | --- | --- | --- |
-| Main CPU | Signetics S2650A, crystal / 8 | Adapted CPU and step enables tested separately; connection pending |
+| Main CPU | Signetics S2650A, crystal / 8 | Connected synthetic ROM/RAM/I/O program passes; full CPU and game coverage pending |
 | Audio/speech CPUs | Two S2650As, crystal / 16 | CPU implementation available; sound-board instances pending |
 | Video | Signetics 2621 PAL timing, three S2636 sprite chips, character ROM/RAM | Pending |
 | Program | Five 4 KiB EPROMs, staggered in four 8 KiB pages | Downloadable ROM and mirrored 1 KiB system RAM |
@@ -67,3 +68,4 @@ Original code is BSD-3-Clause. MiSTer-BDSM is MIT and pinned as a submodule.
 Imported Arcadia CPU/packages retain original notices and the supplied upstream
 GPL-2.0 license; see the vendor README. Future imports retain their licenses.
 See [CPU tests and gaps](docs/cpu.md).
+See [main bus and I/O tests](docs/main-bus.md).

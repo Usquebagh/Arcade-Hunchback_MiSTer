@@ -3,7 +3,8 @@
 Reference: pinned MAME CVS main_cpu_map, palette_r/w and character_ram_r/w,
 and Kevtris v1.4 PAL sources, previously audited privately. The SystemVerilog
 `cvs_main_memory` connects existing downloaded program/system RAM to new FLAG
-views. This is a tested memory boundary, not yet a connected S2650 machine.
+views. The subsequent `cvs_main` assembly connects this boundary to the adapted
+S2650; a downloaded synthetic program checks real memory and I/O responses.
 
 | Window, mirrored in each 8 KiB CPU page | FLAG low | FLAG high |
 | --- | --- | --- |
@@ -13,8 +14,8 @@ views. This is a tested memory boundary, not yet a connected S2650 machine.
 | 1700..17FF | S2636 chip 1 interface | Character plane 1, selected 256-byte page |
 | 1800..1BFF | 1 KiB attribute RAM | 1 KiB character-code RAM |
 
-Each character plane has four independent pages. The external char_page input
-will eventually be latched from extended I/O address bits 6/7; rendering mode
+Each character plane has four independent pages. The char_page input is now
+latched by `cvs_main_io` from extended-read address bits 6/7; rendering mode
 is separately selected by bits 4/5. In MAME's larger character region the writable
 1 KiB half is at plane_offset OR 0400 OR page_offset OR byte_offset. These modules
 store only that writable half, not character ROM or the full graphics region.
@@ -39,8 +40,8 @@ selection/read/write/idle isolation, held responses, program routing and FLAG-
 independent system RAM. Mutations select the wrong FLAG view, alias character
 pages, reverse sprite chip selection, and use a live response selector.
 
-Missing: real CPU connection, I/O bank latch, display-side ports/arbitration,
-S2636 semantics and Quartus memory inference/CDC/timing. The required banked
+Missing: display-side ports/arbitration, S2636 semantics and Quartus memory
+inference/CDC/timing. The required banked
 memory coverage gap remains active until those pieces have meaningful checks.
 
 CPU reset investigation: existing native diagnostics arise from unspecified

@@ -42,3 +42,12 @@ Even a gated candidate remains hardware-testing-pending until actual MiSTer test
 ROMs, generated images, schematics, private research, game recordings, simulator
 traces, reports and Quartus outputs stay ignored. Never commit them. Do not infer
 CVS accuracy from the Galaxian/Scramble/Donkey Kong versions.
+
+For main-bus or CPU wiring changes, run `hunchback.main.bus` and
+`hunchback.main.connected` as well as affected native CPU/memory baselines and
+lint. The connected check synthesizes the actual VHDL CPU into a disposable
+Verilog file for Icarus and executes actual SystemVerilog memory/I/O. Its sole
+identifier escape for the VHDL `int` port is lexical, not a logic substitution.
+Do not replace this assembly test with a mock CPU or inferred RAM initialization.
+Keep physical input decode and native CPU unknown-state diagnostics as blockers
+until independently audited and checked.

@@ -51,7 +51,9 @@ Extended I/O reads select input strobes and character bank/mode. Extended writes
 control scroll. Nonextended control reads return collision flags; writes latch
 audio commands. Nonextended data reads clear collisions; writes select video
 effects. Vblank drives main sense and interrupt; sound CPUs use an approximate
-380 Hz sense oscillator. CPU bus protocol and exact timing remain pending.
+380 Hz sense oscillator. A synthetic main CPU connection now checks the declared
+one-edge memory/I/O protocol and /96 machine-step transfers; physical bus timing,
+vblank generation and sound-board timing remain pending. See [main bus](main-bus.md).
 
 ## Draft ioctl index-0 layout
 
