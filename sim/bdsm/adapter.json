@@ -35,7 +35,8 @@
     "docs/video-assembly.md",
     "docs/rom-observation.md",
     "docs/audio-digital.md",
-    "docs/audio-assembly.md"
+    "docs/audio-assembly.md",
+    "docs/audio-samples.md"
   ],
   "required_files": [
     "rtl/machine/cvs_reset.sv",
@@ -87,7 +88,9 @@
     "sim/bdsm/audio_bus.cpp",
     "sim/cpu/cvs_audio_cpu_tb.sv",
     "rtl/machine/cvs_av_machine.sv",
-    "sim/cpu/cvs_av_machine_tb.sv"
+    "sim/cpu/cvs_av_machine_tb.sv",
+    "rtl/machine/cvs_audio_samples.sv",
+    "sim/bdsm/audio_samples.cpp"
   ],
   "games": [
     "Hunchback (CVS set 1)"
@@ -445,7 +448,7 @@
       "id": "hunchback.audio.coverage",
       "suite": "reference",
       "required": true,
-      "skip_reason": "Digital audio and actual dual-CPU connection checks exist; connected ROM events are observations only. Native unknown RAM/indexed-read paths, second speech CPU, analog/discrete/PCM/TMS5100, oscillator/CDC and independent channel/cadence references remain incomplete.",
+      "skip_reason": "Digital audio/dual-CPU/raw signed sample checks exist; connected ROM events and preview remain observations only. Native unknown RAM/indexed-read/power-up phase paths, physical DAC bits/weights/calibrated mixing/filter/discrete audio, second speech CPU/TMS5100, oscillator/CDC and independent channel references remain incomplete.",
       "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
       "reference": "docs/validation.md; pending evidence."
     },
@@ -632,8 +635,18 @@
       "required": true,
       "tools": ["ghdl", "iverilog", "vvp"],
       "timeout": 180,
-      "expectation": "Both actual CPUs execute five FLAG-independent main commands, two audio IRQ/RETE reads and RAM/DAC signatures, /96 and /192, ready stalls and isolated audio image download.",
-      "reference": "docs/audio-assembly.md; expectations recorded before implementation, actual main/video/audio hierarchy, synthetic software; shared master contract not physical oscillator/CDC proof."
+      "expectation": "Both actual CPUs execute five FLAG-independent main commands, two audio IRQ/RETE reads and RAM/DAC signatures, /96 and /192, ready stalls, isolated audio image download and per-edge raw sample contracts.",
+      "reference": "docs/audio-assembly.md and docs/audio-samples.md; independent synthetic expectations and actual main/video/audio hierarchy; shared master/raw numeric contract not physical oscillator/CDC/gain proof."
+    },
+    {
+      "id": "hunchback.audio.samples",
+      "suite": "smoke",
+      "mode": "audio_samples",
+      "required": true,
+      "tools": ["verilator", "make", "g++"],
+      "timeout": 180,
+      "expectation": "Independent linear-time rational 48k cadence, all 256 by 16 raw signed scaling combinations, output hold, changing inputs and arbitrary-phase resets.",
+      "reference": "docs/audio-samples.md; explicit numeric raw-channel contract recorded before implementation, not physical gain/bit order/analog calibration."
     }
   ],
   "mutations": [
@@ -1464,6 +1477,42 @@
       "new": ".command_trigger(audio_trigger && !flag)",
       "failure_label": "av_ack_count",
       "reason": "FLAG-selected main RAM bank incorrectly suppresses a command IRQ."
+    },
+    {
+      "id": "audio_sample_boundary",
+      "check": "hunchback.audio.samples",
+      "file": "rtl/machine/cvs_audio_samples.sv",
+      "old": "next_sum>=27'd57272724",
+      "new": "next_sum>27'd57272724",
+      "failure_label": "audio_sample_cadence",
+      "reason": "Exact rational accumulator wrap misses a sample edge."
+    },
+    {
+      "id": "audio_sample8_sign",
+      "check": "hunchback.audio.samples",
+      "file": "rtl/machine/cvs_audio_samples.sv",
+      "old": "{~dac8[7],dac8[6:0],8'd0}",
+      "new": "{dac8[7],dac8[6:0],8'd0}",
+      "failure_label": "audio_sample8",
+      "reason": "Raw eight-bit scaling uses the wrong digital midpoint."
+    },
+    {
+      "id": "audio_sample4_sign",
+      "check": "hunchback.audio.samples",
+      "file": "rtl/machine/cvs_audio_samples.sv",
+      "old": "{~dac4[3],dac4[2:0],12'd0}",
+      "new": "{dac4[3],dac4[2:0],12'd0}",
+      "failure_label": "audio_sample4",
+      "reason": "Raw four-bit scaling uses the wrong digital midpoint."
+    },
+    {
+      "id": "audio_sample8_connection",
+      "check": "hunchback.audio.assembly",
+      "file": "rtl/machine/cvs_av_machine.sv",
+      "old": ".reset(reset),.dac8(dac8),.dac4(dac4)",
+      "new": ".reset(reset),.dac8(8'h80),.dac4(dac4)",
+      "failure_label": "av_sample8",
+      "reason": "Actual byte DAC changes do not reach the sampler input."
     }
   ],
   "build": {

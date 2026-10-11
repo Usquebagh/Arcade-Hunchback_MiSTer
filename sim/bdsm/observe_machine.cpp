@@ -35,7 +35,9 @@ int main(int argc,char** argv) {
     std::ofstream bus("bus.log"),captures("captures.log");
 #ifdef AUDIO_OBSERVE
     std::ofstream audio_bus("audio-bus.log"),audio_events("audio-events.log");
+    std::ofstream audio_samples("audio-samples.log");
     uint64_t audio_acks=0,audio_reads=0,audio_writes=0,dac8_writes=0,dac4_writes=0,discrete_writes=0,command_events=0;
+    uint64_t audio_sample_origin=0;
     bool last_audio_ack=false;
     m.audio_ready=1;m.audio_sense=0;
 #endif
@@ -111,6 +113,7 @@ int main(int argc,char** argv) {
             if(m.dac8_wr) {++dac8_writes;audio_events<<cycle<<" DAC8 "<<unsigned(m.dac8)<<"\n";}
             if(m.dac4_wr) {++dac4_writes;audio_events<<cycle<<" DAC4 "<<unsigned(m.dac4)<<"\n";}
             if(m.discrete_wr) {++discrete_writes;audio_events<<cycle<<" DISCRETE "<<unsigned(m.discrete)<<"\n";}
+            if(m.sample_ce)audio_samples<<cycle<<" "<<int(int16_t(m.pcm8))<<" "<<int(int16_t(m.pcm4))<<"\n";
         }
 #endif
         if(m.reset)last_ack=false;
@@ -149,6 +152,9 @@ int main(int argc,char** argv) {
     tick();
     for(unsigned n=0;n<bytes.size();++n) {m.dl_wr=1;m.dl_addr=n;m.dl_data=bytes[n];tick();}
     m.dl_wr=0;m.reset_na=1;m.video_reset=0;for(unsigned n=0;n<4;++n)tick();m.reset=0;
+#ifdef AUDIO_OBSERVE
+    audio_sample_origin=cycle;
+#endif
     while(cycle<limit)tick();
     if(!initialized)fail("observe_startup_missing",want.size(),stores);
     std::cout<<"OBSERVED {\"cycles\":"<<cycle<<",\"frames_started\":"<<frames<<",\"irq_acknowledgements\":"<<irqs
@@ -160,7 +166,7 @@ int main(int argc,char** argv) {
     std::cout<<",\"audio_irq_acknowledgements\":"<<audio_acks<<",\"audio_command_events\":"<<command_events
              <<",\"audio_command_reads\":"<<audio_reads<<",\"audio_writes\":"<<audio_writes
              <<",\"dac8_writes\":"<<dac8_writes<<",\"dac4_writes\":"<<dac4_writes
-             <<",\"discrete_writes\":"<<discrete_writes;
+             <<",\"discrete_writes\":"<<discrete_writes<<",\"audio_sample_origin\":"<<audio_sample_origin;
 #endif
     std::cout<<"}"<<std::endl;
     m.final();return 0;

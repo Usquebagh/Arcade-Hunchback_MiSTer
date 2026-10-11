@@ -250,3 +250,20 @@ audio trace retains six unknown RAM writes and two unknown indexed addresses.
 No power-up initialization was added. Analog/PCM/speech, physical oscillator/CDC,
 channel references and MiSTer/Quartus gates remain incomplete. See
 [expectations, fault proofs and limits](audio-assembly.md).
+
+## Raw DAC sampling milestone, 2026-10-11
+
+`hunchback.audio.samples` independently checks rational 48k strobes, all 4096
+raw channel level pairs, hold, input changes and arbitrary-phase reset. The
+actual dual-CPU check verifies the connected sample outputs on every edge.
+Four new faults reproduce designated assertions twice; the full configured
+campaign is 96 and was not rerun. Focused affected baselines and lint passed.
+
+An authenticated private game sample log renders 377099 stereo frames after
+independent cadence/scaling validation against actual DAC events. The preview
+uses explicit mean removal and half gain; its four-bit channel is constant
+under these stimuli. A changed masked initial audio phase bit and different
+byte-DAC event timing are retained, reinforcing power-up/reference limitations.
+Raw scaling and a preview do not qualify physical gain/filter/mixing, discrete
+audio or speech. All native unknown-state/MiSTer/Quartus blockers remain. See
+[raw sample expectations and preview scope](audio-samples.md).

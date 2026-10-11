@@ -9,8 +9,13 @@ not independent proof of physical board timing or analog audio fidelity.
 `cvs_audio_bus` and `cvs_audio_cpu` provide a standalone MAME-compatible digital
 sound-CPU boundary: actual 4 KiB ROM/128-byte RAM, command IRQ/read, byte DAC and
 four DAC/discrete latches. Exhaustive bus and actual CPU/clock/IRQ checks pass.
-Analog output, speech and main-machine/physical clock integration remain pending;
-the schematic latch-bit discrepancy is retained. See [audio boundary](audio-digital.md).
+`cvs_av_machine` connects actual main/video and audio CPUs with checked command
+IRQ/read delivery. `cvs_audio_samples` exposes separate raw signed channels at
+nominal 48k cadence with independent numeric checks. Physical DAC coding/weights,
+calibrated gain/filter/mixer/discrete output, speech and physical clock/CDC
+integration remain pending; the schematic latch-bit discrepancy is retained.
+See [audio boundary](audio-digital.md), [connection](audio-assembly.md) and
+[raw sampling](audio-samples.md).
 
 `cvs_reset`: asynchronous reset assertion and two rising edges for synchronous
 release. Reset also holds while PLL lock is absent, ROM download is active, or

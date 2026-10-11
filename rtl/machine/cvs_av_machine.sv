@@ -27,7 +27,9 @@ module cvs_av_machine (
     output wire audio_req, audio_wr, audio_memory_space, audio_extended, audio_data_port, audio_flag,
     output wire [14:0] audio_address,
     output wire [7:0] audio_write_data, audio_read_data,
-    output wire [1:0] audio_phase
+    output wire [1:0] audio_phase,
+    output wire sample_ce,
+    output wire signed [15:0] pcm8, pcm4
 );
     // Preserve the independently checked main/video assembly and debug ports.
     cvs_machine main_video(.*);
@@ -46,4 +48,6 @@ module cvs_av_machine (
         .req(audio_req),.wr(audio_wr),.memory_space(audio_memory_space),
         .extended(audio_extended),.data_port(audio_data_port),.flag(audio_flag),
         .address(audio_address),.write_data(audio_write_data),.read_data(audio_read_data),.phase(audio_phase));
+    cvs_audio_samples samples(.clk(clk),.reset(reset),.dac8(dac8),.dac4(dac4),
+        .sample_ce(sample_ce),.pcm8(pcm8),.pcm4(pcm4));
 endmodule

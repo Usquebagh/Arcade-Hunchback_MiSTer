@@ -25,7 +25,7 @@ def main():
     parser.add_argument('--cycles',type=int,default=300_000_000)
     parser.add_argument('--seed',type=int,default=1)
     parser.add_argument('--controls',action='store_true',help='Synthetic coin/start/right/jump input windows; see docs/rom-observation.md')
-    parser.add_argument('--audio',action='store_true',help='Connect actual audio CPU/digital bus; nominal external 380 Hz SENSE, no PCM/speech/analog reference')
+    parser.add_argument('--audio',action='store_true',help='Actual audio CPU/bus and raw 48k samples; nominal external 380 Hz SENSE, no calibrated mixing/speech/analog reference')
     args=parser.parse_args()
     if sys.platform!='linux':parser.error('Run in WSL/Linux with GHDL and Verilator')
     if not 2_000_000<=args.cycles<=1_000_000_000 or not 1<=args.seed<=2147483647:
@@ -51,7 +51,7 @@ def main():
     if args.audio:
         metadata['audio_fixture']=dict(master_hz=57272724,sense_hz=380,
             provenance='Nominal synchronous enables and external SENSE fixture; not physical oscillator/CDC proof')
-        metadata['limitations'].append('Digital audio-ROM events observed only; no independent firmware/channel/waveform oracle or analog/PCM/speech')
+        metadata['limitations'].append('Digital audio-ROM events/raw samples observed only; no independent firmware/channel/waveform oracle or analog/calibrated mixing/speech')
     def save():
         (output/'observation.json').write_text(json.dumps(metadata,indent=2)+'\n')
     save()
@@ -80,7 +80,7 @@ def main():
         names=['cvs_machine','cvs_main','cvs_main_bus','cvs_main_io','cvs_main_memory','cvs_banked','cvs_memory','cvs_clock',
                'cvs_scan','cvs_video_timing','cvs_vblank_irq','cvs_video_join','cvs_s2636_bank','cvs_s2636_objects','cvs_character_video']
         top='cvs_av_machine' if args.audio else 'cvs_machine'
-        if args.audio:names += ['cvs_av_machine','cvs_audio_cpu','cvs_audio_bus']
+        if args.audio:names += ['cvs_av_machine','cvs_audio_cpu','cvs_audio_bus','cvs_audio_samples']
         command=['verilator','--cc','--exe','--build','-j','4','--top-module',top,'-Wall','-Wno-fatal',
             '--x-initial','unique','--x-assign','unique','--Mdir',str(work/'obj'),'-CFLAGS','-O3 -std=c++17'+(' -DAUDIO_OBSERVE' if args.audio else ''),str(cpu),
             *[str(frozen/'rtl/machine'/f'{name}.sv') for name in names],str(frozen/'sim/bdsm/observe_machine.cpp')]
@@ -109,7 +109,7 @@ def main():
         if returncode or not events:raise ValueError('Diagnostic failed or omitted its bounded observation; see run.log')
         metadata['observations']=events[-1]
         metadata['event_logs']=[dict(name=p.name,sha256=hashlib.sha256(p.read_bytes()).hexdigest())
-                                for p in sorted(output.glob('*bus.log'))+sorted(output.glob('*events.log'))]
+                                for p in sorted(output.glob('*bus.log'))+sorted(output.glob('*events.log'))+sorted(output.glob('*samples.log'))]
         metadata['captures']=[dict(name=p.name,sha256=hashlib.sha256(p.read_bytes()).hexdigest(),
                                   provenance='Actual machine pixels; observed only, no independent game-frame oracle')
                               for p in sorted(output.glob('frame-*.ppm'))]

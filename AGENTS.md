@@ -138,4 +138,16 @@ diagnostics; keep both command-event/ACK and accepted audio bus/DAC logs. Nomina
 380 Hz external SENSE and shared-master enables do not qualify physical oscillator
 phase/drift or CDC. Native unknown RAM writes and indexed read addresses remain
 limitations; do not clear RAM or coerce unknown addresses to manufacture PASS.
-Keep analog/PCM/speech/channel-reference and MiSTer/Quartus candidate blockers.
+Keep analog/calibrated PCM/speech/channel-reference and MiSTer/Quartus candidate blockers.
+
+For raw DAC sampling run `hunchback.audio.samples`, `hunchback.audio.assembly`
+and lint plus affected audio/main/native CPU/clock/memory/machine checks. Preserve
+the independent linear-time 48k accumulator oracle, all 4096 raw level pairs,
+between-strobe hold, pre-edge DAC capture and arbitrary-phase reset. Raw signed
+scaling is not physical bit significance, gain, analog filtering or mixing.
+Retain exact-wrap/sign/connection mutation proofs. Render only authenticated
+completed sample/DAC logs with `tools/render_audio_observation.py`; require exact
+cadence and value agreement with preceding DAC events. WAVs stay private/ignored.
+Preview-only mean removal and gain must be explicit. No frame/sample agreement
+may discard native unknown-state or power-up phase differences. A constant real
+channel is missing stimulus coverage even when synthetic scaling checks pass.

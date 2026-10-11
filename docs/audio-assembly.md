@@ -112,3 +112,7 @@ Analog/discrete synthesis, calibrated PCM, resistor/DAC bit significance,
 speech CPU/TMS5100, physical oscillators/CDC, complete CPU/game/video references,
 MiSTer integration and Quartus constraint/timing gates remain incomplete. No
 RBF candidate or audible output is produced by this milestone.
+
+The following [raw-sampling milestone](audio-samples.md) adds separate PCM ports
+and a private preview without qualifying physical channel gain/mixing or removing
+these blockers. Its changed power-up phase observation is retained separately.

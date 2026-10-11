@@ -70,7 +70,7 @@ def main():
                     'rtl/machine/cvs_s2636_bank.sv','rtl/machine/cvs_s2636_objects.sv','rtl/machine/cvs_character_video.sv']
     if args.mode=='av_connected':
         top='cvs_av_machine_tb'
-        sources += ['rtl/machine/cvs_av_machine.sv','rtl/machine/cvs_audio_cpu.sv','rtl/machine/cvs_audio_bus.sv']
+        sources += ['rtl/machine/cvs_av_machine.sv','rtl/machine/cvs_audio_cpu.sv','rtl/machine/cvs_audio_bus.sv','rtl/machine/cvs_audio_samples.sv']
     sources += ['sim/cpu/'+top+'.sv']
     compile_run=subprocess.run(['iverilog','-g2012','-Wall','-s',top,'-o',str(work/'test.vvp'),
                                 str(cpu_file),*sources],capture_output=True,text=True)

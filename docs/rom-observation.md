@@ -55,7 +55,8 @@ prove movement/jump physics or the physical switch matrix. No left input is used
 The default profile retains main/video execution. Optional `--audio` connects
 the actual digital audio CPU/bus with nominal external SENSE; see
 [connection checks, observations and gaps](audio-assembly.md). It produces raw
-DAC/discrete events, with analog/PCM/speech still missing.
+DAC/discrete events and [raw sampled channels](audio-samples.md), with calibrated
+gain/filter/mixing, analog/discrete audio and speech still missing.
 
 ## Observations and retained counter regression
 

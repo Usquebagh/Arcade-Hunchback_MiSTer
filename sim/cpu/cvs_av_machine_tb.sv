@@ -9,6 +9,9 @@ module cvs_av_machine_tb;
     wire audio_req,audio_wr,audio_memory_space,audio_intack,audio_irq,dac8_wr;
     wire [14:0] address,audio_address;
     wire [7:0] write_data,audio_write_data,audio_read_data,audio_command,dac8;
+    wire [3:0] dac4;
+    wire sample_ce;
+    wire signed [15:0] pcm8,pcm4;
     cvs_av_machine dut(.clk(clk),.reset(reset),.reset_na(reset_na),.video_reset(video_reset),
         .scan_run(scan_run),.ready(ready),.audio_ready(audio_ready),.audio_sense(1'b1),
         .dl_wr(dl_wr),.dl_addr(dl_addr),.dl_data(dl_data),
@@ -17,20 +20,30 @@ module cvs_av_machine_tb;
         .flag(flag),.address(address),.write_data(write_data),.audio_command(audio_command),.audio_trigger(audio_trigger),
         .audio_req(audio_req),.audio_wr(audio_wr),.audio_memory_space(audio_memory_space),
         .audio_address(audio_address),.audio_write_data(audio_write_data),.audio_read_data(audio_read_data),
-        .audio_intack(audio_intack),.audio_irq(audio_irq),.dac8(dac8),.dac8_wr(dac8_wr));
+        .audio_intack(audio_intack),.audio_irq(audio_irq),.dac8(dac8),.dac8_wr(dac8_wr),.dac4(dac4),
+        .sample_ce(sample_ce),.pcm8(pcm8),.pcm4(pcm4));
     reg [7:0] main_program[0:1023],audio_program[0:4095],commands[0:4],responses[0:1];
     integer cycle=0,size=0,updates=0,triggers=0,acks=0,reads=0,stores=0,dacs=0;
     integer last_main=-1,last_audio=-1,trace_start=-1;
     reg previous_ack=0,trace_on=0;
+    longint unsigned sample_edges=0;
+    integer samples=0,want_pcm8=0,want_pcm4=0;
     task check(input condition,input [8*40-1:0] label_text,input integer want,input integer got);
         if(condition!==1'b1)begin
             $display("BDSM {\"status\":\"FAIL\",\"label\":\"%0s\",\"cycle\":%0d,\"expected\":%0d,\"observed\":\"%0d\"}",label_text,cycle,want,got);$finish(1);
         end
     endtask
     task tick;
-        reg command_write,command_read;
+        reg command_write,command_read,want_sample;
         begin
             clk=0;#5;command_write=0;command_read=0;
+            want_sample=0;
+            if(reset)begin sample_edges=0;want_pcm8=0;want_pcm4=0;samples=0;end
+            else begin
+                sample_edges=sample_edges+1;
+                want_sample=(sample_edges*48000/57272724)!=((sample_edges-1)*48000/57272724);
+                if(want_sample)begin want_pcm8=dac8*256-32768;want_pcm4=dac4*4096-32768;samples=samples+1;end
+            end
             if(!reset && req && ready)begin
                 if(last_main>=0)check((cycle-last_main)%96==0,"av_main_cadence",96,cycle-last_main);
                 last_main=cycle;
@@ -51,6 +64,9 @@ module cvs_av_machine_tb;
                 end
             end
             clk=1;#5;cycle=cycle+1;
+            check(sample_ce===want_sample,"av_sample_cadence",want_sample,sample_ce);
+            check($signed(pcm8)===want_pcm8,"av_sample8",want_pcm8,$signed(pcm8));
+            check($signed(pcm4)===want_pcm4,"av_sample4",want_pcm4,$signed(pcm4));
             if(!reset)begin
                 if(audio_intack && !previous_ack)acks=acks+1;previous_ack=audio_intack;
                 if(command_write)begin
@@ -113,6 +129,7 @@ module cvs_av_machine_tb;
         check(acks==2,"av_ack_count",2,acks);
         check(reads==2 && stores==2 && dacs==2,"av_audio_events",222,reads*100+stores*10+dacs);
         check(audio_irq===1'b0 && audio_command===8'hc6 && dac8===8'hc6,"av_completion",8'hc6,dac8);
+        check(samples==sample_edges*48000/57272724 && samples>30,"av_sample_count",sample_edges*48000/57272724,samples);
         $display("BDSM {\"status\":\"PASS\",\"cycle\":%0d,\"observed\":\"Two actual CPUs: image isolation, FLAG-independent WRTC, two real IRQ/RETE command reads and RAM/DAC signatures, /96 and /192, independent ready stalls\"}",cycle);$finish(0);
     end
 endmodule
