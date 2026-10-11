@@ -89,6 +89,8 @@ For provisional scan/join/machine or downloader changes run `hunchback.video.sca
 ROM, and affected main/native CPU/memory/PVI/character/timing checks and lint.
 Preserve independent enabled-time scan expectations, six-edge pixel/sync metadata,
 actual PVI presence, complete synthetic field and actual CPU status readbacks.
+Keep the directed pause with a delayed line strobe pending; periodic pauses can
+alias with clock phase and do not replace that regression.
 The 227x256 viewport is provisional; it does not resolve physical PCK/PIXCLK/origins.
 For cold CPU changes run `hunchback.cpu.cold_self_xor` and native CPU checks;
 never reinstate simulation-only register initialization in the synthesized CPU.

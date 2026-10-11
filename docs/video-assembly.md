@@ -98,3 +98,15 @@ mode/black presence/sync, partial graphics routing, CPU collision clearing and
 cold self-XOR. Total 82; passing baselines and matching assertions twice are
 mandatory. All physical timing, full PVI, machine IRQ timing, audio/input and
 game/Quartus gates remain open. No qualified candidate or hardware result.
+
+
+## Pending-line pause regression
+
+The first 82-fault campaign exposed a surviving scan pause-mask mutation. Its
+periodic 96-enabled/5-disabled burst pattern aligned to the /16 phase and never
+stopped with the delayed line strobe pending. The waveform assertions were
+correct but that stimulus lacked this edge. A directed seven-clock pause now
+freezes exactly that pending state; the same line-delay assertion must reject
+the unmasked strobe. The original failed campaign is retained. No RTL, assertion
+or expected waveform was changed to pass, and the corrected frozen campaign
+must rerun before this milestone is qualified.

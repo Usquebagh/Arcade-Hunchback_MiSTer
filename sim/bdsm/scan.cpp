@@ -24,7 +24,17 @@ int main(int argc,char** argv){
             if(run)delay=((delay*2)|rawline)&3;
             b.tick();if(run)++enabled;if(ce)++ticks;
         };
-        while(ticks<2*frame+6)step(b.cycle%101>=5);
+        bool paused_pending_line=false;
+        while(ticks<2*frame+6){
+            // Periodic bursts can alias with /16 phase and never pause here.
+            // Freeze exactly while the delayed line strobe is pending.
+            if(!paused_pending_line && (delay&2)){
+                for(unsigned n=0;n<7;++n)step(false);
+                paused_pending_line=true;
+            }
+            step(b.cycle%101>=5);
+        }
+        b.check(paused_pending_line,"scan_pause_fixture",1,paused_pending_line);
         b.check(requests==2*227*256,"scan_field_size",2*227*256,requests);
         b.check(lines==624,"scan_line_count",624,lines);
         b.rtl.reset=1;b.rtl.run=0;b.tick();b.rtl.eval();
