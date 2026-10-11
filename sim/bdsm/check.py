@@ -14,7 +14,7 @@ def emit(status, **details):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('mode', choices=['reset', 'clock', 'memory', 'decode', 'lint', 'rom', 'mra', 'cpu_alu', 'cpu_edges', 'cpu_bus', 'cpu_synth', 'cpu_diagnostics'])
+    parser.add_argument('mode', choices=['reset', 'clock', 'memory', 'banked', 'decode', 'lint', 'rom', 'mra', 'cpu_alu', 'cpu_edges', 'cpu_bus', 'cpu_synth', 'cpu_diagnostics'])
     parser.add_argument('--seed', type=int, default=1)
     args = parser.parse_args()
     adapter = Path(__file__).resolve().parent
@@ -32,23 +32,25 @@ def main():
         print(ran.stdout, end=''); print(ran.stderr, end='', file=sys.stderr)
         return ran.returncode
     sources = {name: 'rtl/machine/cvs_' + name + '.sv' for name in ['reset', 'clock', 'memory', 'decode']}
+    banked_sources = ['rtl/machine/cvs_main_memory.sv','rtl/machine/cvs_banked.sv','rtl/machine/cvs_memory.sv']
     if args.mode == 'lint':
         warnings = []
-        for name, source in sources.items():
+        lint_sources = {**{('cvs_'+k):[v] for k,v in sources.items()}, 'cvs_main_memory':banked_sources}
+        for name, source in lint_sources.items():
             logfile = work / (name + '.log')
             with logfile.open('w') as log:
-                ran = subprocess.run(['verilator', '--lint-only', '--top-module', 'cvs_' + name, '-Wall', '-Wno-fatal', source], stdout=log, stderr=subprocess.STDOUT)
+                ran = subprocess.run(['verilator', '--lint-only', '--top-module', name, '-Wall', '-Wno-fatal', *source], stdout=log, stderr=subprocess.STDOUT)
             if ran.returncode:
                 emit('ERROR', reason='Lint could not complete', diagnostics=[str(logfile)])
                 return 2
             warnings.extend(re.findall(r'%Warning-[^\n]+', logfile.read_text()))
         emit('WARNING' if warnings else 'PASS', observed=warnings or 'All implemented modules have zero -Wall findings')
         return 0
-    top = 'cvs_' + args.mode
+    top = 'cvs_main_memory' if args.mode == 'banked' else 'cvs_' + args.mode
     with (work / 'compile.log').open('w') as log:
         ran = subprocess.run(['verilator', '--cc', '--exe', '--build', '--trace', '--trace-depth', '2',
                               '--top-module', top, '-Wall', '--Mdir', str(work),
-                              '-CFLAGS', '-std=c++17 -I' + str(adapter), sources[args.mode],
+                              '-CFLAGS', '-std=c++17 -I' + str(adapter), *(banked_sources if args.mode=='banked' else [sources[args.mode]]),
                               str(adapter / (args.mode + '.cpp'))], stdout=log, stderr=subprocess.STDOUT)
     if ran.returncode:
         emit('ERROR', reason='Verilator/C++ compilation failed', diagnostics=[str(work / 'compile.log')])

@@ -26,7 +26,8 @@
     "docs/validation.md",
     "docs/schematic-audit.md",
     "docs/pal-audit.md",
-    "docs/cpu.md"
+    "docs/cpu.md",
+    "docs/banked-memory.md"
   ],
   "required_files": [
     "rtl/machine/cvs_reset.sv",
@@ -37,7 +38,9 @@
     "rtl/machine/cvs_decode.sv",
     "rtl/vendor/arcadia/base_pack.vhd",
     "rtl/vendor/arcadia/sgs2650_pack.vhd",
-    "rtl/vendor/arcadia/sgs2650.vhd"
+    "rtl/vendor/arcadia/sgs2650.vhd",
+    "rtl/machine/cvs_banked.sv",
+    "rtl/machine/cvs_main_memory.sv"
   ],
   "games": [
     "Hunchback (CVS set 1)"
@@ -91,6 +94,20 @@
       "timeout": 180,
       "expectation": "Exhaustive mapped program bytes, ROM protection, one-edge reads, RAM mirror and explicit forwarding.",
       "reference": "docs/architecture.md; pinned MAME CVS map/clocks and explicit implementation contract."
+    },
+    {
+      "id": "hunchback.memory.banked",
+      "suite": "smoke",
+      "mode": "banked",
+      "required": true,
+      "tools": [
+        "verilator",
+        "make",
+        "g++"
+      ],
+      "timeout": 180,
+      "expectation": "All CPU RAM FLAG views, character pages, 16-byte palette aliases and four CPU-page mirrors retain independent bytes; sprite routing and registered response selection are correct.",
+      "reference": "Pinned MAME cvs.cpp main_cpu_map, palette/character handlers and supplied PAL source; sprite behaviour/display arbitration excluded."
     },
     {
       "id": "hunchback.decode.synthetic",
@@ -217,7 +234,7 @@
       "id": "hunchback.banked_memory.coverage",
       "suite": "reference",
       "required": true,
-      "skip_reason": "FLAG-banked video/character/palette/S2636 registers not implemented.",
+      "skip_reason": "CPU-side banked RAM/routing implemented; S2636 register behaviour, display ports/arbitration, IO-latched character bank and CPU-to-memory integration remain unimplemented.",
       "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
       "reference": "docs/validation.md; pending evidence."
     },
@@ -413,6 +430,42 @@
       "new": "assign ce_main_step = ce_main && (main_step == 2'd1);",
       "failure_label": "main_step_cadence",
       "reason": "CPU machine-step enable is one physical CPU period group early."
+    },
+    {
+      "id": "lost_flag_bank",
+      "check": "hunchback.memory.banked",
+      "file": "rtl/machine/cvs_banked.sv",
+      "old": "else if (cpu_flag) cpu_dout <= screen[cpu_addr[9:0]];\n                else cpu_dout <= attributes[cpu_addr[9:0]];",
+      "new": "else if (cpu_flag) cpu_dout <= attributes[cpu_addr[9:0]];\n                else cpu_dout <= screen[cpu_addr[9:0]];",
+      "failure_label": "banked_byte",
+      "reason": "Attribute reads incorrectly select the FLAG-high screen bank."
+    },
+    {
+      "id": "lost_character_page",
+      "check": "hunchback.memory.banked",
+      "file": "rtl/machine/cvs_banked.sv",
+      "old": "wire [9:0] char_addr = {char_page,cpu_addr[7:0]};",
+      "new": "wire [9:0] char_addr = {char_page[1]^char_page[0],char_page[1]^char_page[0],cpu_addr[7:0]};",
+      "failure_label": "banked_byte",
+      "reason": "Character pages alias in pairs while both address input bits remain used."
+    },
+    {
+      "id": "reversed_sprite_unit",
+      "check": "hunchback.memory.banked",
+      "file": "rtl/machine/cvs_banked.sv",
+      "old": "3'b100 >> (cpu_addr[9:8] - 2'd1)",
+      "new": "3'b001 << (cpu_addr[9:8] - 2'd1)",
+      "failure_label": "sprite_select",
+      "reason": "Sprite register windows select the wrong chip."
+    },
+    {
+      "id": "live_response_selector",
+      "check": "hunchback.memory.banked",
+      "file": "rtl/machine/cvs_main_memory.sv",
+      "old": "assign cpu_dout = response_banked ? banked_data : fixed_data;",
+      "new": "assign cpu_dout = (response_banked && banked) ? banked_data : fixed_data;",
+      "failure_label": "response_hold",
+      "reason": "Changing address switches the preceding read response before another read."
     }
   ],
   "build": {

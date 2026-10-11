@@ -8,7 +8,8 @@ conversions are separate boards; their ROMs are not interchangeable with CVS.
 > Reset, main/audio CPU clock enables, program ROM, mirrored system RAM and the
 > standalone U15L decoder have synthetic tests. An adapted S2650A passes exhaustive
 > ALU and directed CPU/bus regressions; startup diagnostics remain unresolved.
-> Connected memory, video, inputs, audio and MiSTer integration remain unfinished.
+> CPU-side FLAG-banked RAM and memory routing now have exhaustive synthetic checks.
+> CPU connection, video, inputs, audio and MiSTer integration remain unfinished.
 > Actual MiSTer testing is pending.
 
 ## Original hardware
