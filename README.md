@@ -4,7 +4,7 @@ A private development project for **Hunchback (set 1)**, Century Electronics
 (1983), on the original CVS hardware. The Galaxian, Scramble and Donkey Kong
 conversions are separate boards; their ROMs are not interchangeable with CVS.
 
-> **Status:** foundational HDL only; no working game or RBF candidate yet.
+> **Status:** private development core; no qualified RBF candidate yet.
 > Reset, main/audio CPU clock enables, program ROM, mirrored system RAM and the
 > standalone U15L decoder have synthetic tests. An adapted S2650A passes exhaustive
 > ALU and directed CPU/bus regressions; startup diagnostics remain unresolved.
@@ -15,8 +15,9 @@ conversions are separate boards; their ROMs are not interchangeable with CVS.
 > pixel tests. Shared display RAM and a normalized character/bullet/palette/mixer
 > pipeline pass independent pixel and actual-CPU collision read/clear checks.
 > A provisional main/video assembly checks a complete synthetic field with real
-> PVIs and CPU status reads. The unchanged parent ROM passes its first 1,024 RAM
-> clear writes; attract mode and gameplay remain unchecked.
+> PVIs and CPU status reads. The unchanged parent ROM matches 4,143 initialization
+> writes and its return. Longer two-state diagnostics display the title and game
+> field after coin/start; independent attract/gameplay verification remains open.
 > Mixed game video, physical inputs, audio and MiSTer integration remain unfinished.
 > Actual MiSTer testing is pending.
 
@@ -86,3 +87,4 @@ See [provisional video timing and remaining gaps](docs/video-timing.md).
 See [S2636 objects, status, pixel expectations and gaps](docs/s2636.md).
 See [character/bullet/mixer expectations and gaps](docs/character-video.md).
 See [provisional scan, composed assembly and early bootstrap](docs/video-assembly.md).
+See [private real-ROM observations and their limits](docs/rom-observation.md).

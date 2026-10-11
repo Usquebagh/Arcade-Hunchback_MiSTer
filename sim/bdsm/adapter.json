@@ -32,7 +32,8 @@
     "docs/video-timing.md",
     "docs/s2636.md",
     "docs/character-video.md",
-    "docs/video-assembly.md"
+    "docs/video-assembly.md",
+    "docs/rom-observation.md"
   ],
   "required_files": [
     "rtl/machine/cvs_reset.sv",
@@ -75,13 +76,16 @@
     "sim/bdsm/bootstrap_oracle_check.py",
     "sim/bdsm/startup_model.py",
     "sim/bdsm/startup_oracle_check.py",
-    "sim/cpu/cvs_startup_tb.sv"
+    "sim/cpu/cvs_startup_tb.sv",
+    "tools/observe_hunchback.py",
+    "tools/render_rom_observation.py",
+    "sim/bdsm/observe_machine.cpp"
   ],
   "games": [
     "Hunchback (CVS set 1)"
   ],
   "limitations": [
-    "CPU/FLAG RAM and provisional raster/PVI/character assembly have synthetic tests; unchanged ROM has early RAM-clear bootstrap coverage, not full game/physical timing/audio/MiSTer qualification.",
+    "CPU/FLAG RAM and provisional raster/PVI/character assembly have synthetic tests; authenticated ROM initialization has an independent write oracle and later title/game-field execution is observed in two-state diagnostics, not full game/physical timing/audio/MiSTer qualification.",
     "Two-state Verilator does not prove X/Z, CDC, PLL, analog fidelity or board accuracy.",
     "Synthetic strobes/forwarding are declared implementation contracts, not board measurements.",
     "ROM identity/layout PASS is not CPU boot, video, input or audio coverage.",
@@ -449,7 +453,7 @@
       "id": "hunchback.game_boot.coverage",
       "suite": "reference",
       "required": true,
-      "skip_reason": "Authenticated parent passed independently modeled first 1024 RAM-clear writes; attract mode, gameplay, full CPU/reference and phase-correct game video remain unchecked.",
+      "skip_reason": "Authenticated ROM first initialization matches 4143 writes and a return; title/game-field and scripted inputs are two-state observations only. Independent attract/gameplay/complete CPU/reference and phase-correct game video remain unchecked.",
       "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
       "reference": "docs/validation.md; pending evidence."
     },

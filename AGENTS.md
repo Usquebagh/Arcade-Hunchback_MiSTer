@@ -109,3 +109,12 @@ and `hunchback.rom.startup` with the authenticated local ROM. Preserve write ord
 FLAG, memory versus extended I/O and the actual post-call return fetch. Scan is
 paused and IRQ is inhibited in this check; it does not qualify the next startup
 routines, input polling, machine IRQ timing, attract frames or gameplay.
+
+For long-ROM exploration use `tools/observe_hunchback.py` and the expectations in
+`docs/rom-observation.md`. Keep actual CPU/memory/PVI execution, untouched ROMs,
+frozen source identities, randomized seed, retained compiler findings and the
+independent first-call checkpoint. Preserve `observe_reset_irq_count`; reset-time
+pin values must not enter diagnostic IRQ counts. OBSERVED_ONLY and cross-seed
+capture agreement are not game/reference or unknown-state PASS. Physical input,
+pixel placement and native CPU blockers remain. Render only hash-matching completed
+captures with `tools/render_rom_observation.py`; previews stay ignored/private.

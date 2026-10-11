@@ -8,6 +8,11 @@ earlier full campaign proved 81 faults but had one surviving pause mutation; the
 corrected directed pause then detected that fault twice in a targeted run. This
 is not an all-82 current-snapshot mutation qualification.
 
+The long actual-ROM diagnostic now retains title/game-field and scripted-input
+observations with randomized power-up seeds. Its reset IRQ-counter bug has a
+retained checkpoint assertion and seeded reproduction. These observations are
+not a candidate or an independent game-reference PASS. See [ROM diagnostic](rom-observation.md).
+
 Initial synthetic checks cover reset assertion/release/qualification, main/audio
 enable count/cadence/phase/reset restart, all 20 KiB mapped program addresses,
 one-edge read latency, ROM write protection, all 1 KiB system RAM addresses and
