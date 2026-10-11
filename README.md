@@ -20,7 +20,7 @@ conversions are separate boards; their ROMs are not interchangeable with CVS.
 | --- | --- | --- |
 | Main CPU | Signetics S2650A, crystal / 8 | Connected synthetic ROM/RAM/I/O program passes; full CPU and game coverage pending |
 | Audio/speech CPUs | Two S2650As, crystal / 16 | CPU implementation available; sound-board instances pending |
-| Video | Signetics 2621 PAL timing, three S2636 sprite chips, character ROM/RAM | Provisional timing and vblank CPU tests; timing reference conflict, pixels and collisions pending |
+| Video | Signetics 2621 PAL timing, three S2636 sprite chips, character ROM/RAM | 312-line timing and vblank CPU tests; physical phases, pixels and collisions pending |
 | Program | Five 4 KiB EPROMs, staggered in four 8 KiB pages | Downloadable ROM and mirrored 1 KiB system RAM |
 | Sound | 8/4-bit DAC, discrete circuits, TMS5100 speech | Pending |
 

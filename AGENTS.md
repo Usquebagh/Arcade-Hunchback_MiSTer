@@ -55,7 +55,8 @@ until independently audited and checked.
 For video timing or vblank wiring changes, run `hunchback.video.timing.312`,
 `hunchback.video.timing.317`, `hunchback.video.irq`, `hunchback.video.cpu` and lint,
 plus the main-bus/native CPU/memory checks when CPU wiring is affected. Preserve
-the independent linear-time waveform oracle and VSYNC-wrap regression. These
-profiles are provisional: the Signetics scan conflicts on vertical total and
-board PCK/PIXCLK/display phases remain unaudited. A timing-test PASS must not
-remove that reference gap, graphics/collision coverage or candidate blockers.
+the independent linear-time waveform oracle and VSYNC-wrap regression. The
+supported datasheet line count is 312; the retained .317 check is synthetic
+parameter stress coverage, not an alternate board hypothesis. Board
+PCK/PIXCLK/display phases remain unaudited. A timing-test PASS must not remove
+those gaps, graphics/collision coverage or candidate blockers.

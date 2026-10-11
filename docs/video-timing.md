@@ -8,10 +8,13 @@ Primary reference: Signetics, Universal Sync Generator (PAL) 2621, preliminary
 specification, printed pages 3-6 (five-page scan including cover), downloaded from
 https://amigan.yatho.com/2621USG.pdf. SHA-256:
 `89600ad2677f3c2a92bb7d7ad76030d2b6fef98b856193af39a95832881ce8ac`.
-The scan and inspection crops remain private and ignored. The block diagram's
-vertical divider reads 317, but the vertical waveform labels explicitly show
-311,312,1,2. This unresolved internal discrepancy prevents a board timing claim.
-Both totals will be exercised; the default 312 profile follows the waveform.
+The scan and inspection crops remain private and ignored. The supported vertical
+total is 312: the waveform explicitly labels 311,312,1,2. An initial reading of
+the blurred block label as 317 was overstated as a source conflict. On the user's
+2026-10-11 correction, comparison with the diagram's other degraded 2 glyphs
+supports reading it as 312 too. The default HDL was already 312 and is unchanged.
+The 317 configuration is retained solely as a synthetic parameter stress test,
+with its existing check ID; it is not an alternate CVS or 2621 timing hypothesis.
 
 Kevtris v1.4 schematic, main-board timing sheet (PDF page 5), shows X1=14.318 MHz,
 U13AA/U13AB producing 3.579 MHz into U13D/2621 CLK. RESET is tied to ground.
@@ -40,8 +43,9 @@ CBLNK's OR interpretation and all edge associations need independent board audit
 No graphics viewport, pixel output, collision, S2636 register logic, interlaced
 output or analog propagation model is implied. MAME uses a 256x256 bitmap, visible
 x=0..239/y=8..255, 50 Hz and a nominal 2500 us vblank; it does not provide these
-raw timing constants. At the assumed board clock, the diagram profile computes
-50.5414 Hz and the block profile 49.7442 Hz, rather than exact MAME 50 Hz.
+raw timing constants. At the assumed board clock, the 312-line model computes
+50.5414 Hz rather than exact MAME 50 Hz. This remains a clock/board validation
+question, not a disagreement about the datasheet's line count.
 
 Synchronous FPGA reset establishes h=0, line=V_LINES and divider=0; after six
 position ticks it enters line 1. This is a deterministic preframe convention,
@@ -51,15 +55,16 @@ clock-domain logic; no output is used as a generated clock. `line_start` and
 `frame_start` qualify the consuming master edge, not a level-wide reset pulse.
 
 Planned independent test: derive h and line from a linear position-tick index,
-compare every master edge across multiple frames in each profile, exercise run
+compare every master edge across multiple frames at 312 and in the synthetic
+parameter stress configuration, exercise run
 stalls and reset at a nonzero phase, count frame/line periods and pulse widths,
 and check all transcribed intervals. Tests must not infer expected constants
 from the HDL. Faults target divider phase, horizontal/vertical wrap, vertical
 reset width and blanking combination; each must fail its designated assertion
 twice. New timing has no baseline until those checks execute successfully.
 
-Required video coverage remains incomplete until the line-count discrepancy,
-board clocks/phases, display arbitration, character/sprite/bullet pixels,
+Required video coverage remains incomplete until board clocks/phases,
+display arbitration, character/sprite/bullet pixels,
 collision logic, vblank/interrupt CPU connection and MiSTer output have meaningful
 checks. PLL/CDC/Quartus constraints and hardware measurement remain separate gates.
 
@@ -81,11 +86,11 @@ inhibit set, stack depth one), then marker D7, resumed PSU=80 and marker 22.
 Exactly one acknowledgement per blank interval and a second-frame rearm must
 be observed. CPU intack is a held level between machine-step enables, not
 assumed to be a one-master-edge pulse. This test does not establish physical
-MiSTer reset/loader behaviour or solve the timing-reference discrepancy.
+MiSTer reset/loader behaviour or qualify physical board clock/display phases.
 
 ## Executed implementation checks
 
-Both timing profiles, the 1024 five-event IRQ histories and the actual-CPU
+The 312 timing and synthetic 317 parameter checks, the 1024 five-event IRQ histories and the actual-CPU
 vblank assembly passed their first corrected baselines with seed 1. Every
 master edge across two full frames is compared to an independent linear-time
 oracle, including run stalls and a restart at nonzero phase. Expectations are
@@ -101,7 +106,7 @@ The decode now covers the first line's h=0..5 tail and excludes that tail on
 the final line. Both corrected profiles passed without changing expectations.
 `vsync_wrap_gap` deliberately reintroduces the first gap as a retained regression.
 
-Ten new mutations cover /16 phase, horizontal wrap, both vertical totals,
+Ten new mutations cover /16 phase, horizontal wrap, nominal and stress totals,
 VRST width, blanking OR, VS wrap, HS start and two IRQ edge/level faults. The
 complete campaign now has 34 faults, each requiring two matching designated
 assertion failures from a passing baseline. Required startup diagnostics and

@@ -20,9 +20,10 @@ before its consuming edge. This module does not establish PLL frequency or video
 timing. An exact legal PLL configuration must be selected and checked later.
 
 `cvs_video_timing`: a separately tested 2621 waveform subset with position /16,
-horizontal reset, provisional 312/317 line profiles, blanking and internal HS/VS
-interpretations. The preliminary datasheet has a vertical-total discrepancy;
-board PCK/PIXCLK and display phases remain unaudited. `cvs_vblank_irq` latches a
+horizontal reset, 312 lines, blanking and internal HS/VS interpretations. The
+317-line test is synthetic parameter stress coverage. The blurred divider label
+has been resolved as 312; board PCK/PIXCLK and display phases remain unaudited.
+`cvs_vblank_irq` latches a
 rising blank event until CPU acknowledgement. A synthetic actual-CPU assembly
 tests SENSE, vector 03, HALT/RETE and rearm; there are no rendered pixels yet.
 See [video timing and qualification gaps](video-timing.md).

@@ -107,7 +107,9 @@ is claimed. Reports retain source/dependency hashes, versions and observations.
 
 New checks `hunchback.video.timing.312`/`.317` compare every master edge against
 an independent linear-time waveform oracle over two frames, run stalls and an
-arbitrary-phase reset. `hunchback.video.irq` exercises the pending event latch
+arbitrary-phase reset. The .317 check is now classified as synthetic parameter
+stress coverage; 312 is the supported datasheet/board expectation.
+`hunchback.video.irq` exercises the pending event latch
 and all 1024 five-event blank/ack histories. `hunchback.video.cpu` connects the
 actual synthesized VHDL CPU, actual SV memory/clock/timing/IRQ and a downloaded
 synthetic program. It verifies PSU outside/inside blank, vector 03 ISR status,
@@ -123,7 +125,9 @@ designated assertion twice. The generic framework is unchanged; its unit tests
 are rerun after the core-specific connected adapter gains a video mode.
 
 These tests establish a provisional timing/CPU boundary, not visible game video.
-The manufacturer scan conflicts on 312/317 vertical total. Original CVS pixel
+The initial 317 reading was a blurred-digit interpretation, corrected to 312
+after the user's glyph comparison and waveform cross-check. It is no longer a
+reference-conflict blocker; no HDL or test assertions changed. Original CVS pixel
 clocks/display counters, arbitration, S2636 objects/register side effects,
 character/bullet drawing, colour lookup and collisions remain unqualified.
 The required video coverage blocker remains, as do physical input/audio/game/
