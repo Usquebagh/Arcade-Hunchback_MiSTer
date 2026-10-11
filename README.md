@@ -14,6 +14,9 @@ conversions are separate boards; their ROMs are not interchangeable with CVS.
 > Four-object S2636 rendering/status and a three-chip CPU assembly have synthetic
 > pixel tests. Shared display RAM and a normalized character/bullet/palette/mixer
 > pipeline pass independent pixel and actual-CPU collision read/clear checks.
+> A provisional main/video assembly checks a complete synthetic field with real
+> PVIs and CPU status reads. The unchanged parent ROM passes its first 1,024 RAM
+> clear writes; attract mode and gameplay remain unchecked.
 > Mixed game video, physical inputs, audio and MiSTer integration remain unfinished.
 > Actual MiSTer testing is pending.
 
@@ -76,3 +79,4 @@ See [main bus and I/O tests](docs/main-bus.md).
 See [provisional video timing and remaining gaps](docs/video-timing.md).
 See [S2636 objects, status, pixel expectations and gaps](docs/s2636.md).
 See [character/bullet/mixer expectations and gaps](docs/character-video.md).
+See [provisional scan, composed assembly and early bootstrap](docs/video-assembly.md).

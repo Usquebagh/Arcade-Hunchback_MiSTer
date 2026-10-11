@@ -14,12 +14,14 @@ def emit(status, **details):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('mode', choices=['reset', 'clock', 'memory', 'banked', 'display', 'character', 'character_connected', 'main_bus', 'main_connected', 'video_connected', 's2636_objects', 's2636_connected', 'vblank_irq', 'video_timing', 'video_timing_alt', 'decode', 'lint', 'rom', 'mra', 'cpu_alu', 'cpu_edges', 'cpu_bus', 'cpu_synth', 'cpu_diagnostics'])
+    parser.add_argument('mode', choices=['reset', 'clock', 'memory', 'banked', 'display', 'scan', 'character', 'character_connected', 'cold_connected', 'assembly_connected', 'bootstrap_connected', 'bootstrap_oracle', 'main_bus', 'main_connected', 'video_connected', 's2636_objects', 's2636_connected', 'vblank_irq', 'video_timing', 'video_timing_alt', 'decode', 'lint', 'rom', 'mra', 'cpu_alu', 'cpu_edges', 'cpu_bus', 'cpu_synth', 'cpu_diagnostics'])
     parser.add_argument('--seed', type=int, default=1)
     args = parser.parse_args()
     adapter = Path(__file__).resolve().parent
-    if args.mode in ['main_connected','video_connected','s2636_connected','character_connected']:
+    if args.mode in ['main_connected','video_connected','s2636_connected','character_connected','assembly_connected','bootstrap_connected','cold_connected']:
         return subprocess.run([sys.executable, str(adapter / 'check_connected.py'), '--mode', args.mode, '--seed', str(args.seed)]).returncode
+    if args.mode=='bootstrap_oracle':
+        return subprocess.run([sys.executable,str(adapter/'bootstrap_oracle_check.py')]).returncode
     if args.mode.startswith('cpu_'):
         return subprocess.run([sys.executable, str(adapter / 'check_ghdl.py'), args.mode, '--seed', str(args.seed)]).returncode
     core = Path.cwd()
@@ -37,12 +39,14 @@ def main():
     banked_sources = ['rtl/machine/cvs_main_memory.sv','rtl/machine/cvs_banked.sv','rtl/machine/cvs_memory.sv']
     bus_sources = ['rtl/machine/cvs_main_bus.sv','rtl/machine/cvs_main_io.sv',*banked_sources]
     character_sources = ['sim/cpu/cvs_character_tb.sv','rtl/machine/cvs_character_video.sv','rtl/machine/cvs_banked.sv']
+    scan_sources=['rtl/machine/cvs_scan.sv',sources['video_timing']]
+    join_sources=['rtl/machine/cvs_video_join.sv','rtl/machine/cvs_s2636_bank.sv',sources['s2636_objects'],'rtl/machine/cvs_character_video.sv']
     if args.mode == 'lint':
         warnings = []
         lint_sources = {**{('cvs_'+k):[v] for k,v in sources.items()}, 'cvs_main_memory':banked_sources,
                         'cvs_main_bus':bus_sources,
                         'cvs_s2636_bank':['rtl/machine/cvs_s2636_bank.sv',sources['s2636_objects']],
-                        'cvs_character_tb':character_sources,
+                        'cvs_character_tb':character_sources,'cvs_scan':scan_sources,'cvs_video_join':join_sources,
                         'cvs_character_video':['rtl/machine/cvs_character_video.sv']}
         for name, source in lint_sources.items():
             logfile = work / (name + '.log')
@@ -52,11 +56,11 @@ def main():
                 emit('ERROR', reason='Lint could not complete', diagnostics=[str(logfile)])
                 return 2
             warnings.extend(re.findall(r'%Warning-[^\n]+', logfile.read_text()))
-        emit('WARNING' if warnings else 'PASS', observed=warnings or 'All implemented modules have zero -Wall findings')
+        emit('WARNING' if warnings else 'PASS', observed=warnings or 'Configured SystemVerilog block tops have zero -Wall findings; actual mixed CPU hierarchy is separately compiled with Icarus -Wall')
         return 0
     mode = 'video_timing' if args.mode == 'video_timing_alt' else args.mode
     top = 'cvs_main_memory' if mode in ('banked','display') else 'cvs_character_tb' if mode=='character' else 'cvs_' + mode
-    mode_sources = character_sources if mode=='character' else bus_sources if mode == 'main_bus' else banked_sources if mode in ('banked','display') else [sources[mode]]
+    mode_sources = scan_sources if mode=='scan' else character_sources if mode=='character' else bus_sources if mode == 'main_bus' else banked_sources if mode in ('banked','display') else [sources[mode]]
     extra_options = ['-GV_LINES=317'] if args.mode == 'video_timing_alt' else []
     extra_cflags = ' -DV_LINES_EXPECTED=317' if args.mode == 'video_timing_alt' else ''
     with (work / 'compile.log').open('w') as log:

@@ -17,4 +17,6 @@ project modules' BSD license. No upstream accuracy claim is automatically adopte
 Local changes: trailing-whitespace normalization, VHDL-2008 trace-name qualification, reproduced carry/borrow and
 signed-compare corrections, page-preserving arithmetic, I/O qualifiers/fetch
 restoration, HALT interrupt return, synchronous enable and opcode-zero reset bus.
+Cold synthesized EORZ R0 now produces its architectural zero without upstream's
+simulation-only general-register initialization, retaining non-CC PSL bits.
 See `docs/cpu.md` for tested boundaries and outstanding coverage.

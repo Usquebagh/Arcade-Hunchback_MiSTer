@@ -75,3 +75,17 @@ Complete opcode/cycle differential coverage, full reset/unknown review, connecte
 CVS memory/game boot, video, sound instances, CDC/PLL/Quartus and physical testing
 remain missing. Required CPU and full-machine blockers remain active. No RBF
 candidate is produced in this increment.
+
+## Cold synthesized self-XOR regression, 2026-10-11
+
+The actual synthesized CPU lacks upstream's simulation-only general-register
+initialization. The real parent begins clearing RAM by EORZ R0 followed by
+STRZ R1 and indexed stores. The first write failed with unknown data/address.
+An independent cold synthetic reproduction failed too. EORZ R0 now explicitly
+implements its architectural zero and CC=zero, preserving all other PSL bits.
+The strengthened regression checks two known indexed zero stores and PSL=27
+after independent status initialization. No broad reset values or diagnostic
+suppression were introduced. Native CPU/ALU/synthesis and connected bus pass;
+the required broader unknown-state WARNING remains active. The unchanged ROM's
+first 1024 RAM-clear writes match a restricted independent instruction model.
+Attract/gameplay, complete ISA/cycle and physical reference remain unqualified.

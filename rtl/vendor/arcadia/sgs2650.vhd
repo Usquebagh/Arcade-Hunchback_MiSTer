@@ -732,7 +732,15 @@ BEGIN
           CASE dec.ins IS
             WHEN ALU  => -- R0=R0 <op> Rn
               nrd_c<="00";
-              op_alu(ri,r0,rs_v,psl,rd_v,psl_v);
+              IF ri=x"20" THEN
+                -- EORZ R0 is an architectural zero even before R0 is known.
+                -- A self-XOR must not depend on simulation-only reset values.
+                rd_v:=(OTHERS=>'0');
+                psl_v:=psl;
+                psl_v(7 DOWNTO 6):="00";
+              ELSE
+                op_alu(ri,r0,rs_v,psl,rd_v,psl_v);
+              END IF;
               rd_maj_c<='1';
               rd_c<=rd_v;
               psl_c<=psl_v;

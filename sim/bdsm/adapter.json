@@ -31,7 +31,8 @@
     "docs/main-bus.md",
     "docs/video-timing.md",
     "docs/s2636.md",
-    "docs/character-video.md"
+    "docs/character-video.md",
+    "docs/video-assembly.md"
   ],
   "required_files": [
     "rtl/machine/cvs_reset.sv",
@@ -63,13 +64,21 @@
     "sim/cpu/cvs_character_tb.sv",
     "sim/bdsm/character.cpp",
     "sim/bdsm/display.cpp",
-    "sim/cpu/cvs_character_cpu_tb.sv"
+    "sim/cpu/cvs_character_cpu_tb.sv",
+    "rtl/machine/cvs_scan.sv",
+    "rtl/machine/cvs_video_join.sv",
+    "sim/bdsm/scan.cpp",
+    "rtl/machine/cvs_machine.sv",
+    "sim/cpu/cvs_machine_tb.sv",
+    "sim/bdsm/bootstrap_model.py",
+    "sim/cpu/cvs_cold_cpu_tb.sv",
+    "sim/bdsm/bootstrap_oracle_check.py"
   ],
   "games": [
     "Hunchback (CVS set 1)"
   ],
   "limitations": [
-    "CPU, FLAG RAM, raw I/O, provisional timing and three PVI object/status instances have synthetic tests; no mixed game frame, audio, boot or MiSTer integration.",
+    "CPU/FLAG RAM and provisional raster/PVI/character assembly have synthetic tests; unchanged ROM has early RAM-clear bootstrap coverage, not full game/physical timing/audio/MiSTer qualification.",
     "Two-state Verilator does not prove X/Z, CDC, PLL, analog fidelity or board accuracy.",
     "Synthetic strobes/forwarding are declared implementation contracts, not board measurements.",
     "ROM identity/layout PASS is not CPU boot, video, input or audio coverage.",
@@ -405,7 +414,7 @@
       "id": "hunchback.video.coverage",
       "suite": "reference",
       "required": true,
-      "skip_reason": "312 timing, normalized S2636 objects and MAME-compatible character/bullet/mixing pipeline pass synthetic checks; physical phases/origins, full PVI, PAL equivalence, stars/effects, composed game and board reference remain unqualified.",
+      "skip_reason": "Provisional 312 scan and actual CPU/shared RAM/three PVI/character composed synthetic field pass; physical PCK/PIXCLK/origins, full PVI, PAL equivalence, stars/effects and composed game reference remain unqualified.",
       "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
       "reference": "docs/validation.md; pending evidence."
     },
@@ -437,7 +446,7 @@
       "id": "hunchback.game_boot.coverage",
       "suite": "reference",
       "required": true,
-      "skip_reason": "Validated ROM fixture does not prove CPU retirement, attract mode or gameplay; connected boot tests absent.",
+      "skip_reason": "Authenticated parent passed independently modeled first 1024 RAM-clear writes; attract mode, gameplay, full CPU/reference and phase-correct game video remain unchecked.",
       "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
       "reference": "docs/validation.md; pending evidence."
     },
@@ -470,6 +479,78 @@
       "timeout": 180,
       "expectation": "Actual CPU initializes shared video memory and two glyph pages; 192 independently specified pixels and collision FF/00 read-clear signatures pass.",
       "reference": "docs/character-video.md; actual VHDL CPU and shared SV memory/renderer with fixture coordinates/sprites/IRQ."
+    },
+    {
+      "id": "hunchback.video.scan",
+      "suite": "smoke",
+      "mode": "scan",
+      "required": true,
+      "tools": [
+        "verilator",
+        "make",
+        "g++"
+      ],
+      "timeout": 180,
+      "expectation": "Independent enabled-time oracle checks provisional rotated coordinates, 227x256 requests, two-edge PVI line preparation, blanking, frame boundaries, pause and reset.",
+      "reference": "docs/video-assembly.md; declared integration viewport over separately checked 312 waveform; physical PCK/PIXCLK/origins unqualified."
+    },
+    {
+      "id": "hunchback.video.assembly",
+      "suite": "smoke",
+      "mode": "assembly_connected",
+      "required": true,
+      "tools": [
+        "ghdl",
+        "iverilog",
+        "vvp"
+      ],
+      "timeout": 240,
+      "expectation": "Actual CPU initializes shared memory and three PVIs; independent 58112-pixel field, sync/latency, collisions and five actual CPU status readbacks pass.",
+      "reference": "docs/video-assembly.md; synthetic program and independently specified scene over provisional raster; physical origins unqualified."
+    },
+    {
+      "id": "hunchback.rom.bootstrap",
+      "suite": "game",
+      "mode": "bootstrap_connected",
+      "required": true,
+      "tools": [
+        "ghdl",
+        "iverilog",
+        "vvp",
+        "python3"
+      ],
+      "timeout": 180,
+      "rom": "hunchbak.zip",
+      "game": "hunchback",
+      "prepare": "prepare_hunchback.py",
+      "expectation": "Unchanged authenticated parent ROM executes 1024 system-RAM writes matching an independent restricted runtime-ROM instruction model, including full address/FLAG/data.",
+      "reference": "docs/video-assembly.md; restricted instruction semantics from pinned S2650 primary source; early bootstrap only, not full game boot."
+    },
+    {
+      "id": "hunchback.cpu.cold_self_xor",
+      "suite": "smoke",
+      "mode": "cold_connected",
+      "required": true,
+      "tools": [
+        "ghdl",
+        "iverilog",
+        "vvp"
+      ],
+      "timeout": 60,
+      "expectation": "Cold actual synthesized CPU EORZ R0 produces zero, propagates it to R1, emits two known indexed zero stores with FLAG high and preserves initialized non-CC PSL bits in 27 readback.",
+      "reference": "docs/video-assembly.md; algebraic self-XOR identity, pinned S2650 semantics and retained local-ROM startup failure; broad unknown-state audit remains open."
+    },
+    {
+      "id": "hunchback.bootstrap.oracle",
+      "suite": "smoke",
+      "mode": "bootstrap_oracle",
+      "required": true,
+      "tools": [
+        "python3"
+      ],
+      "timeout": 60,
+      "expectation": "Independently specified increment/decrement indexed write orders and alternate blocks agree; unknown opcodes and aliased RAM closure reject preparation.",
+      "reference": "docs/video-assembly.md; synthetic restricted-interpreter contract checks, not full CPU or game oracle."
     }
   ],
   "mutations": [
@@ -1102,6 +1183,114 @@
       "new": "x1<=pixel_x;y1<=y0;",
       "failure_label": "character_coordinates",
       "reason": "Glyph-stage metadata follows the next request instead of the accepted pixel."
+    },
+    {
+      "id": "scan_rotated_origin",
+      "file": "rtl/machine/cvs_scan.sv",
+      "check": "hunchback.video.scan",
+      "old": "h_count+8'd221",
+      "new": "h_count+8'd220",
+      "failure_label": "scan_coordinates",
+      "reason": "Horizontal wrap maps to the wrong normalized coordinate."
+    },
+    {
+      "id": "scan_line_too_early",
+      "file": "rtl/machine/cvs_scan.sv",
+      "check": "hunchback.video.scan",
+      "old": "line_delay[1]",
+      "new": "(line_delay[0] | line_delay[1])",
+      "failure_label": "scan_line_delay",
+      "reason": "PVI line preparation overlaps field latching."
+    },
+    {
+      "id": "scan_short_viewport",
+      "file": "rtl/machine/cvs_scan.sv",
+      "check": "hunchback.video.scan",
+      "old": "v_count<9'd299",
+      "new": "v_count<9'd298",
+      "failure_label": "scan_request",
+      "reason": "Last normalized row is omitted."
+    },
+    {
+      "id": "scan_unmasked_pause",
+      "file": "rtl/machine/cvs_scan.sv",
+      "check": "hunchback.video.scan",
+      "old": "run && !reset && line_delay[1]",
+      "new": "!reset && line_delay[1]",
+      "failure_label": "scan_line_delay",
+      "reason": "A stalled pending line strobe is consumed repeatedly."
+    },
+    {
+      "id": "join_pixel_too_early",
+      "file": "rtl/machine/cvs_video_join.sv",
+      "check": "hunchback.video.assembly",
+      "old": ".pixel_ce(pending),.visible(visible_pending)",
+      "new": ".pixel_ce(pixel_ce),.visible(visible_pending)",
+      "failure_label": "assembly_latency",
+      "reason": "Character request samples previous PVI pixels on the same edge."
+    },
+    {
+      "id": "join_wrong_coordinate",
+      "file": "rtl/machine/cvs_video_join.sv",
+      "check": "hunchback.video.assembly",
+      "old": "x_pending<=pixel_x;",
+      "new": "x_pending<=pixel_x+8'd1;",
+      "failure_label": "assembly_coordinates",
+      "reason": "Accepted pixel coordinate is shifted before the pipeline."
+    },
+    {
+      "id": "join_lost_black_presence",
+      "file": "rtl/machine/cvs_video_join.sv",
+      "check": "hunchback.video.assembly",
+      "old": ".sprites(sprites)",
+      "new": ".sprites(sprites & 12'hff7)",
+      "failure_label": "assembly_collision",
+      "reason": "Black chip-1 presence is lost while other chip colours remain."
+    },
+    {
+      "id": "join_wrong_mode",
+      "file": "rtl/machine/cvs_video_join.sv",
+      "check": "hunchback.video.assembly",
+      "old": "mode_pending<=char_mode;",
+      "new": "mode_pending<=char_mode ^ 2'd2;",
+      "failure_label": "assembly_character",
+      "reason": "RAM glyph mode changes while accepted metadata is delayed."
+    },
+    {
+      "id": "join_sync_early",
+      "file": "rtl/machine/cvs_video_join.sv",
+      "check": "hunchback.video.assembly",
+      "old": "hs_delay[5]",
+      "new": "hs_delay[4]",
+      "failure_label": "assembly_sync",
+      "reason": "Sync travels one fewer clock than pixel data."
+    },
+    {
+      "id": "assembly_graphics_offset",
+      "file": "rtl/machine/cvs_machine.sv",
+      "check": "hunchback.video.assembly",
+      "old": "13'(dl_addr-16'ha800)",
+      "new": "13'(dl_addr-16'ha801)",
+      "failure_label": "assembly_palette",
+      "reason": "Graphics/PROM downloader shifts destination by one byte."
+    },
+    {
+      "id": "assembly_disconnected_clear",
+      "file": "rtl/machine/cvs_machine.sv",
+      "check": "hunchback.video.assembly",
+      "old": ".collision_clear(collision_clear),.dl_wr(dl_wr &&",
+      "new": ".collision_clear(1'b0),.dl_wr(dl_wr &&",
+      "failure_label": "assembly_cpu_readback",
+      "reason": "Actual CPU collision clear does not reach joined video."
+    },
+    {
+      "id": "cold_self_xor_restore",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "check": "hunchback.cpu.cold_self_xor",
+      "old": "IF ri=x\"20\" THEN",
+      "new": "IF ri=x\"FF\" THEN",
+      "failure_label": "cold_cpu_self_xor",
+      "reason": "Reintroduces cold self-XOR unknown-state propagation."
     }
   ],
   "build": {

@@ -83,3 +83,15 @@ Render retained character diagnostics with tools/render_sprite_diag.py --kind
 character, comparing the reference before producing an ignored image. Normalized
 MAME compatibility does not qualify physical phases/origins, PAL equivalence,
 RAM inference/arbitration, stars/effects or full PVI/composed game coverage.
+
+For provisional scan/join/machine or downloader changes run `hunchback.video.scan`,
+`hunchback.video.assembly`, `hunchback.rom.bootstrap` with the authenticated local
+ROM, and affected main/native CPU/memory/PVI/character/timing checks and lint.
+Preserve independent enabled-time scan expectations, six-edge pixel/sync metadata,
+actual PVI presence, complete synthetic field and actual CPU status readbacks.
+The 227x256 viewport is provisional; it does not resolve physical PCK/PIXCLK/origins.
+For cold CPU changes run `hunchback.cpu.cold_self_xor` and native CPU checks;
+never reinstate simulation-only register initialization in the synthesized CPU.
+Keep the runtime-ROM bootstrap oracle independent and its own contract checks
+(`hunchback.bootstrap.oracle`). No game bytes or expected RAM dumps enter Git.
+First RAM-clear PASS does not replace attract/gameplay/reference coverage.

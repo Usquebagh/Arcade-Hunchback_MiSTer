@@ -43,6 +43,17 @@ The renderer accepts already aligned sprite nibbles; physical PVI/raster alignme
 CVS PAL equivalence, arbitration, stars/effects and composed game frames remain
 unqualified. See [character video contract](character-video.md).
 
+`cvs_scan` maps the tested 312 waveform into a provisional 227x256 identity
+viewport, preparing PVI rows two enabled edges after line entry. `cvs_video_join`
+delays metadata one edge to match registered PVI pixels before the character
+pipeline; output/sync alignment is six edges. `cvs_machine` connects actual CPU/
+FLAG RAM, clock enables, VRST SENSE/IRQ, scan, three PVIs and character/collisions.
+A synthetic CPU program checks the complete field and status I/O. This is an
+assembly under explicit assumptions, not a qualified CVS/MiSTer top or measured
+placement. The unchanged parent passes an independently modeled early RAM-clear
+loop after fixing cold synthesized EORZ R0; full game boot remains a required gap.
+See [assembly and limitations](video-assembly.md).
+
 `cvs_memory`: 32 KiB downloadable program storage, synchronous one-edge reads;
 ROM selected when address bits 12:0 < 0x1400 in each 8 KiB CPU page. ROM is not
 CPU-writable. System RAM at 0x1c00..0x1fff mirrors into all four CPU pages. Same

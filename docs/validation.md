@@ -188,3 +188,27 @@ its designated assertion twice. Earlier compile/selection errors remain errors,
 not mutation catches. Full PVI, board phases/origins, PAL equivalence, arbitration,
 Quartus RAM inference, stars/effects, game boot, input/audio, integration and
 timing gates remain incomplete. Required WARNING/SKIP still blocks every RBF.
+
+## Provisional composed assembly and early bootstrap, 2026-10-11
+
+`hunchback.video.scan` compares every request/coordinate/line strobe with an
+independent enabled-time oracle over two 312-line frames, pauses and reset.
+`hunchback.video.assembly` executes actual VHDL CPU and actual shared SV RAM,
+scan, three PVIs and character pipeline. All 58112 normalized pixels, six-edge
+valid/sync alignment, black presence, foreground/bullet collisions and five CPU
+collision/completion readbacks match an independently specified synthetic scene.
+The scan window/origin and CPU stall are explicit fixtures, not board timing.
+
+The initial unchanged-ROM test failed its first RAM write with unknown state.
+A cold synthetic reproducer retained that bug; the narrow EORZ R0 fix preserves
+non-CC PSL and avoids simulation-only reset assumptions. The corrected local
+parent then matched all 1024 independently modeled clear writes. Its restricted
+oracle has separate increment/decrement/order and malformed-fixture contract
+checks. Game bytes and generated expected streams remain ignored. This is early
+bootstrap coverage; full game/attract/reference gaps remain required.
+
+Twelve new faults bring the configured campaign to 82. Every fault must reproduce
+its designated assertion twice. Generic framework remains pinned/unchanged;
+unit tests run for connected-adapter work. Required native startup WARNING and
+physical video/PAL/PVI/input/audio/game/MiSTer/PLL/constraint gaps still block RBF.
+See [assembly expectations, regressions and remaining coverage](video-assembly.md).
