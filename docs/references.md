@@ -30,3 +30,17 @@ was inspected to establish plane weights, MSB-first columns and scroll-copy
 translation. SHA-256 4b10a23600c1babd40cf0faa1b681de861c23c28f21d874f512f44d8ff03c27b.
 It supports the normalized compatibility model in [character video](character-video.md),
 not physical phase or calibrated DAC accuracy; original HDL/oracle are separate.
+
+The pinned MAME [TMC0281 numeric ROM reference](https://github.com/mamedev/mame/blob/c806573e925ce00fe3e8d8fe417eba63f83275ce/src/devices/sound/tms5110r.hxx)
+has SHA-256 43b114437812a94073804617f78a4fd72e9874292dc9be44660cf7b8904f6480.
+Only that variant's numeric facts are transcribed, with original BSD-3-Clause
+notices and license; see [vendor provenance](../rtl/vendor/tms5100/README.md).
+The new parser and lattice logic are original compatibility implementations.
+The lattice reference's fifteen-bit argument wrapping and multiplier-LSB
+approximation must remain distinct from physical TMC0281 accuracy claims.
+
+The installed clean [MiSTer template](https://github.com/MiSTer-devel/Template_MiSTer)
+is identified at 3ea1134cf05d62c2b1db30362277a823d739ced2. Its source/ports,
+project assignments and PLL inventory were inspected; it is not yet imported
+or connected to this core. The Quartus container theypsilon/quartus-lite-c5:17.0.2
+is installed locally, but no Hunchback synthesis/fitting/timing run is qualified.

@@ -39,7 +39,9 @@
     "docs/audio-samples.md",
     "docs/audio-wiring.md",
     "docs/speech-digital.md",
-    "docs/tms5100-control.md"
+    "docs/tms5100-control.md",
+    "docs/tms5100-frames.md",
+    "docs/tms5100-lattice.md"
   ],
   "required_files": [
     "rtl/machine/cvs_reset.sv",
@@ -100,7 +102,20 @@
     "sim/cpu/cvs_speech_cpu_tb.sv",
     "rtl/machine/cvs_tms5100_control.sv",
     "sim/bdsm/tms5100_control.cpp",
-    "sim/cpu/cvs_tms5100_cpu_tb.sv"
+    "sim/cpu/cvs_tms5100_cpu_tb.sv",
+    "rtl/machine/cvs_tms5100_frames.sv",
+    "rtl/vendor/tms5100/cvs_tms5100_tables.sv",
+    "rtl/vendor/tms5100/README.md",
+    "LICENSES/TMS5100-MAME-BSD-3-Clause.txt",
+    "sim/bdsm/tms5100_reference.hpp",
+    "sim/bdsm/tms5100_tables.cpp",
+    "sim/bdsm/tms5100_frames.cpp",
+    "sim/cpu/cvs_tms5100_frame_rom_tb.sv",
+    "sim/bdsm/tms5100_frame_rom.cpp",
+    "rtl/machine/cvs_tms5100_lattice.sv",
+    "rtl/machine/cvs_tms5100_pcm.sv",
+    "sim/cpu/cvs_tms5100_lattice_tb.sv",
+    "sim/bdsm/tms5100_lattice.cpp"
   ],
   "games": [
     "Hunchback (CVS set 1)"
@@ -458,7 +473,7 @@
       "id": "hunchback.audio.coverage",
       "suite": "reference",
       "required": true,
-      "skip_reason": "Digital audio/dual-CPU/raw samples, speech-CPU/control/serial and normalized TMS command/direction/actual-CPU checks exist. Talk status is an external fixture and ROM probes remain observations only. TMC0281 frame/coefficients/LPC/stop/drain/voice and three-CPU connection, native unknown RAM/index/power-up paths, physical DAC/weights/calibrated mix/filter/discrete audio, serial/PDC/RC clocks/CDC and independent channel references remain incomplete.",
+      "skip_reason": "Digital audio/dual-CPU/raw samples, speech-CPU/control/serial, normalized TMS command/direction/actual-CPU, TMC0281 frame/numeric ROM/serial assembly and standalone numeric lattice/PCM checks exist. Talk status remains an external fixture; ROM probes are observations only. Speech sample/frame cadence, interpolation, LFSR/chirp excitation, stop/drain/voice and three-CPU connection, native unknown RAM/index/power-up paths, physical DAC/weights/calibrated mix/filter/discrete audio, serial/PDC/RC clocks/CDC and independent channel references remain incomplete.",
       "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
       "reference": "docs/validation.md; pending evidence."
     },
@@ -697,6 +712,46 @@
       "timeout": 120,
       "expectation": "Actual VHDL speech CPU/control bus/TMS controller: eight independent status/direction signatures, shared CTL2/8, PDC inversion, two starts/one reset, /192 and a held talk-output read under ready stall.",
       "reference": "docs/tms5100-control.md; independent synthetic program/signatures. External datapath talk status is a fixture; no LPC voice/completion or physical timing."
+    },
+    {
+      "id": "hunchback.speech.frames",
+      "suite": "smoke",
+      "mode": "tms5100_frames",
+      "required": true,
+      "tools": ["verilator", "make", "g++"],
+      "timeout": 180,
+      "expectation": "Independent MSB-field encoder, all energy/pitch/repeat combinations, legal K indices and 4/10/28/49 lengths; repeat/high-K retention, atomic commit, serial stalls/holds, unsolicited responses, busy rejection and partial-frame reset/clear.",
+      "reference": "docs/tms5100-frames.md; pinned MAME TMC0281 parse compatibility plus independent synthetic arithmetic model, no physical ROM clock or LPC waveform."
+    },
+    {
+      "id": "hunchback.speech.tables",
+      "suite": "smoke",
+      "mode": "tms5100_tables",
+      "required": true,
+      "tools": ["verilator", "make", "g++"],
+      "timeout": 180,
+      "expectation": "Exhaustive TMC0281 energy/pitch/K/chirp/interpolation addresses, signedness, invalid defaults and independently changing addresses.",
+      "reference": "rtl/vendor/tms5100/README.md; shared pinned upstream numeric facts, separately addressed synthetic oracle. No independent physical table/voice verification."
+    },
+    {
+      "id": "hunchback.speech.frames.rom",
+      "suite": "smoke",
+      "mode": "tms5100_frame_rom",
+      "required": true,
+      "tools": ["verilator", "make", "g++"],
+      "timeout": 180,
+      "expectation": "Actual serial-ROM boundary and parser read downloaded independent frames across byte/ROM wrap, every energy/pitch/repeat combination, retention, CPU pointer-write priority/retry and shared reset of an issued response.",
+      "reference": "docs/tms5100-frames.md; synthetic field/arithmetic/byte packing oracle, actual SV ROMs/parser. CPU pointer writes are stimuli; no mock ROM, no voice/frame cadence or physical bus timing."
+    },
+    {
+      "id": "hunchback.speech.lattice",
+      "suite": "smoke",
+      "mode": "tms5100_lattice",
+      "required": true,
+      "tools": ["verilator", "make", "g++"],
+      "timeout": 180,
+      "expectation": "Independent wide-sum/floor/modular arithmetic oracle for the serial lattice, one-sample energy delay, captured K, signed/extreme/table sequences, all energy/excitation pairs, exhaustive PCM raw values, latency/hold/rejected requests and every reset position.",
+      "reference": "docs/tms5100-lattice.md; pinned MAME normalized numeric compatibility, not physical multiplier-LSB/analog calibration, interpolation/excitation/frame scheduler/voice."
     }
   ],
   "mutations": [
@@ -1680,6 +1735,105 @@
       "new": ".ctl_status(talk_status)",
       "failure_label": "tms_cpu_signature",
       "reason": "Actual CPU reads unconditional talk status instead of the current CTL direction's bit."
+    },
+    {
+      "id": "frame_reversed_field",
+      "check": "hunchback.speech.frames",
+      "file": "rtl/machine/cvs_tms5100_frames.sv",
+      "old": "assembled={accumulator,bit_data}",
+      "new": "assembled={bit_data,accumulator}",
+      "failure_label": "tms_frame_length",
+      "reason": "Incoming serial bits occupy the wrong field significance."
+    },
+    {
+      "id": "frame_silence_reads_tail",
+      "check": "hunchback.speech.frames",
+      "file": "rtl/machine/cvs_tms5100_frames.sv",
+      "old": "if(assembled[3:0]==0 || assembled[3:0]==4'hf)",
+      "new": "if(assembled[3:0]==4'hf)",
+      "failure_label": "tms_frame_length",
+      "reason": "Silence consumes repeat/pitch tail bits that belong to the next frame."
+    },
+    {
+      "id": "frame_unvoiced_loses_upper_k",
+      "check": "hunchback.speech.frames",
+      "file": "rtl/machine/cvs_tms5100_frames.sv",
+      "old": "coefficient_indices<=staged_k;",
+      "new": "coefficient_indices<=staged_pitch==0 ? (staged_k & 50'h00000fffff) : staged_k;",
+      "failure_label": "tms_frame_fields",
+      "reason": "Unvoiced frames destroy raw K5..K10 needed by later voiced repeats."
+    },
+    {
+      "id": "frame_request_lost_on_stall",
+      "check": "hunchback.speech.frames",
+      "file": "rtl/machine/cvs_tms5100_frames.sv",
+      "old": "if(bit_req && bit_ready)waiting<=1'b1",
+      "new": "if(bit_req && (bit_ready || !frame_req))waiting<=1'b1",
+      "failure_label": "tms_frame_retry",
+      "reason": "A pending frame bit request is mistaken for an accepted transfer."
+    },
+    {
+      "id": "frame_wrong_tms5110_pitch",
+      "check": "hunchback.speech.tables",
+      "file": "rtl/vendor/tms5100/cvs_tms5100_tables.sv",
+      "old": "5'd1:pitch=8'd41;",
+      "new": "5'd1:pitch=8'd15;",
+      "failure_label": "tms_pitch_table",
+      "reason": "A TMS5110A pitch value silently replaces the TMC0281 coefficient profile."
+    },
+    {
+      "id": "frame_rom_inverted_data",
+      "check": "hunchback.speech.frames.rom",
+      "file": "sim/cpu/cvs_tms5100_frame_rom_tb.sv",
+      "old": ".bit_data(serial_bit),.frame_valid(frame_valid)",
+      "new": ".bit_data(!serial_bit),.frame_valid(frame_valid)",
+      "failure_label": "tms_frame_rom_length",
+      "reason": "The actual serial-ROM response is inverted at the parser connection."
+    },
+    {
+      "id": "lattice_energy_delay_removed",
+      "check": "hunchback.speech.lattice",
+      "file": "rtl/machine/cvs_tms5100_lattice.sv",
+      "old": "$signed({1'b0,previous_energy}) * excitation",
+      "new": "$signed({1'b0,(sample_req ? energy : previous_energy)}) * excitation",
+      "failure_label": "tms_lattice_raw",
+      "reason": "Excitation uses current energy instead of the previous sample's energy."
+    },
+    {
+      "id": "lattice_wrong_excitation_shift",
+      "check": "hunchback.speech.lattice",
+      "file": "rtl/machine/cvs_tms5100_lattice.sv",
+      "old": "top[10]<=15'(initial_product >>> 3)",
+      "new": "top[10]<=15'(initial_product >>> 2)",
+      "failure_label": "tms_lattice_raw",
+      "reason": "Excitation gain and negative rounding follow the wrong divisor."
+    },
+    {
+      "id": "lattice_wrong_feedback_index",
+      "check": "hunchback.speech.lattice",
+      "file": "rtl/machine/cvs_tms5100_lattice.sv",
+      "old": "state==UP ? delay[stage] : top[stage-4'd1]",
+      "new": "state==UP ? delay[stage] : top[stage]",
+      "failure_label": "tms_lattice_raw",
+      "reason": "The lower lattice feeds back the wrong upper-stage value."
+    },
+    {
+      "id": "lattice_live_upper_coefficients",
+      "check": "hunchback.speech.lattice",
+      "file": "rtl/machine/cvs_tms5100_lattice.sv",
+      "old": "$signed(captured_k[mul_slot*10+:10])",
+      "new": "$signed(state==UP ? coefficients[mul_slot*10+:10] : captured_k[mul_slot*10+:10])",
+      "failure_label": "tms_lattice_raw",
+      "reason": "Changing live K inputs corrupts an already accepted sample."
+    },
+    {
+      "id": "lattice_positive_clip_too_early",
+      "check": "hunchback.speech.lattice",
+      "file": "rtl/machine/cvs_tms5100_pcm.sv",
+      "old": "raw_sample>15'sd2047",
+      "new": "raw_sample>15'sd1023",
+      "failure_label": "tms_lattice_pcm_probe",
+      "reason": "Positive PCM saturates at half the specified raw magnitude."
     }
   ],
   "build": {

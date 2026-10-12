@@ -300,3 +300,23 @@ and all 17 framework units pass. See [expectations and coverage](tms5100-control
 TMC0281 frame/coefficients/LPC/stop/drain/voice, physical timing, three-CPU
 machine, analog/audio references, native runtime, MiSTer and Quartus gates
 remain incomplete. No RBF candidate is qualified by these command checks.
+
+## TMC0281 frames, numeric ROMs and lattice, 2026-10-12
+
+Frame checks cover all energy/pitch/repeat values, legal K indices, atomic
+4/10/28/49-bit frames and upper-K retention. The actual serial-memory assembly
+checks downloaded synthetic frames, wrap, pointer-write priority/retry and
+issued-response reset. Numeric ROMs have exhaustive address/sign tests with
+shared pinned upstream numeric facts. The serial lattice passes an independent
+wide-integer recurrence, all energy/excitation input pairs, changing captured
+parameters, every reset position and exhaustive PCM quantization. Eleven new
+faults reproduce twice across the two components. A corrected ROM-inversion
+designation is separately proved; the initial mismatched campaign is FAILED.
+Configured mutations total 120; complete regression/campaign and Quartus are
+deferred. The generator's cadence/interpolation/LFSR/chirp/stop-drain and voice,
+three-CPU connection and MiSTer top/project remain missing, with all existing
+physical/native/runtime/analog/reference blockers retained. The installed
+Quartus Docker image exists and the clean local Template_MiSTer framework is
+identified at 3ea1134cf05d62c2b1db30362277a823d739ced2; neither is an integration
+or timing PASS. See [frame expectations](tms5100-frames.md) and
+[lattice expectations](tms5100-lattice.md).

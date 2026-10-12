@@ -175,3 +175,24 @@ expectations before implementation in `docs/tms5100-control.md`. The external
 talk-status fixture and start/reset/address/branch pulses do not implement LPC,
 stop/drain timing or physical ROM-clock/CS/CTL1. Keep those candidate blockers
 until actual datapath and connected CPU/reference checks replace them.
+
+For TMC0281 frame/table changes run `hunchback.speech.frames`,
+`hunchback.speech.tables`, `hunchback.speech.frames.rom`, speech bus/controller/CPU
+baselines and lint. Preserve MSB-first field assembly from LSB-first ROM bytes,
+4/10/28/49-bit lengths, atomic commits, repeat and raw upper-K retention across
+unvoiced frames, dummy-free initial reads, one outstanding request, stalls,
+partial-frame cancellation and actual ROM pointer-write priority/retry/wrap.
+Use the pinned T0280B_0281A numeric ROM profile and retain imported notices;
+the shared numeric table reference is not independent physical/voice evidence.
+Frame/table PASS cannot remove lattice/interpolation/excitation/stop-drain/clock,
+actual speech firmware/voice, physical protocol or three-CPU candidate blockers.
+
+For the normalized lattice/PCM component run `hunchback.speech.lattice` and
+lint plus affected frame/table/serial baselines. Preserve the independent
+wide-sum/floor-division oracle versus modular HDL state, signed ten/fifteen-bit
+matrix inputs, previous-sample energy, captured coefficients, lower feedback
+order, exhaustive raw PCM clip/quantization, exact latency, hold, busy rejection
+and reset at every pipeline edge. Retain pinned software rounding/LSB versus
+physical-chip limitations. A numeric filter PASS is not oscillator, frame
+cadence, interpolation, LFSR/chirp generation, stop/drain/CTL status, voice,
+analog/MiSTer or Quartus qualification.

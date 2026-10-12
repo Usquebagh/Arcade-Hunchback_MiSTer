@@ -95,3 +95,5 @@ See [connected main/video/audio expectations and observations](docs/audio-assemb
 See [raw DAC sample checks and private preview limitations](docs/audio-samples.md).
 See [audio wiring audit](docs/audio-wiring.md) and [speech CPU/digital interface](docs/speech-digital.md).
 See [TMS5100 command-controller checks and remaining LPC work](docs/tms5100-control.md).
+See [TMC0281 frames and coefficient ROMs](docs/tms5100-frames.md) and
+[numeric lattice/PCM checks](docs/tms5100-lattice.md).
