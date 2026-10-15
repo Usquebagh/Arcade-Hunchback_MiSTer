@@ -110,3 +110,10 @@ on two consecutive runs. The fault model and designated assertion are retained
 as `overwritten_nested_return` in the BDSM adapter. This covers two active stack
 entries only; deeper nesting, wrap/overflow, interrupt/subroutine interaction,
 full opcode/cycle differential and native unknown-state diagnostics remain open.
+
+The same bench now checks absolute BIRA/BDRA with zero-wrap non-taken and
+nonzero taken cases against the pinned MAME instruction macros and CPU branch
+decode. Baseline passes; in disposable snapshots, making the BIDR predicate
+unconditionally true fails `bira_wrap_not_taken` at cycle 860 twice. The
+`bidr_zero_wrap_branches` mutation is retained in the adapter. Relative variants,
+all registers/conditions and indirect branch forms remain uncovered.

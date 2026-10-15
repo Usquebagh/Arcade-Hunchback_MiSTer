@@ -378,7 +378,7 @@
         "ghdl"
       ],
       "timeout": 120,
-      "expectation": "Synthetic register banks, addressing, one- and two-level subroutine return-stack entries, memory/IO, stall, sense/FLAG and HALT/interrupt resume signatures match pinned instruction expectations.",
+      "expectation": "Synthetic register banks, addressing, one- and two-level subroutine return-stack entries, absolute BIRA/BDRA modulo and branch outcomes, memory/IO, stall, sense/FLAG and HALT/interrupt resume signatures match pinned instruction expectations.",
       "reference": "MAME S2650 and Signetics user manual; prime opcode bus contract and software initialization explicitly modeled."
     },
     {
@@ -960,6 +960,15 @@
       "new": "ras(0)<=page_inc(iar);",
       "failure_label": "nested_outer_return",
       "reason": "Nested subroutine call overwrites the outer return-stack entry."
+    },
+    {
+      "id": "bidr_zero_wrap_branches",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "rd_v/=x\"00\"",
+      "new": "true",
+      "failure_label": "bira_wrap_not_taken",
+      "reason": "Increment/decrement branches incorrectly take when the updated register wraps to zero."
     },
     {
       "id": "ignored_cpu_enable",

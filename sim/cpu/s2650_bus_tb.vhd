@@ -167,13 +167,35 @@ begin
     check(memory(16#1c20#)=x"5a","nested_inner_return",16#5a#,to_integer(memory(16#1c20#)));
     check(memory(16#1c21#)=x"a5","nested_outer_return",16#a5#,to_integer(memory(16#1c21#)));
 
+    -- BIRA increments modulo 256 and branches exactly when the new value is nonzero.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#04#,16#ff#,
+      16#dc#,0,16#c0#,16#04#,0,16#dc#,0,16#e0#,
+      16#05#,16#11#,16#cd#,16#1c#,16#22#,16#40#));
+    program(16#c0#,(16#05#,16#22#,16#cd#,16#1c#,16#22#,16#40#));
+    program(16#e0#,(16#05#,16#33#,16#cd#,16#1c#,16#23#,16#40#));
+    start;for n in 1 to 100 loop tick;end loop;
+    check(memory(16#1c22#)=x"40","bira_wrap_not_taken",16#40#,to_integer(memory(16#1c22#)));
+    check(memory(16#1c23#)=x"33","bira_nonzero_taken",16#33#,to_integer(memory(16#1c23#)));
+
+    -- BDRA decrements modulo 256 and branches exactly when the new value is nonzero.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#04#,1,
+      16#fc#,0,16#c0#,16#04#,0,16#fc#,0,16#e0#,
+      16#05#,16#55#,16#cd#,16#1c#,16#25#,16#40#));
+    program(16#c0#,(16#05#,16#44#,16#cd#,16#1c#,16#24#,16#40#));
+    program(16#e0#,(16#05#,16#66#,16#cd#,16#1c#,16#26#,16#40#));
+    start;for n in 1 to 100 loop tick;end loop;
+    check(memory(16#1c24#)=x"40","bdra_zero_not_taken",16#40#,to_integer(memory(16#1c24#)));
+    check(memory(16#1c26#)=x"66","bdra_nonzero_taken",16#66#,to_integer(memory(16#1c26#)));
+
     -- Relative branch wraps inside its current 8 KiB page, not into page 1.
     memory:=(others=>x"40");
     program(0,(16#1f#,16#1f#,16#fb#));
     program(16#1ffb#,(16#75#,16#ff#,16#1b#,3));
     branch_armed:=true;start;for n in 1 to 25 loop tick;end loop;
     check(branch_seen,"relative_branch_progress",1,0);
-    write(line_out,string'("BDSM {""status"":""PASS"",""observed"":""Synthetic CPU register/status/addressing/bus/IO/nested subroutine stack/HALT interrupt scenarios""}"));
+    write(line_out,string'("BDSM {""status"":""PASS"",""observed"":""Synthetic CPU register/status/addressing/bus/IO/nested returns/absolute increment-decrement branches/HALT interrupt scenarios""}"));
     writeline(output,line_out);stop(0);wait;
   end process;
 end;
