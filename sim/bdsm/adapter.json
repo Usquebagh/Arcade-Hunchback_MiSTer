@@ -1079,6 +1079,24 @@
       "reason": "Relative BSTR saves a return address without wrapping at the active 8 KiB page boundary."
     },
     {
+      "id": "birr_increment_direction",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "WHEN BCTF |  -- Branch on condition True/False Relativ 18/98\n                       BRN  |  -- Branch on register non-zero, Relative  58\n                       BIDR => -- Branch on Inc / Dec Register, Relative D8/F8\n                    state_c<=sWAIT;\n                    IF ri(7 DOWNTO 6)=\"11\" THEN -- BIDR : Inc/Dec\n                      IF ri(5)='0' THEN -- BRIR : INC\n                        rd_v:=rs_v+1;",
+      "new": "WHEN BCTF |  -- Branch on condition True/False Relativ 18/98\n                       BRN  |  -- Branch on register non-zero, Relative  58\n                       BIDR => -- Branch on Inc / Dec Register, Relative D8/F8\n                    state_c<=sWAIT;\n                    IF ri(7 DOWNTO 6)=\"11\" THEN -- BIDR : Inc/Dec\n                      IF ri(5)='0' THEN -- BRIR : INC\n                        rd_v:=rs_v-1;",
+      "failure_label": "birr_wrap_not_taken",
+      "reason": "Relative BIRR decrements its register instead of incrementing modulo 256."
+    },
+    {
+      "id": "bdrr_decrement_direction",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "WHEN BCTF |  -- Branch on condition True/False Relativ 18/98\n                       BRN  |  -- Branch on register non-zero, Relative  58\n                       BIDR => -- Branch on Inc / Dec Register, Relative D8/F8\n                    state_c<=sWAIT;\n                    IF ri(7 DOWNTO 6)=\"11\" THEN -- BIDR : Inc/Dec\n                      IF ri(5)='0' THEN -- BRIR : INC\n                        rd_v:=rs_v+1;\n                      ELSE -- BDRR\n                        rd_v:=rs_v-1;",
+      "new": "WHEN BCTF |  -- Branch on condition True/False Relativ 18/98\n                       BRN  |  -- Branch on register non-zero, Relative  58\n                       BIDR => -- Branch on Inc / Dec Register, Relative D8/F8\n                    state_c<=sWAIT;\n                    IF ri(7 DOWNTO 6)=\"11\" THEN -- BIDR : Inc/Dec\n                      IF ri(5)='0' THEN -- BRIR : INC\n                        rd_v:=rs_v+1;\n                      ELSE -- BDRR\n                        rd_v:=rs_v+1;",
+      "failure_label": "bdrr_zero_not_taken",
+      "reason": "Relative BDRR increments its register instead of decrementing modulo 256."
+    },
+    {
       "id": "ignored_cpu_enable",
       "check": "hunchback.cpu.bus",
       "file": "rtl/vendor/arcadia/sgs2650.vhd",

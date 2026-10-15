@@ -190,10 +190,10 @@ the pinned MAME instruction semantics; they are not board measurements. The
 focused bus baseline passes. Dropping the BSTR target offset fails
 `bstr_page_wrap_target`; saving `iar+1` without page wrapping fails
 `bstr_page_wrap_return` at cycle 1295 in two disposable copies. The adapter
-retains both targeted mutations. BIRR/BDRR boundary behavior currently has no
-separate mutation proof; relative branch offset and page-wrap faults are covered
-by other retained mutations. Indirect and conditional relative boundary cases
-remain open.
+retains both targeted mutations. Reversing the BIRR increment fails
+`birr_wrap_not_taken`, and reversing the BDRR decrement fails
+`bdrr_zero_not_taken`; both direction mutations are retained in the adapter.
+Indirect and conditional relative boundary cases remain open.
 
 Focused checks after these bench-only changes passed `hunchback.cpu.bus`,
 `hunchback.cpu.alu`, `hunchback.cpu.edge_regressions`,
