@@ -10,7 +10,8 @@ use work.base_pack.all;
 entity s2650_bus_tb is end;
 architecture test of s2650_bus_tb is
   signal clk : std_logic := '0';
-  signal reset, reset_na : std_logic := '1';
+  signal reset : std_logic := '1';
+  signal reset_na : std_logic := '0';
   signal ack, irq, sense : std_logic := '0';
   signal ce : std_logic := '1';
   signal req, wr, mio, ene, dc, intack, flag : std_logic;

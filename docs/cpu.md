@@ -66,6 +66,13 @@ assertions can pass alongside that explicit gap. Do not force MAME's determinist
 reset image onto all hardware state merely to hide warnings; the manufacturer
 guarantees less reset state than MAME initializes.
 
+The shared directed bus bench now asserts active-low reset from simulation time
+zero. This removes one fixture-start warning, but the diagnostic still reports 21
+numeric_std warnings: unknown comparisons at time zero and later reset/fetch
+transitions, plus unknown conversions from 66 ns through 267 ns after reset
+release. They remain evidence of uninitialized CPU state and keep the required
+WARNING active; no warning is filtered or suppressed.
+
 Mutations reintroduce the three arithmetic faults, remove page wrap, skip HALT
 resume, ignore enable, use stale I/O qualifiers and shift machine-step cadence.
 Each designated failure must reproduce twice. ALU cycle values are case IDs,
