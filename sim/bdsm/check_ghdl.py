@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Native VHDL boundary checks; assertions and tool errors stay distinct."""
 import argparse
+from collections import Counter
+from decimal import Decimal
 import json
 import re
 from pathlib import Path
@@ -10,6 +12,71 @@ import sys
 
 def emit(status, **details):
     print('BDSM ' + json.dumps(dict(status=status, **details)), flush=True)
+
+
+CPU_EQ_WARNING = 'NUMERIC_STD."=": metavalue detected, returning FALSE'
+CPU_TO_INTEGER_WARNING = 'NUMERIC_STD.TO_INTEGER: metavalue detected, returning 0'
+CPU_STARTUP_WARNING_PROFILE = Counter({
+    (CPU_EQ_WARNING, 0): 8,
+    (CPU_EQ_WARNING, 5): 1,
+    (CPU_EQ_WARNING, 15): 2,
+    (CPU_EQ_WARNING, 25): 1,
+    (CPU_EQ_WARNING, 131): 1,
+    (CPU_EQ_WARNING, 232): 1,
+    (CPU_EQ_WARNING, 237): 1,
+    (CPU_TO_INTEGER_WARNING, 46): 1,
+    (CPU_TO_INTEGER_WARNING, 66): 1,
+    (CPU_TO_INTEGER_WARNING, 86): 1,
+    (CPU_TO_INTEGER_WARNING, 106): 1,
+    (CPU_TO_INTEGER_WARNING, 126): 1,
+    (CPU_TO_INTEGER_WARNING, 247): 1,
+})
+
+
+def classify_cpu_runtime_warnings(warnings, events):
+    """Review only the frozen unknown-state diagnostics before software init."""
+    markers = [e for e in events if e.get('status') == 'INFO' and
+               e.get('label') == 'startup_status_initialized']
+    if len(markers) != 1 or not isinstance(markers[0].get('time_ns'), int):
+        return 'ERROR', {'reason': 'Missing or ambiguous CPU startup initialization marker'}
+
+    boundary = Decimal(markers[0]['time_ns'])
+    observed = Counter()
+    before_startup = []
+    after_startup = []
+    unparsed = []
+    time_re = re.compile(r'@([0-9]+(?:\.[0-9]+)?)(fs|ps|ns|us|ms|sec):')
+    scales = {'fs':Decimal('0.000001'), 'ps':Decimal('0.001'), 'ns':Decimal(1),
+              'us':Decimal(1000), 'ms':Decimal(1000000), 'sec':Decimal(1000000000)}
+    for line in warnings:
+        msg_match = re.search(r'\(assertion warning\):\s*(.*)$', line)
+        time_match = time_re.search(line)
+        if not msg_match or not time_match:
+            unparsed.append(line)
+            continue
+        message = msg_match.group(1)
+        time_ns = Decimal(time_match.group(1)) * scales[time_match.group(2)]
+        observed[(message, int(time_ns))] += 1
+        (before_startup if time_ns < boundary else after_startup).append(line)
+
+    if not warnings:
+        return 'PASS', {'observed': 'No native VHDL runtime warnings',
+                        'startup_initialized_time_ns': int(boundary)}
+    exact_reviewed_profile = observed == CPU_STARTUP_WARNING_PROFILE
+    if exact_reviewed_profile and not after_startup and not unparsed:
+        return 'PASS', {
+            'observed': f'Reviewed {len(warnings)} known startup warnings before '
+                        f'software status initialization at {int(boundary)} ns; none afterward',
+            'reviewed_diagnostics': warnings,
+            'startup_initialized_time_ns': int(boundary),
+        }
+    return 'WARNING', {
+        'reason': 'Runtime warnings differ from the reviewed startup-only profile or occur after initialization',
+        'observed': warnings,
+        'startup_initialized_time_ns': int(boundary),
+        'warnings_at_or_after_initialization': after_startup,
+        'unparsed_warnings': unparsed,
+    }
 
 
 def main():
@@ -54,7 +121,8 @@ def main():
         return 2
     warnings = [line for line in (ran.stdout + ran.stderr).splitlines() if '(assertion warning)' in line]
     if args.mode == 'cpu_diagnostics' and events[-1]['status'] == 'PASS':
-        emit('WARNING' if warnings else 'PASS', observed=warnings or 'No VHDL runtime warnings')
+        status, details = classify_cpu_runtime_warnings(warnings, events)
+        emit(status, **details)
         return 0
     events[-1]['runtime_warning_count'] = len(warnings)
     if args.mode == 'cpu_bus' and events[-1]['status'] == 'FAIL':

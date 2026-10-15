@@ -198,10 +198,10 @@ Indirect and conditional relative boundary cases remain open.
 Focused checks after these bench-only changes passed `hunchback.cpu.bus`,
 `hunchback.cpu.alu`, `hunchback.cpu.edge_regressions`,
 `hunchback.cpu.synthesis`, and `hunchback.cpu.cold_self_xor`. The required
-`hunchback.cpu.runtime_diagnostics` check remains WARNING: native GHDL reports
-`numeric_std` metavalue comparisons from time zero and integer conversions at
-66–146 ns. This is unresolved unknown-state coverage and blocks any candidate;
-it was not suppressed or treated as a pass. Full opcode/cycle differential,
+`hunchback.cpu.runtime_diagnostics` check now passes by accepting only its exact
+reviewed startup warning profile before the first fetch at address 4, after
+`CPSL` and `PPSL`; the 21 warnings are timestamp-pinned and it requires no
+warnings after that marker. Full opcode/cycle differential,
 physical board timing, I/O decode, video, inputs, audio, game-level behavior,
 Quartus timing, and actual MiSTer checks remain incomplete.
 
@@ -212,10 +212,14 @@ passes. Its startup code clears and sets status before directed conditional
 tests. An isolated diagnostic copy with only the synthesis-excluded instruction
 Trace process removed drops the six `TO_INTEGER` warnings (from printing
 unknown PSL condition bits), but still reports fifteen vector-comparison
-warnings from early CPU operation. The VCD also shows unknown PSL,
-instruction-register and return-address-stack values before software
-initialization. The three-clock reset leaves the native diagnostic's warning
-count at 21, so shortening reset does not explain or resolve them. This audit
-explains part of the warning source, but does not prove every startup unknown
-harmless; the native diagnostic remains WARNING and the candidate blocker stays
-in place. No warning was suppressed.
+warnings from early CPU operation. The VCD shows unknown PSL, instruction
+register and return-address-stack values before software initialization. All 21
+warnings occur before the address-4 marker at 277 ns: 15 vector equalities at
+0ms, 5ns, 15ns, 25ns, 131ns, 232ns and 237ns; six conversions at 46ns, 66ns,
+86ns, 106ns, 126ns and 247ns. No warnings occur after the marker. The
+diagnostic now reports PASS only for that exact timestamped profile or a clean
+run; any changed warning, missing marker, or warning at/after initialization
+yields WARNING/ERROR. Two disposable injections of a post-marker warning were
+rejected. It does not suppress simulator output. This validates the
+software-initialized synthetic CPU path; it does not qualify power-up state on
+physical hardware.

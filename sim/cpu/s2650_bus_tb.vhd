@@ -32,6 +32,8 @@ begin
     variable first_store, second_store : natural := 0;
     variable branch_armed, branch_next, branch_seen : boolean := false;
     variable wrap_target_seen, wrap_return_seen : boolean := false;
+    variable startup_initialized : boolean := false;
+    variable startup_stage : natural := 0;
     variable line_out : line;
     procedure check(condition : boolean; label_text : string; want, got : integer) is
     begin
@@ -63,6 +65,23 @@ begin
       elsif req='1' and ready='1' then
         address:=to_integer(ad);
         if mio='1' then
+          if not startup_initialized and address=4 then
+            check(startup_stage=3,"startup_status_fetch_sequence",3,startup_stage);
+            startup_initialized:=true;
+            write(line_out,string'("BDSM {""status"":""INFO"",""label"":""startup_status_initialized"",""time_ns"":"));
+            write(line_out,now/1 ns);write(line_out,string'("}"));writeline(output,line_out);
+          elsif not startup_initialized then
+            case startup_stage is
+              when 0 => check(address=1,"startup_cpsl_operand",1,address);startup_stage:=1;
+              when 1 =>
+                if address=2 then startup_stage:=2;
+                else check(address=1,"startup_cpsl_operand_repeat",1,address);end if;
+              when 2 =>
+                if address=3 then startup_stage:=3;
+                else check(address=2,"startup_ppsl_opcode_repeat",2,address);end if;
+              when others => check(address=3,"startup_ppsl_operand_repeat",3,address);
+            end case;
+          end if;
           if branch_next then
             check(address=2,"relative_page",2,address);branch_seen:=true;branch_next:=false;
           elsif branch_armed and address=16#1ffe# then
@@ -110,7 +129,7 @@ begin
     variable held_address : uv15;
   begin
     program(0,(
-      16#75#,16#ff#,16#77#,16#0a#, -- explicit status initialization
+      16#75#,16#ff#,16#77#,16#0a#, -- CPSL ff; PPSL 0a initializes PSL
       16#04#,16#12#,16#05#,16#34#,16#06#,16#56#,16#07#,16#78#,
       16#01#,16#cc#,16#1c#,0,
       16#04#,16#ff#,16#84#,1,16#cc#,16#1c#,1,

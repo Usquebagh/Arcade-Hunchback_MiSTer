@@ -414,8 +414,8 @@
         "ghdl"
       ],
       "timeout": 120,
-      "expectation": "No unreviewed numeric_std runtime unknown-value warnings; required WARNING blocks candidates.",
-      "reference": "Native GHDL multivalue simulation; initial/register/stack-state review remains open."
+      "expectation": "Only the exact documented timestamped profile may occur before the first post-CPSL/PPSL fetch at address 4: vector equality 8x at 0ms, 1x at 5ns, 2x at 15ns, 1x at 25ns, 131ns, 232ns, and 237ns; TO_INTEGER 1x at 46ns, 66ns, 86ns, 106ns, 126ns, and 247ns. No runtime warnings after that marker. Any changed profile, missing marker, or later warning blocks.",
+      "reference": "Signetics 2650 startup procedure and CPSL/PPSL descriptions; native GHDL multivalue simulation; docs/cpu.md records trace-isolation audit."
     },
     {
       "id": "hunchback.rtl.lint",
