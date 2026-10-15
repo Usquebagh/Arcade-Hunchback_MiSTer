@@ -256,6 +256,19 @@ begin
     check(memory(16#1c52#)=x"40","bsta_false_skips_subroutine",16#40#,to_integer(memory(16#1c52#)));
     check(memory(16#1c53#)=x"44","bsta_zero_subroutine",16#44#,to_integer(memory(16#1c53#)));
 
+    -- BSFA '=' calls for positive CC (condition false) and skips for zero CC.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#04#,1,
+      16#bc#,0,16#c0#,16#05#,16#11#,16#cd#,16#1c#,16#80#,
+      16#04#,0,16#bc#,0,16#e0#,16#05#,16#22#,16#cd#,16#1c#,16#81#,16#40#));
+    program(16#c0#,(16#05#,16#33#,16#cd#,16#1c#,16#82#,16#17#));
+    program(16#e0#,(16#05#,16#44#,16#cd#,16#1c#,16#83#,16#17#));
+    start;for n in 1 to 65 loop tick;end loop;
+    check(memory(16#1c80#)=x"11","bsfa_false_condition_return",16#11#,to_integer(memory(16#1c80#)));
+    check(memory(16#1c81#)=x"22","bsfa_true_condition_fallthrough",16#22#,to_integer(memory(16#1c81#)));
+    check(memory(16#1c82#)=x"33","bsfa_false_subroutine",16#33#,to_integer(memory(16#1c82#)));
+    check(memory(16#1c83#)=x"40","bsfa_true_skips_subroutine",16#40#,to_integer(memory(16#1c83#)));
+
     -- Eight active calls fill the complete three-bit hardware return stack.
     memory:=(others=>x"40");
     program(0,(16#75#,16#ff#,16#77#,16#0a#,16#bf#,1,0,

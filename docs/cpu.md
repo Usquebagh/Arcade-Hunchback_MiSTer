@@ -136,8 +136,8 @@ copies, inverting CC equality fails `bcta_false_fallthrough` at cycle 1320
 twice; making RETC unconditional fails `retc_false_then_true` at cycle 1425
 twice. Both mutations are retained in the adapter. Conditional relative BCTR/BCFR,
 BCTA, RETC, BSTA and RETE interrupt handling now have directed coverage.
-Conditional BSFA, RETE enable timing and all CC/register combinations remain
-uncovered.
+RETE enable timing and all CC/register combinations remain uncovered; absolute
+BSFA coverage is added below.
 
 Relative BCTR `=` with positive CC is checked as a non-taken fall-through;
 BCFR `=` under the same CC must take and skip the fall-through store. The pinned
@@ -163,8 +163,8 @@ return to its caller. Pinned MAME `M_BRR` and `M_RET` semantics define these
 synthetic expectations. The focused baseline passes. Forcing false BSTR to call
 fails `bstr_false_skips_subroutine` at cycle 1240 twice; reversing the BSFR
 predicate fails `bsfr_positive_subroutine` at cycle 1295 twice. Both mutations
-are retained in the adapter. Absolute BSFA and relative branch-to-subroutine
-page-boundary cases remain uncovered.
+are retained in the adapter. Relative branch-to-subroutine page-boundary cases
+remain uncovered.
 
 An eight-call absolute subroutine chain now fills all eight documented return
 stack slots, writes a deepest-level signature, and unwinds to a separate caller
@@ -173,3 +173,11 @@ mask and the implementation's eight-entry stack; stack overflow is not inferred
 from this test. The focused baseline passes. Aliasing stack writes to four slots
 in a disposable copy fails `stack_depth8_outer_return` at cycle 1280 twice; the
 mutation is retained as `stack_depth_alias_four`.
+
+Absolute BSFA `=` now calls on positive CC, returns through its saved frame,
+and skips its distinct target on zero CC. Its synthetic expectation follows
+the pinned MAME absolute BSFA predicate. Baseline passes; reversing that
+predicate fails `bsfa_false_subroutine` at cycle 1245 twice. The targeted fault
+is retained as `bsfa_predicate_reversed`. Conditional absolute subroutine
+coverage is directed; other condition codes, indirect forms and page-boundary
+cases remain open.

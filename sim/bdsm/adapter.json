@@ -378,7 +378,7 @@
         "ghdl"
       ],
       "timeout": 120,
-      "expectation": "Synthetic register banks, addressing, one-, two- and eight-level subroutine return-stack entries, relative/absolute BIRR/BDRR, BCTA/BCTR/BCFR/BSTA/BSTR/BSFR condition/fall-through and return behavior, RETC/RETE interrupt handling, memory/IO, stall, sense/FLAG and HALT resume signatures match pinned instruction expectations.",
+      "expectation": "Synthetic register banks, addressing, one-, two- and eight-level subroutine return-stack entries, relative/absolute BIRR/BDRR, BCTA/BCTR/BCFR/BSTA/BSFA/BSTR/BSFR condition/fall-through and return behavior, RETC/RETE interrupt handling, memory/IO, stall, sense/FLAG and HALT resume signatures match pinned instruction expectations.",
       "reference": "MAME S2650 and Signetics user manual; prime opcode bus contract and software initialization explicitly modeled."
     },
     {
@@ -1050,6 +1050,15 @@
       "new": "ras(to_integer(psu(1 DOWNTO 0)))<=page_inc(iar);",
       "failure_label": "stack_depth8_outer_return",
       "reason": "Return stack writes alias every four entries instead of addressing all eight."
+    },
+    {
+      "id": "bsfa_predicate_reversed",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "WHEN BSTF |  -- Branch to sub on condition True/False absolute\n                 BSN  => -- Branch to sub on register non-zero, absolute\n              IF (ri(7 DOWNTO 6)=\"00\" AND cond_v) OR         -- BSTA\n                 (ri(7 DOWNTO 6)=\"10\" AND NOT cond_v) OR",
+      "new": "WHEN BSTF |  -- Branch to sub on condition True/False absolute\n                 BSN  => -- Branch to sub on register non-zero, absolute\n              IF (ri(7 DOWNTO 6)=\"00\" AND cond_v) OR         -- BSTA\n                 (ri(7 DOWNTO 6)=\"10\" AND cond_v) OR",
+      "failure_label": "bsfa_false_subroutine",
+      "reason": "Absolute BSFA uses the true-condition predicate instead of its inverse."
     },
     {
       "id": "ignored_cpu_enable",
