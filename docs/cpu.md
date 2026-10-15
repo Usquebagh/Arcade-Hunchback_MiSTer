@@ -62,19 +62,14 @@ GHDL analyzes/elaborates/synthesizes the adapted CPU. Informational notes for a
 become required WARNING. This is not Quartus fitting or TimeQuest qualification.
 SystemVerilog retains separate unsuppressed Verilator -Wall checks.
 
-Native CPU simulations expose numeric_std unknown-value warnings during startup
-and evaluation of uninitialized state. They remain in logs, with a separate
-required diagnostic check returning WARNING and blocking candidates. Functional
-assertions can pass alongside that explicit gap. Do not force MAME's deterministic
-reset image onto all hardware state merely to hide warnings; the manufacturer
-guarantees less reset state than MAME initializes.
-
-The shared directed bus bench now asserts active-low reset from simulation time
-zero. This removes one fixture-start warning, but the diagnostic still reports 21
-numeric_std warnings: unknown comparisons at time zero and later reset/fetch
-transitions, plus unknown conversions from 66 ns through 267 ns after reset
-release. They remain evidence of uninitialized CPU state and keep the required
-WARNING active; no warning is filtered or suppressed.
+Native CPU startup diagnostics are checked separately from functional behavior.
+The required `hunchback.cpu.runtime_diagnostics` gate accepts either a clean run
+or the exact reviewed 21-warning profile before the first fetch at address 4,
+after software initializes CPSL and PPSL. It rejects changed or additional
+warnings, any warning at or after that marker, and a missing marker. This is a
+bounded synthetic software-startup contract; it does not establish physical
+power-up state. Do not force MAME's deterministic reset image onto hardware
+state merely to hide warnings; the manufacturer guarantees less reset state.
 
 Mutations reintroduce the three arithmetic faults, remove page wrap, skip HALT
 resume, ignore enable, use stale I/O qualifiers and shift machine-step cadence.
