@@ -102,7 +102,8 @@ begin
     procedure start is
     begin
       irq<='0';reset<='1';reset_na<='0';tick;
-      reset_na<='1';for n in 1 to 4 loop tick;end loop;
+      -- The manufacturer startup procedure requires at least three RESET clocks.
+      reset_na<='1';for n in 1 to 2 loop tick;end loop;
       reset<='0';
       wait for 1 ns; -- settle the reset-address mux before sampling bus outputs
     end procedure;
