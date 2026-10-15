@@ -36,3 +36,10 @@ Joystick mapping follows the pinned MAME Hunchback input-port bit assignments.
 Physical decode, cocktail controls, DIP polarity/defaults and board switch
 wiring have not been independently audited. This shell does not establish a
 gameplay, unchanged-ROM, MiSTer hardware or Quartus timing PASS.
+
+`hunchback.mister.shell_behavior` drives the outputs of an interface-only HPS
+fixture and checks the real wrapper's index-zero download hold/completion,
+external/menu/user reset paths, two-clock reset release and active-low joystick
+mapping through the actual synthesized S2650 and machine hierarchy. This checks
+wrapper behavior after the HPS interface; it does not exercise the HPS serial
+protocol, real joystick routing, physical controls or DIP interpretation.

@@ -484,7 +484,7 @@
       "id": "hunchback.input.coverage",
       "suite": "reference",
       "required": true,
-      "skip_reason": "Raw MAME-compatible ports are tested with synthetic CPU reads; physical decode, DIP meaning, coin/start/player/cocktail mapping and MiSTer input routing remain unverified.",
+      "skip_reason": "Raw MAME-compatible ports and wrapper active-low joystick bit assignments are checked with synthetic CPU reads and HPS-boundary fixtures; physical decode, DIP meaning/defaults, cocktail switch mapping and the real MiSTer input protocol remain unverified.",
       "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
       "reference": "docs/validation.md; pending evidence."
     },
@@ -516,7 +516,7 @@
       "id": "hunchback.mister_integration.coverage",
       "suite": "reference",
       "required": true,
-      "skip_reason": "The MiSTer shell/project files, reset/ROM-load gating, nominal PLL request, actual CPU hierarchy elaboration and CE/DE video timing now have structural or synthetic checks. HPS and PLL are interface stubs in shell elaboration; real download, PLL lock/frequency, complete audio/video shell behavior, hardware CDC and actual MiSTer operation remain untested.",
+      "skip_reason": "The MiSTer shell/project files, HPS-boundary ROM-load/reset and joystick behavior, nominal PLL request, actual CPU hierarchy elaboration and CE/DE video timing now have structural or synthetic checks. HPS and PLL are interface stubs; the real download protocol, PLL lock/frequency, complete audio/video shell behavior, hardware CDC and actual MiSTer operation remain untested.",
       "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
       "reference": "docs/validation.md; pending evidence."
     },
@@ -831,6 +831,16 @@
       "timeout": 300,
       "expectation": "Compile the MiSTer emu wrapper and complete actual three-CPU SV hierarchy against the GHDL-synthesized S2650. HPS and PLL are interface-only stubs; this is source/elaboration coverage, not their behavior or Quartus timing.",
       "reference": "docs/mister-shell.md; pinned MiSTer shell interface and connected actual CPU source. No HPS, PLL lock, download, physical IO or hardware reference."
+    },
+    {
+      "id": "hunchback.mister.shell_behavior",
+      "suite": "smoke",
+      "mode": "mister_shell_behavior_connected",
+      "required": true,
+      "tools": ["ghdl", "iverilog", "vvp"],
+      "timeout": 300,
+      "expectation": "With HPS output pins driven by a fixture, verify actual wrapper ROM-download reset hold/release, external/menu/user reset, two-clock reset release and active-low joystick port mapping through the actual synthesized-CPU machine hierarchy.",
+      "reference": "docs/mister-shell.md; independent shell contracts and MAME-compatible logical input assignments. HPS protocol, physical controls, PLL behavior, DIPs and hardware remain unqualified."
     }
   ],
   "mutations": [
@@ -2012,6 +2022,24 @@
       "new": "display_enable<=v3;",
       "failure_label": "assembly_display_enable",
       "reason": "MiSTer DE must stay low during the normalized horizontal and vertical blanking intervals."
+    },
+    {
+      "id": "mister_shell_reset_releases_during_download",
+      "check": "hunchback.mister.shell_behavior",
+      "file": "Arcade-Hunchback.sv",
+      "old": "assign reset = release_pipe[1] || !pll_locked || load_active || !rom_loaded;",
+      "new": "assign reset = release_pipe[1] || !pll_locked || load_active;",
+      "failure_label": "reset_waits_for_rom",
+      "reason": "Core reset must remain asserted until the index-zero ROM download has completed."
+    },
+    {
+      "id": "mister_shell_joystick_polarity",
+      "check": "hunchback.mister.shell_behavior",
+      "file": "Arcade-Hunchback.sv",
+      "old": "~joy0[9]",
+      "new": "joy0[9]",
+      "failure_label": "joystick_idle_in0",
+      "reason": "MAME-compatible active-low player-one coin mapping must preserve its documented polarity."
     }
   ],
   "build": {
