@@ -484,7 +484,7 @@
       "id": "hunchback.input.coverage",
       "suite": "reference",
       "required": true,
-      "skip_reason": "Raw MAME-compatible ports and wrapper active-low joystick bit assignments are checked with synthetic CPU reads and HPS-boundary fixtures; physical decode, DIP meaning/defaults, cocktail switch mapping and the real MiSTer input protocol remain unverified.",
+      "skip_reason": "Raw MAME-compatible ports, active-low joystick mapping and menu-to-MAME DSW2/DSW3 bytes are checked with synthetic CPU reads and HPS-boundary fixtures; physical decode, board DIP positions/polarity, cocktail switch mapping and the real MiSTer input protocol remain unverified.",
       "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
       "reference": "docs/validation.md; pending evidence."
     },
@@ -839,7 +839,7 @@
       "required": true,
       "tools": ["ghdl", "iverilog", "vvp"],
       "timeout": 300,
-      "expectation": "With HPS output pins driven by a fixture, verify actual wrapper ROM-download reset hold/release, external/menu/user reset, two-clock reset release and active-low joystick port mapping through the actual synthesized-CPU machine hierarchy.",
+      "expectation": "With HPS output pins driven by a fixture, verify actual wrapper ROM-download reset hold/release, external/menu/user reset, two-clock reset release, active-low joystick mapping and representative MAME DSW2/DSW3 byte mappings through the actual synthesized-CPU machine hierarchy.",
       "reference": "docs/mister-shell.md; independent shell contracts and MAME-compatible logical input assignments. HPS protocol, physical controls, PLL behavior, DIPs and hardware remain unqualified."
     }
   ],
@@ -2040,6 +2040,24 @@
       "new": "joy0[9]",
       "failure_label": "joystick_idle_in0",
       "reason": "MAME-compatible active-low player-one coin mapping must preserve its documented polarity."
+    },
+    {
+      "id": "mister_shell_dsw_port_swap",
+      "check": "hunchback.mister.shell_behavior",
+      "file": "Arcade-Hunchback.sv",
+      "old": ".dsw1(mame_dsw2),.dsw2(mame_dsw3),",
+      "new": ".dsw1(mame_dsw3),.dsw2(mame_dsw2),",
+      "failure_label": "mame_dsw2_machine_port",
+      "reason": "The main-I/O adapter returns MAME DSW2 at extended port 7 and DSW3 at port 6."
+    },
+    {
+      "id": "mister_menu_status_overlaps_reset",
+      "check": "hunchback.mister.shell_behavior",
+      "file": "Arcade-Hunchback.sv",
+      "old": "O[2:1],Coin A,1C1C,3C1C,2C1C,4C1C;",
+      "new": "O[1:0],Coin A,1C1C,3C1C,2C1C,4C1C;",
+      "failure_label": "mister_status_reserved",
+      "reason": "MiSTer status bit 0 is reserved for the R[0] reset action and must not hold a game option."
     }
   ],
   "build": {

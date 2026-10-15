@@ -78,6 +78,13 @@ module mister_shell_tb;
         if(dut.in0!==8'b11000000)fail("joystick_player_coin_jump_polarity",8'b11000000,dut.in0);
         if(dut.in1!==8'b11011011)fail("joystick_jump2_polarity",8'b11011011,dut.in1);
 
+        menu_status=0;
+        menu_status[2:1]=2'b01;menu_status[4:3]=2'b10;menu_status[5]=1;
+        menu_status[7]=1;menu_status[9:8]=2'b10;menu_status[11]=1;
+        #1;
+        if(dut.machine.dsw1!==8'hd9)fail("mame_dsw2_machine_port",8'hd9,dut.machine.dsw1);
+        if(dut.machine.dsw2!==8'hf9)fail("mame_dsw3_machine_port",8'hf9,dut.machine.dsw2);
+
         menu_status[0]=1;#1;
         if(dut.core_reset!==1'b1)fail("menu_reset_assertion",1,dut.core_reset);
         menu_status[0]=0;menu_buttons[1]=1;#1;

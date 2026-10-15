@@ -18,6 +18,13 @@ independent ready inputs tied high for this shell. A nominal 380 Hz square-wave
 SENSE is generated from the master clock and shared by audio and speech CPUs;
 physical oscillator phase, drift and CDC are not qualified.
 
+MiSTer reserves status bit 0 for `R[0]` reset, so menu options begin at status
+bit 1. MAME's Hunchback map reads DSW3 at extended port 6 and DSW2 at port 7;
+the shell maps coinage/lives to the port-7 input and cabinet/bonus/registration
+to port 6. The behavioral shell check verifies representative raw bytes from
+the menu settings. The physical positions and electrical polarity of the
+board's two DIP switch banks remain unaudited.
+
 ## Video and audio boundaries
 
 The MiSTer pixel enable follows the scan position tick through horizontal and
@@ -39,7 +46,8 @@ gameplay, unchanged-ROM, MiSTer hardware or Quartus timing PASS.
 
 `hunchback.mister.shell_behavior` drives the outputs of an interface-only HPS
 fixture and checks the real wrapper's index-zero download hold/completion,
-external/menu/user reset paths, two-clock reset release and active-low joystick
-mapping through the actual synthesized S2650 and machine hierarchy. This checks
-wrapper behavior after the HPS interface; it does not exercise the HPS serial
-protocol, real joystick routing, physical controls or DIP interpretation.
+external/menu/user reset paths, two-clock reset release, active-low joystick
+mapping and representative MAME DSW2/DSW3 bytes through the actual synthesized
+S2650 and machine hierarchy. This checks wrapper behavior after the HPS
+interface; it does not exercise the HPS serial protocol, real joystick routing,
+physical controls or DIP switch placement/polarity.

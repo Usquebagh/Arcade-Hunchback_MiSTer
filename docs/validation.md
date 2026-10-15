@@ -320,3 +320,20 @@ Quartus Docker image exists and the clean local Template_MiSTer framework is
 identified at 3ea1134cf05d62c2b1db30362277a823d739ced2; neither is an integration
 or timing PASS. See [frame expectations](tms5100-frames.md) and
 [lattice expectations](tms5100-lattice.md).
+
+## MiSTer reset status and Hunchback DSW mapping, 2026-10-15
+
+The MiSTer template reserves status bit 0 for `R[0]` reset. The wrapper's
+Coin A option previously overlapped that bit, and its menu coin/lives byte and
+cabinet/bonus/registration byte were connected to the opposite machine inputs:
+MAME reads DSW3 at extended port 6 and DSW2 at port 7. Options now use bits 1
+through 11, and the corrected port order is checked at the actual machine
+boundary. The shell behavioral check also covers index-zero download reset,
+external/menu/user reset, two-clock release and active-low joystick mapping.
+The full configured smoke suite passes on this change. Four targeted faults
+(ROM-ready reset gating, joystick polarity, DSW order and status-bit overlap)
+each fail their designated assertion twice. RTL lint and CPU synthesis pass;
+the existing native CPU unknown-value diagnostic remains WARNING. Physical
+DIP positions/polarity, HPS protocol, PLL, board video/audio/game reference,
+the complete mutation campaign and Quartus timing remain required blockers;
+this change does not qualify an RBF candidate. See [MiSTer shell expectations](mister-shell.md).

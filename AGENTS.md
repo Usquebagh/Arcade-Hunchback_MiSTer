@@ -219,8 +219,9 @@ For MiSTer shell, PLL, pixel-enable or display-enable changes run
 `hunchback.video.scan`, `hunchback.video.assembly`, `hunchback.machine.full`,
 `hunchback.mister.shell`, `hunchback.mister.shell_behavior`, relevant
 main/audio/speech integration baselines and lint. Preserve the shell test's
-index-zero download/reset sequence, menu/external/user reset, two-clock release
-and active-low mapping driven at the HPS output boundary. Preserve the independent
+index-zero download/reset sequence, menu/external/user reset, two-clock release,
+active-low joystick mapping and MAME DSW2/DSW3 bytes driven at the HPS output
+boundary. Preserve the independent
 all-position CE oracle through horizontal and vertical blanking and
 the delayed DE/RGB/sync alignment. Keep the PLL frequency, pixel origins,
 physical controls/DIP decode, discrete/analog audio and actual MiSTer checks as

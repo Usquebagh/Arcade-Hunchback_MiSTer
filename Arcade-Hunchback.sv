@@ -29,13 +29,13 @@ module emu (
         "Hunchback (CVS);",
         "-;",
         "O[122:121],Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
-        "O[1:0],Coin A,1C1C,3C1C,2C1C,4C1C;",
-        "O[3:2],Coin B,1C2C,1C3C,1C4C,1C5C;",
-        "O[4],Lives,3,5;",
-        "O[6],Cabinet,Upright,Cocktail;",
-        "O[8:7],Bonus life,10k,20k,40k,80k;",
-        "O[9],Registration,On,Off;",
-        "O[10],Registration length,3,10;",
+        "O[2:1],Coin A,1C1C,3C1C,2C1C,4C1C;",
+        "O[4:3],Coin B,1C2C,1C3C,1C4C,1C5C;",
+        "O[5],Lives,3,5;",
+        "O[7],Cabinet,Upright,Cocktail;",
+        "O[9:8],Bonus life,10k,20k,40k,80k;",
+        "O[10],Registration,On,Off;",
+        "O[11],Registration length,3,10;",
         "-;",
         "J1,Jump,Start 1,Coin 1,Jump 2,Start 2,Coin 2;",
         "jn,A,B,X,Y,Start,Select;",
@@ -66,12 +66,12 @@ module emu (
 
     wire [7:0] in0={2'b11,~joy0[4],~joy1[4],~joy0[10],~joy1[10],~joy1[9],~joy0[9]};
     wire [7:0] in1={2'b11,~joy0[2],~joy0[3],~joy1[2],~joy1[3],2'b11};
-    wire [7:0] coin_b={status[3:2]==2'd0 ? 2'b11 : status[3:2]==2'd1 ? 2'b01 :
-                       status[3:2]==2'd2 ? 2'b10 : 2'b00};
-    wire [7:0] bonus={status[8:7]==2'd0 ? 2'b11 : status[8:7]==2'd1 ? 2'b01 :
-                      status[8:7]==2'd2 ? 2'b10 : 2'b00};
-    wire [7:0] dsw2={2'b11,1'b0,status[4],coin_b[1:0],status[1:0]};
-    wire [7:0] dsw1={3'b111,status[6],bonus[1:0],~status[10],~status[9]};
+    wire [1:0] coin_b=status[4:3]==2'd0 ? 2'b11 : status[4:3]==2'd1 ? 2'b01 :
+                      status[4:3]==2'd2 ? 2'b10 : 2'b00;
+    wire [1:0] bonus=status[9:8]==2'd0 ? 2'b11 : status[9:8]==2'd1 ? 2'b01 :
+                     status[9:8]==2'd2 ? 2'b10 : 2'b00;
+    wire [7:0] mame_dsw2={2'b11,1'b0,status[5],coin_b,status[2:1]};
+    wire [7:0] mame_dsw3={3'b111,status[7],bonus,~status[11],~status[10]};
 
     reg [16:0] sense_divider=0;
     reg sense_380=0;
@@ -98,7 +98,7 @@ module emu (
         .clk(clk_sys),.reset(core_reset),.reset_na(!core_reset),.video_reset(core_reset),.scan_run(1'b1),
         .ready(1'b1),.audio_ready(1'b1),.audio_sense(sense_380),.speech_ready(1'b1),.speech_sense(sense_380),
         .dl_wr(ioctl_wr && rom_download),.dl_addr(ioctl_addr[15:0]),.dl_data(ioctl_dout),
-        .in0(in0),.in1(in1),.in2(8'hff),.in3(8'hff),.dsw1(dsw1),.dsw2(dsw2),
+        .in0(in0),.in1(in1),.in2(8'hff),.in3(8'hff),.dsw1(mame_dsw2),.dsw2(mame_dsw3),
         .pixel_valid(pixel_valid),.pixel_ce_all(pixel_ce_all),.display_enable(display_enable),
         .out_x(out_x),.out_y(out_y),.red(red),.green(green),.blue(blue),.raw_pixel(raw_pixel),
         .pvi_irq(pvi_irq),.palette_index(palette_index),.bullet_present(bullet_present),

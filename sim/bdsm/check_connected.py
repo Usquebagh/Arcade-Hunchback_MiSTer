@@ -16,6 +16,13 @@ def main():
     args = parser.parse_args()
     work = Path('build/bdsm-' + args.mode).resolve()
     work.mkdir(parents=True, exist_ok=True)
+    if args.mode=='mister_shell_behavior_connected':
+        shell=Path('Arcade-Hunchback.sv').read_text()
+        ranges=[(int(first),int(second) if second else int(first))
+                for first,second in re.findall(r'"O\[(\d+)(?::(\d+))?\]',shell)]
+        if any(min(first,second)==0 for first,second in ranges) or '"R[0],Reset;"' not in shell:
+            emit('FAIL',label='mister_status_reserved',cycle=0,expected=1,observed=0)
+            return 1
     bootstrap=False
     startup=None
     if args.mode=='startup_connected':
