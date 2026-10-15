@@ -136,3 +136,11 @@ twice; making RETC unconditional fails `retc_false_then_true` at cycle 1425
 twice. Both mutations are retained in the adapter. Conditional relative/false
 branches, conditional BSTR/BSTA, RETE condition/interrupt interaction and all
 CC/register combinations are still uncovered.
+
+Relative BCTR `=` with positive CC is checked as a non-taken fall-through;
+BCFR `=` under the same CC must take and skip the fall-through store. The pinned
+MAME `M_BRR` contract and instruction table define this inverse condition
+relationship. Baseline passes. Reversing the false-branch predicate in a
+disposable copy fails `bcfr_taken_skips_fallthrough` at cycle 1435 twice; the
+adapter retains `bcfr_uses_true_predicate`. Conditional relative subroutine
+branches and RETE conditions are still open.

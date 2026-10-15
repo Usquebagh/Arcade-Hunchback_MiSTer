@@ -224,6 +224,17 @@ begin
     check(memory(16#1c32#)=x"40","bcta_false_skips_target",16#40#,to_integer(memory(16#1c32#)));
     check(memory(16#1c33#)=x"44","bcta_zero_taken",16#44#,to_integer(memory(16#1c33#)));
 
+    -- BCTR '=' falls through for positive CC; BCFR '=' takes on that same CC.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#04#,1,
+      16#18#,18,16#05#,16#11#,16#cd#,16#1c#,16#40#,
+      16#98#,11,16#05#,16#22#,16#cd#,16#1c#,16#41#,16#40#));
+    program(26,(16#05#,16#33#,16#cd#,16#1c#,16#42#,16#40#));
+    start;for n in 1 to 110 loop tick;end loop;
+    check(memory(16#1c40#)=x"11","bctr_false_fallthrough",16#11#,to_integer(memory(16#1c40#)));
+    check(memory(16#1c41#)=x"40","bcfr_taken_skips_fallthrough",16#40#,to_integer(memory(16#1c41#)));
+    check(memory(16#1c42#)=x"33","bcfr_positive_taken",16#33#,to_integer(memory(16#1c42#)));
+
     -- RETC '=' must leave the stack intact when false; RETC '>' then returns.
     memory:=(others=>x"40");
     program(0,(16#75#,16#ff#,16#77#,16#0a#,16#bf#,0,16#c0#,
