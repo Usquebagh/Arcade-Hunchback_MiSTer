@@ -378,7 +378,7 @@
         "ghdl"
       ],
       "timeout": 120,
-      "expectation": "Synthetic register banks, addressing, one- and two-level subroutine return-stack entries, relative/absolute BIRR/BDRR, BCTA/BCTR/BCFR/BSTA/BSTR/BSFR condition/fall-through and return behavior, RETC/RETE interrupt handling, memory/IO, stall, sense/FLAG and HALT resume signatures match pinned instruction expectations.",
+      "expectation": "Synthetic register banks, addressing, one-, two- and eight-level subroutine return-stack entries, relative/absolute BIRR/BDRR, BCTA/BCTR/BCFR/BSTA/BSTR/BSFR condition/fall-through and return behavior, RETC/RETE interrupt handling, memory/IO, stall, sense/FLAG and HALT resume signatures match pinned instruction expectations.",
       "reference": "MAME S2650 and Signetics user manual; prime opcode bus contract and software initialization explicitly modeled."
     },
     {
@@ -1041,6 +1041,15 @@
       "new": "WHEN BSTF |  -- Branch to sub on condition True/False Relative\n                       BSN  => -- Branch to sub on register non-zero, Relative\n                    IF (ri(7 DOWNTO 6)=\"00\" AND cond_v) OR         -- BSTR\n                       (ri(7 DOWNTO 6)=\"10\" AND cond_v) OR",
       "failure_label": "bsfr_positive_subroutine",
       "reason": "Relative BSFR takes only when the condition is false."
+    },
+    {
+      "id": "stack_depth_alias_four",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "ras(to_integer(psu(2 DOWNTO 0)))<=page_inc(iar);",
+      "new": "ras(to_integer(psu(1 DOWNTO 0)))<=page_inc(iar);",
+      "failure_label": "stack_depth8_outer_return",
+      "reason": "Return stack writes alias every four entries instead of addressing all eight."
     },
     {
       "id": "ignored_cpu_enable",

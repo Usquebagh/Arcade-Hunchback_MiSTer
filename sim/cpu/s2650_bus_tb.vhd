@@ -256,6 +256,22 @@ begin
     check(memory(16#1c52#)=x"40","bsta_false_skips_subroutine",16#40#,to_integer(memory(16#1c52#)));
     check(memory(16#1c53#)=x"44","bsta_zero_subroutine",16#44#,to_integer(memory(16#1c53#)));
 
+    -- Eight active calls fill the complete three-bit hardware return stack.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#bf#,1,0,
+      16#05#,16#5a#,16#cd#,16#1c#,16#71#,16#40#));
+    program(16#100#,(16#bf#,1,16#10#,16#17#));
+    program(16#110#,(16#bf#,1,16#20#,16#17#));
+    program(16#120#,(16#bf#,1,16#30#,16#17#));
+    program(16#130#,(16#bf#,1,16#40#,16#17#));
+    program(16#140#,(16#bf#,1,16#50#,16#17#));
+    program(16#150#,(16#bf#,1,16#60#,16#17#));
+    program(16#160#,(16#bf#,1,16#70#,16#17#));
+    program(16#170#,(16#04#,16#a8#,16#cc#,16#1c#,16#70#,16#17#));
+    start;for n in 1 to 100 loop tick;end loop;
+    check(memory(16#1c70#)=x"a8","stack_depth8_deepest_call",16#a8#,to_integer(memory(16#1c70#)));
+    check(memory(16#1c71#)=x"5a","stack_depth8_outer_return",16#5a#,to_integer(memory(16#1c71#)));
+
     -- BSTR '=' skips on positive CC, then calls on zero CC and returns.
     memory:=(others=>x"40");
     program(0,(16#75#,16#ff#,16#77#,16#0a#,16#04#,1,16#38#,32,

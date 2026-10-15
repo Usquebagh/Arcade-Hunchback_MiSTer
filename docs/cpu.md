@@ -107,9 +107,10 @@ subroutines and verifies distinct inner and outer return markers. Its baseline
 passed after the bench change. In disposable source copies, forcing all
 subroutine pushes into stack slot zero failed `nested_outer_return` at cycle 755
 on two consecutive runs. The fault model and designated assertion are retained
-as `overwritten_nested_return` in the BDSM adapter. This covers two active stack
-entries only; deeper nesting, wrap/overflow, interrupt/subroutine interaction,
-full opcode/cycle differential and native unknown-state diagnostics remain open.
+as `overwritten_nested_return` in the BDSM adapter. This specific case covers
+two active stack entries; eight-entry fill/unwind coverage is added below.
+Overflow and interrupt/subroutine interaction, full opcode/cycle differential
+and native unknown-state diagnostics remain open.
 
 The same bench now checks absolute BIRA/BDRA with zero-wrap non-taken and
 nonzero taken cases against the pinned MAME instruction macros and CPU branch
@@ -164,3 +165,11 @@ fails `bstr_false_skips_subroutine` at cycle 1240 twice; reversing the BSFR
 predicate fails `bsfr_positive_subroutine` at cycle 1295 twice. Both mutations
 are retained in the adapter. Absolute BSFA and relative branch-to-subroutine
 page-boundary cases remain uncovered.
+
+An eight-call absolute subroutine chain now fills all eight documented return
+stack slots, writes a deepest-level signature, and unwinds to a separate caller
+signature. The independent contract is the pinned MAME three-bit stack pointer
+mask and the implementation's eight-entry stack; stack overflow is not inferred
+from this test. The focused baseline passes. Aliasing stack writes to four slots
+in a disposable copy fails `stack_depth8_outer_return` at cycle 1280 twice; the
+mutation is retained as `stack_depth_alias_four`.
