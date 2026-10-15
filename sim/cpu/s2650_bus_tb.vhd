@@ -157,13 +157,23 @@ begin
     check(memory(16#1c01#)=x"22","halt_resume",16#22#,to_integer(memory(16#1c01#)));
     check(irq_acks=1,"interrupt_ack_count",1,irq_acks);
 
+    -- Nested absolute subroutines exercise two distinct return-stack entries.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#bf#,0,16#c0#,
+      16#05#,16#a5#,16#cd#,16#1c#,16#21#,16#40#));
+    program(16#c0#,(16#bf#,0,16#e0#,16#17#));
+    program(16#e0#,(16#04#,16#5a#,16#cc#,16#1c#,16#20#,16#17#));
+    start;for n in 1 to 120 loop tick;end loop;
+    check(memory(16#1c20#)=x"5a","nested_inner_return",16#5a#,to_integer(memory(16#1c20#)));
+    check(memory(16#1c21#)=x"a5","nested_outer_return",16#a5#,to_integer(memory(16#1c21#)));
+
     -- Relative branch wraps inside its current 8 KiB page, not into page 1.
     memory:=(others=>x"40");
     program(0,(16#1f#,16#1f#,16#fb#));
     program(16#1ffb#,(16#75#,16#ff#,16#1b#,3));
     branch_armed:=true;start;for n in 1 to 25 loop tick;end loop;
     check(branch_seen,"relative_branch_progress",1,0);
-    write(line_out,string'("BDSM {""status"":""PASS"",""observed"":""Synthetic CPU register/status/addressing/bus/IO/subroutine/HALT interrupt scenarios""}"));
+    write(line_out,string'("BDSM {""status"":""PASS"",""observed"":""Synthetic CPU register/status/addressing/bus/IO/nested subroutine stack/HALT interrupt scenarios""}"));
     writeline(output,line_out);stop(0);wait;
   end process;
 end;

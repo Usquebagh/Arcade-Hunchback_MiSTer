@@ -24,8 +24,11 @@ remain in local MiSTer-BDSM reports; fast tests retain these counterexamples:
 
 Directed processor scenarios also cover ordinary registers/status, alternate R1
 banks, indexed/auto-increment/auto-decrement loads, indirect data in another page,
-absolute subroutine/return, control/data and extended I/O, ack stalls, sense/FLAG,
-one interrupt acknowledgement and disabled-enable state/request behaviour.
+absolute subroutine/return, nested two-level absolute subroutine/return, control/data
+and extended I/O, ack stalls, sense/FLAG, one interrupt acknowledgement and
+disabled-enable state/request behaviour. The nested-call regression checks separate
+inner and outer return markers; it is still directed coverage, not exhaustive stack
+depth or overflow qualification.
 The programs explicitly initialize relevant software state. The initial memory
 driver mistakenly changed data in the clock's delta; it was corrected to deliver
 data after the sampling edge before further failures were interpreted. I/O
@@ -96,3 +99,14 @@ suppression were introduced. Native CPU/ALU/synthesis and connected bus pass;
 the required broader unknown-state WARNING remains active. The unchanged ROM's
 first 1024 RAM-clear writes match a restricted independent instruction model.
 Attract/gameplay, complete ISA/cycle and physical reference remain unqualified.
+
+## Nested return-stack regression, 2026-10-15
+
+The focused `hunchback.cpu.bus` check now executes two nested absolute
+subroutines and verifies distinct inner and outer return markers. Its baseline
+passed after the bench change. In disposable source copies, forcing all
+subroutine pushes into stack slot zero failed `nested_outer_return` at cycle 755
+on two consecutive runs. The fault model and designated assertion are retained
+as `overwritten_nested_return` in the BDSM adapter. This covers two active stack
+entries only; deeper nesting, wrap/overflow, interrupt/subroutine interaction,
+full opcode/cycle differential and native unknown-state diagnostics remain open.
