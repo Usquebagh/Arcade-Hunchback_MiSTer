@@ -378,7 +378,7 @@
         "ghdl"
       ],
       "timeout": 120,
-      "expectation": "Synthetic register banks, addressing, one-, two- and eight-level subroutine return-stack entries, relative/absolute BIRR/BDRR, BCTA/BCTR/BCFR/BSTA/BSFA/BSTR/BSFR condition/fall-through and return behavior, RETC/RETE interrupt handling, memory/IO, stall, sense/FLAG and HALT resume signatures match pinned instruction expectations.",
+      "expectation": "Synthetic register banks, addressing, one-, two- and eight-level return stacks, relative/page-wrap and absolute conditional branch/subroutine families, RETC/RETE interrupt handling, memory/IO, stall, sense/FLAG and HALT resume signatures match pinned instruction expectations.",
       "reference": "MAME S2650 and Signetics user manual; prime opcode bus contract and software initialization explicitly modeled."
     },
     {
@@ -1059,6 +1059,15 @@
       "new": "WHEN BSTF |  -- Branch to sub on condition True/False absolute\n                 BSN  => -- Branch to sub on register non-zero, absolute\n              IF (ri(7 DOWNTO 6)=\"00\" AND cond_v) OR         -- BSTA\n                 (ri(7 DOWNTO 6)=\"10\" AND cond_v) OR",
       "failure_label": "bsfa_false_subroutine",
       "reason": "Absolute BSFA uses the true-condition predicate instead of its inverse."
+    },
+    {
+      "id": "bstr_page_wrap_offset_lost",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "pushsub_c<='1';\n                      ad_c <=page_add(page_inc(iar),sext(dr(6 DOWNTO 0),15));\n                      iar_c<=page_add(page_inc(iar),sext(dr(6 DOWNTO 0),15));",
+      "new": "pushsub_c<='1';\n                      ad_c <=page_add(page_inc(iar),sext(dr(6 DOWNTO 0),15));\n                      iar_c<=page_inc(iar);",
+      "failure_label": "bstr_page_wrap_target",
+      "reason": "Relative BSTR target drops its page-wrapped signed offset."
     },
     {
       "id": "ignored_cpu_enable",

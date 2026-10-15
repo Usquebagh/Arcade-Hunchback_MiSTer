@@ -163,8 +163,8 @@ return to its caller. Pinned MAME `M_BRR` and `M_RET` semantics define these
 synthetic expectations. The focused baseline passes. Forcing false BSTR to call
 fails `bstr_false_skips_subroutine` at cycle 1240 twice; reversing the BSFR
 predicate fails `bsfr_positive_subroutine` at cycle 1295 twice. Both mutations
-are retained in the adapter. Relative branch-to-subroutine page-boundary cases
-remain uncovered.
+are retained in the adapter. Relative BSTR page-wrap target coverage is added
+below; BSFR and conditional relative boundary cases remain uncovered.
 
 An eight-call absolute subroutine chain now fills all eight documented return
 stack slots, writes a deepest-level signature, and unwinds to a separate caller
@@ -181,3 +181,11 @@ predicate fails `bsfa_false_subroutine` at cycle 1245 twice. The targeted fault
 is retained as `bsfa_predicate_reversed`. Conditional absolute subroutine
 coverage is directed; other condition codes, indirect forms and page-boundary
 cases remain open.
+
+An unconditional relative BSTR at 1FFE now crosses the 1FFF page boundary and
+must reach address 0010, where a target signature is written. This checks the
+MAME page-relative target formula against the synthetic bus memory. Baseline
+passes; dropping the saved relative offset fails `bstr_page_wrap_target` at
+cycle 1295 twice in disposable copies. The adapter retains
+`bstr_page_wrap_offset_lost`. The return address wrapping to zero is not yet
+asserted because this scenario deliberately halts in the target.

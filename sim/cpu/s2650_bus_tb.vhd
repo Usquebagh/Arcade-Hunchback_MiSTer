@@ -269,6 +269,14 @@ begin
     check(memory(16#1c82#)=x"33","bsfa_false_subroutine",16#33#,to_integer(memory(16#1c82#)));
     check(memory(16#1c83#)=x"40","bsfa_true_skips_subroutine",16#40#,to_integer(memory(16#1c83#)));
 
+    -- BSTR target calculation crosses 1FFF to address 0010 within the same page.
+    memory:=(others=>x"40");
+    program(0,(16#1f#,16#1f#,16#fe#));
+    program(16#1ffe#,(16#3b#,16));
+    program(16#10#,(16#04#,16#5a#,16#cc#,16#1c#,16#90#,16#40#));
+    start;for n in 1 to 45 loop tick;end loop;
+    check(memory(16#1c90#)=x"5a","bstr_page_wrap_target",16#5a#,to_integer(memory(16#1c90#)));
+
     -- Eight active calls fill the complete three-bit hardware return stack.
     memory:=(others=>x"40");
     program(0,(16#75#,16#ff#,16#77#,16#0a#,16#bf#,1,0,
