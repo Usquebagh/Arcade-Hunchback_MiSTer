@@ -4,7 +4,7 @@ module cvs_startup_tb;
     reg clk=0,reset=1,reset_na=0,video_reset=1,scan_run=0,ready=1,dl_wr=0;
     reg [15:0] dl_addr=0;
     reg [7:0] dl_data=0;
-    wire pixel_valid,bullet_present,background_collision,hsync_n,vsync_n,audio_trigger,intack;
+    wire pixel_valid,pixel_ce_all,display_enable,bullet_present,background_collision,hsync_n,vsync_n,audio_trigger,intack;
     wire req,wr,memory_space,extended,data_port,flag;
     wire [7:0] out_x,out_y,red,green,blue,collision_events,collision,video_fx,audio_command;
     wire [7:0] write_data,read_data,h_count;

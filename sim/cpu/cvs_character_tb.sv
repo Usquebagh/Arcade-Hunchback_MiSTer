@@ -13,7 +13,7 @@ module cvs_character_tb (
     input wire dl_wr,
     input wire [12:0] dl_addr,
     input wire [7:0] dl_data,
-    output wire pixel_valid,
+    output wire pixel_valid, display_enable,
     output wire [7:0] out_x, out_y, red, green, blue,
     output wire [2:0] raw_pixel,
     output wire [3:0] palette_index,

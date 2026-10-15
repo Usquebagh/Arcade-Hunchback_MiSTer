@@ -196,3 +196,32 @@ and reset at every pipeline edge. Retain pinned software rounding/LSB versus
 physical-chip limitations. A numeric filter PASS is not oscillator, frame
 cadence, interpolation, LFSR/chirp generation, stop/drain/CTL status, voice,
 analog/MiSTer or Quartus qualification.
+
+For logical speech sample sequencing run `hunchback.speech.sequence`, frame/
+table/lattice/serial/controller baselines and lint. Preserve the independent
+sample transcript, 200/304 steady frame periods, phase-retaining SPEAK, signed
+interpolation/masks, OLD-frame excitation classification, twenty RNG updates,
+pitch-zero ordering, stop/drain TALKD and idle holds. The configured fast-start
+software profile must remain explicit. External sample ticks/decoded targets
+are fixtures, not actual RC/serial/voice integration. Keep diagnosed pending
+sample/SPEAK collisions as integration gaps until independently covered.
+
+For the three-CPU wrapper run `hunchback.machine.full`,
+`hunchback.audio.assembly`, speech-machine/CPU/bus checks, affected main CPU/bus,
+clock/memory/video assembly checks and lint. Preserve each CPU's independent
+ready behavior, synchronous reset-time opcode priming, the latest low-seven
+speech command payload, main WRTC/FLAG and audio IRQ/RETE/RAM/DAC signatures,
+and continuous speech samples while its CPU is stalled. The synthetic assembly
+does not qualify full-game execution, physical clocks/CDC, sound mixing or
+hardware operation.
+
+For MiSTer shell, PLL, pixel-enable or display-enable changes run
+`hunchback.video.scan`, `hunchback.video.assembly`, `hunchback.machine.full`,
+relevant main/audio/speech integration baselines and lint. Preserve the
+independent all-position CE oracle through horizontal and vertical blanking and
+the delayed DE/RGB/sync alignment. Keep the PLL frequency, pixel origins,
+physical controls/DIP decode, discrete/analog audio and actual MiSTer checks as
+explicit coverage gaps until separately verified. Build only through
+`tools/bdsm.sh build`; do not use a direct Quartus build or label an output an
+RBF candidate until the frozen complete regression, mutation campaign and
+Quartus timing/constraint gates all pass.

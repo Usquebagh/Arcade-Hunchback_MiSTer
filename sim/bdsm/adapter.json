@@ -41,7 +41,13 @@
     "docs/speech-digital.md",
     "docs/tms5100-control.md",
     "docs/tms5100-frames.md",
-    "docs/tms5100-lattice.md"
+    "docs/tms5100-lattice.md",
+    "docs/tms5100-sequence.md",
+    "docs/tms5100-engine.md",
+    "docs/tms5100-rate.md",
+    "docs/speech-machine.md",
+    "docs/full-machine.md",
+    "docs/mister-shell.md"
   ],
   "required_files": [
     "rtl/machine/cvs_reset.sv",
@@ -115,7 +121,20 @@
     "rtl/machine/cvs_tms5100_lattice.sv",
     "rtl/machine/cvs_tms5100_pcm.sv",
     "sim/cpu/cvs_tms5100_lattice_tb.sv",
-    "sim/bdsm/tms5100_lattice.cpp"
+    "sim/bdsm/tms5100_lattice.cpp",
+    "rtl/machine/cvs_tms5100_sequence.sv",
+    "sim/cpu/cvs_tms5100_sequence_tb.sv",
+    "sim/bdsm/tms5100_sequence.cpp",
+    "rtl/machine/cvs_tms5100_engine.sv",
+    "sim/cpu/cvs_tms5100_engine_rom_tb.sv",
+    "sim/bdsm/tms5100_engine.cpp",
+    "sim/bdsm/tms5100_engine_model.hpp",
+    "rtl/machine/cvs_tms5100_rate.sv",
+    "sim/bdsm/tms5100_rate.cpp",
+    "rtl/machine/cvs_speech_machine.sv",
+    "sim/cpu/cvs_speech_machine_tb.sv",
+    "rtl/machine/cvs_full_machine.sv",
+    "sim/cpu/cvs_full_machine_tb.sv"
   ],
   "games": [
     "Hunchback (CVS set 1)"
@@ -457,7 +476,7 @@
       "id": "hunchback.video.coverage",
       "suite": "reference",
       "required": true,
-      "skip_reason": "Provisional 312 scan and actual CPU/shared RAM/three PVI/character composed synthetic field pass; physical PCK/PIXCLK/origins, full PVI, PAL equivalence, stars/effects and composed game reference remain unqualified.",
+      "skip_reason": "Provisional 312 scan, all-position MiSTer CE through blanking, delayed DE/RGB/sync and actual CPU/shared RAM/three PVI/character field pass; physical PCK/PIXCLK/origins, full PVI, PAL equivalence, stars/effects and composed game reference remain unqualified.",
       "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
       "reference": "docs/validation.md; pending evidence."
     },
@@ -473,7 +492,7 @@
       "id": "hunchback.audio.coverage",
       "suite": "reference",
       "required": true,
-      "skip_reason": "Digital audio/dual-CPU/raw samples, speech-CPU/control/serial, normalized TMS command/direction/actual-CPU, TMC0281 frame/numeric ROM/serial assembly and standalone numeric lattice/PCM checks exist. Talk status remains an external fixture; ROM probes are observations only. Speech sample/frame cadence, interpolation, LFSR/chirp excitation, stop/drain/voice and three-CPU connection, native unknown RAM/index/power-up paths, physical DAC/weights/calibrated mix/filter/discrete audio, serial/PDC/RC clocks/CDC and independent channel references remain incomplete.",
+      "skip_reason": "Digital audio/dual-CPU/raw samples, speech-CPU/control/serial, normalized TMS command/direction, TMC0281 frame/numeric ROM/serial assembly, numeric lattice/PCM and an actual three-CPU synthetic assembly now pass. An unchanged-ROM speech capture is observation-only. Speech sample/frame cadence and voice reference, native unknown RAM/index/power-up paths, physical DAC weights/calibrated mix/filter/discrete audio, serial/PDC/RC clocks/CDC and independent channel references remain incomplete.",
       "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
       "reference": "docs/validation.md; pending evidence."
     },
@@ -497,7 +516,7 @@
       "id": "hunchback.mister_integration.coverage",
       "suite": "reference",
       "required": true,
-      "skip_reason": "Physical PLL, HPS/download, video/audio output, reset/CDC, framework integration and synthesis inputs absent.",
+      "skip_reason": "The MiSTer shell/project files, reset/ROM-load gating, nominal PLL request, actual CPU hierarchy elaboration and CE/DE video timing now have structural or synthetic checks. HPS and PLL are interface stubs in shell elaboration; real download, PLL lock/frequency, complete audio/video shell behavior, hardware CDC and actual MiSTer operation remain untested.",
       "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
       "reference": "docs/validation.md; pending evidence."
     },
@@ -505,7 +524,7 @@
       "id": "hunchback.constraints.coverage",
       "suite": "reference",
       "required": true,
-      "skip_reason": "QPF/QSF/QIP/SDC, inferred RAM, CDC and TimeQuest exception/unconstrained-path review pending.",
+      "skip_reason": "QPF/QSF/QIP/SDC and source lists are present; Quartus fitting, inferred RAM, CDC audit, exception endpoints, unconstrained paths and setup/hold/recovery/removal/minimum-pulse timing gates have not run.",
       "expectation": "Meaningful executed subsystem checks with independently justified expectations and required coverage.",
       "reference": "docs/validation.md; pending evidence."
     },
@@ -548,7 +567,7 @@
         "vvp"
       ],
       "timeout": 240,
-      "expectation": "Actual CPU initializes shared memory and three PVIs; independent 58112-pixel field, sync/latency, collisions and five actual CPU status readbacks pass.",
+      "expectation": "Actual CPU initializes shared memory and three PVIs; independent 58112-pixel field, all-position MiSTer CE through blanking, delayed DE/RGB, sync/latency, collisions and five actual CPU status readbacks pass.",
       "reference": "docs/video-assembly.md; synthetic program and independently specified scene over provisional raster; physical origins unqualified."
     },
     {
@@ -752,6 +771,66 @@
       "timeout": 180,
       "expectation": "Independent wide-sum/floor/modular arithmetic oracle for the serial lattice, one-sample energy delay, captured K, signed/extreme/table sequences, all energy/excitation pairs, exhaustive PCM raw values, latency/hold/rejected requests and every reset position.",
       "reference": "docs/tms5100-lattice.md; pinned MAME normalized numeric compatibility, not physical multiplier-LSB/analog calibration, interpolation/excitation/frame scheduler/voice."
+    },
+    {
+      "id": "hunchback.speech.sequence",
+      "suite": "smoke",
+      "mode": "tms5100_sequence",
+      "required": true,
+      "tools": ["verilator", "make", "g++"],
+      "timeout": 180,
+      "expectation": "Independent logical sample transcript: normal/slow phase counts, phase-retaining SPEAK, parameter interpolation/masks, voiced/noise excitation/RNG/pitch-zero, decoded transitions, delayed targets and exact stop/drain status, idle hold and pending cancellation.",
+      "reference": "docs/tms5100-sequence.md; pinned software fast-start compatibility, actual sequencer/chirp ROM with external sample ticks and decoded-target fixtures; no physical RC/serial/voice or complete engine assembly."
+    },
+    {
+      "id": "hunchback.speech.engine",
+      "suite": "smoke",
+      "mode": "tms5100_engine",
+      "required": true,
+      "tools": ["verilator", "make", "g++"],
+      "timeout": 180,
+      "expectation": "Actual controller/serial arbiter/parser/numeric ROM/sequencer/lattice and actual downloaded serial memory match complete normal/slow PCM transcripts, CTL TALK/output buffer, raw frame counts, stalls/wrap, pointer relocation, stop/drain and issued-response software RESET cancellation without changing ROM pointer.",
+      "reference": "docs/tms5100-engine.md; independent encoded frames plus frozen independent sample transcript and wide PCM oracle. External CTL/sample ticks/CPU pointer writes are stimuli; no actual speech firmware, calibrated voice/RC or three-CPU/MiSTer assembly."
+    },
+    {
+      "id": "hunchback.speech.rate",
+      "suite": "smoke",
+      "mode": "tms5100_rate",
+      "required": true,
+      "tools": ["verilator", "make", "g++"],
+      "timeout": 180,
+      "expectation": "Absolute-time rational 7750 Hz cadence/count/pulse width over sustained enabled master time, phase-staggered reset and immediately-before-pulse reset gating/restart.",
+      "reference": "docs/tms5100-rate.md; nominal FPGA contract using pinned MAME 620000/80 approximation, no separate physical RC oscillator/CDC/PLL qualification."
+    },
+    {
+      "id": "hunchback.speech.machine",
+      "suite": "smoke",
+      "mode": "speech_machine_connected",
+      "required": true,
+      "tools": ["ghdl", "iverilog", "vvp"],
+      "timeout": 300,
+      "expectation": "Actual S2650/bus/engine/nominal clock: eight independent status/direction readbacks, explicit final pointer load, ready stall, downloader boundary isolation, known accepted data/PCM, one four-bit stop frame, TALK drain and idle samples.",
+      "reference": "docs/speech-machine.md; independent synthetic CPU/control/stop sentinel expectations. Actual four-state assembly, no external TALK/consumer or inferred RAM. No unchanged-ROM voice/physical clocks or three-CPU/MiSTer qualification."
+    },
+    {
+      "id": "hunchback.machine.full",
+      "suite": "smoke",
+      "mode": "full_connected",
+      "required": true,
+      "tools": ["ghdl", "iverilog", "vvp"],
+      "timeout": 180,
+      "expectation": "Three actual CPUs preserve five FLAG-independent main commands, two digital IRQ/RETE/RAM/DAC signatures, reset-time synchronous ROM priming, ready stalls and raw samples; actual speech CPU reads final low-seven command/status C6, stores pointer 0630 and has independent ready/free-running idle speech samples.",
+      "reference": "docs/full-machine.md; independent synthetic command/program signatures, actual CPU/ROM/RAM/control/engine assembly; no full-game/physical-clock/analog/MiSTer reference."
+    },
+    {
+      "id": "hunchback.mister.shell",
+      "suite": "smoke",
+      "mode": "mister_shell_connected",
+      "required": true,
+      "tools": ["ghdl", "iverilog", "vvp"],
+      "timeout": 300,
+      "expectation": "Compile the MiSTer emu wrapper and complete actual three-CPU SV hierarchy against the GHDL-synthesized S2650. HPS and PLL are interface-only stubs; this is source/elaboration coverage, not their behavior or Quartus timing.",
+      "reference": "docs/mister-shell.md; pinned MiSTer shell interface and connected actual CPU source. No HPS, PLL lock, download, physical IO or hardware reference."
     }
   ],
   "mutations": [
@@ -1834,6 +1913,105 @@
       "new": "raw_sample>15'sd1023",
       "failure_label": "tms_lattice_pcm_probe",
       "reason": "Positive PCM saturates at half the specified raw magnitude."
+    },
+    {
+      "id": "sequence_reversed_slow_reload",
+      "check": "hunchback.speech.sequence",
+      "file": "rtl/machine/cvs_tms5100_sequence.sv",
+      "old": "subcycle_reload<=!slow",
+      "new": "subcycle_reload<=slow",
+      "failure_label": "tms_sequence_phase",
+      "reason": "Normal and slow parameter periods use the opposite reload value."
+    },
+    {
+      "id": "sequence_rng_19_steps",
+      "check": "hunchback.speech.sequence",
+      "file": "rtl/machine/cvs_tms5100_sequence.sv",
+      "old": "for(integer n=0;n<20;n=n+1)",
+      "new": "for(integer n=0;n<19;n=n+1)",
+      "failure_label": "tms_sequence_rng",
+      "reason": "The noise generator advances nineteen times per active sample."
+    },
+    {
+      "id": "sequence_new_pitch_excitation",
+      "check": "hunchback.speech.sequence",
+      "file": "rtl/machine/cvs_tms5100_sequence.sv",
+      "old": "excitation<=old_unvoiced ?",
+      "new": "excitation<=(target_pitch_index==0) ?",
+      "failure_label": "tms_sequence_excitation",
+      "reason": "Excitation classification switches before the old-frame flag latch."
+    },
+    {
+      "id": "sequence_stop_without_drain",
+      "check": "hunchback.speech.sequence",
+      "file": "rtl/machine/cvs_tms5100_sequence.sv",
+      "old": "if(frame_energy_index==4'hf)begin spen<=1'b0;talk<=1'b0;end",
+      "new": "if(frame_energy_index==4'hf)begin spen<=1'b0;talk<=1'b0;talkd<=1'b0;end",
+      "failure_label": "tms_sequence_talk",
+      "reason": "TALK status drops at the stop code before the required drain periods."
+    },
+    {
+      "id": "sequence_inhibits_last_period",
+      "check": "hunchback.speech.sequence",
+      "file": "rtl/machine/cvs_tms5100_sequence.sv",
+      "old": "inhibit_update=inhibit && interpolation_period!=0",
+      "new": "inhibit_update=inhibit || interpolation_period!=0",
+      "failure_label": "tms_sequence_parameters",
+      "reason": "Parameter targets fail to load in interpolation period zero."
+    },
+    {
+      "id": "sequence_pitch_zero_never_clears",
+      "check": "hunchback.speech.sequence",
+      "file": "rtl/machine/cvs_tms5100_sequence.sv",
+      "old": "if(interpolation_period==0 && parameter_counter==0 && subcycle==2)pitch_zero<=1'b0",
+      "new": "if(interpolation_period==0 && parameter_counter==0 && subcycle==2)pitch_zero<=pitch_zero",
+      "failure_label": "tms_sequence_pitch_count",
+      "reason": "Pitch-zero remains asserted after its specified period-zero update."
+    },
+    {
+      "id": "sequence_speak_restarts_phase",
+      "check": "hunchback.speech.sequence",
+      "file": "rtl/machine/cvs_tms5100_sequence.sv",
+      "old": "spen<=1'b1;talk<=1'b1;subcycle_reload<=!slow;",
+      "new": "spen<=1'b1;talk<=1'b1;subcycle_reload<=!slow;interpolation_period<=3'd0;parameter_counter<=4'd0;subcycle<=2'd0;",
+      "failure_label": "tms_sequence_phase",
+      "reason": "SPEAK resets the otherwise free-running interpolation/sample phase."
+    },
+    {
+      "id": "full_speech_command_includes_irq_bit",
+      "check": "hunchback.machine.full",
+      "file": "rtl/machine/cvs_full_machine.sv",
+      "old": ".command(audio_command[6:0]),",
+      "new": ".command(audio_command[7:1]),",
+      "failure_label": "full_speech_command",
+      "reason": "The speech CPU must receive the low seven command bits independently of the digital-audio IRQ bit."
+    },
+    {
+      "id": "full_speech_ready_bypassed",
+      "check": "hunchback.machine.full",
+      "file": "rtl/machine/cvs_full_machine.sv",
+      "old": ".ready(speech_ready),",
+      "new": ".ready(1'b1),",
+      "failure_label": "full_speech_independent_stall",
+      "reason": "The speech CPU must honor its independent bus-ready input while the main and audio CPUs continue."
+    },
+    {
+      "id": "video_mister_ce_one_edge_early",
+      "check": "hunchback.video.assembly",
+      "file": "rtl/machine/cvs_mister_pixel_enable.sv",
+      "old": "assign pixel_ce_out=delay[5];",
+      "new": "assign pixel_ce_out=delay[4];",
+      "failure_label": "assembly_mister_ce",
+      "reason": "MiSTer CE_PIXEL must align with the delayed RGB/sync request through blanking."
+    },
+    {
+      "id": "video_mister_de_ignores_blank",
+      "check": "hunchback.video.assembly",
+      "file": "rtl/machine/cvs_character_video.sv",
+      "old": "display_enable<=v3 && visible3;",
+      "new": "display_enable<=v3;",
+      "failure_label": "assembly_display_enable",
+      "reason": "MiSTer DE must stay low during the normalized horizontal and vertical blanking intervals."
     }
   ],
   "build": {

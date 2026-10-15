@@ -35,6 +35,14 @@ payload holds between valid outputs. CPU PVI status side effects are preserved.
 CPU SENSE/IRQ uses VRST, not composite horizontal/vertical blank. PVI IRQ remains
 diagnostic; physical routing is unqualified.
 
+The full-machine wrapper exposes the scan's unblanked position-enable separately
+from its viewport-limited character request. The MiSTer shell delays the
+unblanked CE by six register stages to align with the N+5 RGB/DE/sync output.
+An independent field oracle checks CE on every scan position, including both
+blanking axes, and checks DE against the delayed visible coordinate. This
+qualifies the normalized digital interface only; PCK/PIXCLK and display origins
+remain unaudited.
+
 ## Actual-CPU composed fixture
 
 A downloaded synthetic program initializes every used memory via actual CPU

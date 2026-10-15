@@ -14,11 +14,11 @@ def emit(status, **details):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('mode', choices=['reset', 'clock', 'memory', 'banked', 'display', 'scan', 'character', 'character_connected', 'cold_connected', 'assembly_connected', 'bootstrap_connected', 'bootstrap_oracle', 'startup_connected', 'startup_oracle', 'audio_bus', 'audio_samples', 'audio_connected', 'speech_bus', 'tms5100_control', 'tms5100_frames', 'tms5100_frame_rom', 'tms5100_lattice', 'tms5100_tables', 'tms5100_connected', 'speech_connected', 'av_connected', 'main_bus', 'main_connected', 'video_connected', 's2636_objects', 's2636_connected', 'vblank_irq', 'video_timing', 'video_timing_alt', 'decode', 'lint', 'rom', 'mra', 'cpu_alu', 'cpu_edges', 'cpu_bus', 'cpu_synth', 'cpu_diagnostics'])
+    parser.add_argument('mode', choices=['reset', 'clock', 'memory', 'banked', 'display', 'scan', 'character', 'character_connected', 'cold_connected', 'assembly_connected', 'bootstrap_connected', 'bootstrap_oracle', 'startup_connected', 'startup_oracle', 'audio_bus', 'audio_samples', 'audio_connected', 'speech_bus', 'tms5100_control', 'tms5100_frames', 'tms5100_frame_rom', 'tms5100_lattice', 'tms5100_sequence', 'tms5100_engine', 'tms5100_rate', 'tms5100_tables', 'tms5100_connected', 'speech_machine_connected', 'full_connected', 'mister_shell_connected', 'speech_connected', 'av_connected', 'main_bus', 'main_connected', 'video_connected', 's2636_objects', 's2636_connected', 'vblank_irq', 'video_timing', 'video_timing_alt', 'decode', 'lint', 'rom', 'mra', 'cpu_alu', 'cpu_edges', 'cpu_bus', 'cpu_synth', 'cpu_diagnostics'])
     parser.add_argument('--seed', type=int, default=1)
     args = parser.parse_args()
     adapter = Path(__file__).resolve().parent
-    if args.mode in ['main_connected','video_connected','s2636_connected','character_connected','assembly_connected','bootstrap_connected','startup_connected','audio_connected','speech_connected','tms5100_connected','av_connected','cold_connected']:
+    if args.mode in ['main_connected','video_connected','s2636_connected','character_connected','assembly_connected','bootstrap_connected','startup_connected','audio_connected','speech_connected','tms5100_connected','speech_machine_connected','full_connected','mister_shell_connected','av_connected','cold_connected']:
         return subprocess.run([sys.executable, str(adapter / 'check_connected.py'), '--mode', args.mode, '--seed', str(args.seed)]).returncode
     if args.mode=='bootstrap_oracle':
         return subprocess.run([sys.executable,str(adapter/'bootstrap_oracle_check.py')]).returncode
@@ -37,7 +37,7 @@ def main():
         ran = subprocess.run(command, capture_output=True, text=True)
         print(ran.stdout, end=''); print(ran.stderr, end='', file=sys.stderr)
         return ran.returncode
-    sources = {name: 'rtl/machine/cvs_' + name + '.sv' for name in ['reset', 'clock', 'memory', 'decode', 'video_timing', 'vblank_irq', 's2636_objects','audio_bus','audio_samples','speech_bus','tms5100_control','tms5100_frames','tms5100_pcm']}
+    sources = {name: 'rtl/machine/cvs_' + name + '.sv' for name in ['reset', 'clock', 'memory', 'decode', 'video_timing', 'vblank_irq', 's2636_objects','audio_bus','audio_samples','speech_bus','tms5100_control','tms5100_frames','tms5100_pcm','tms5100_rate']}
     sources['tms5100_tables']='rtl/vendor/tms5100/cvs_tms5100_tables.sv'
     banked_sources = ['rtl/machine/cvs_main_memory.sv','rtl/machine/cvs_banked.sv','rtl/machine/cvs_memory.sv']
     bus_sources = ['rtl/machine/cvs_main_bus.sv','rtl/machine/cvs_main_io.sv',*banked_sources]
@@ -46,6 +46,10 @@ def main():
     join_sources=['rtl/machine/cvs_video_join.sv','rtl/machine/cvs_s2636_bank.sv',sources['s2636_objects'],'rtl/machine/cvs_character_video.sv']
     frame_rom_sources=['sim/cpu/cvs_tms5100_frame_rom_tb.sv',sources['tms5100_frames'],sources['speech_bus']]
     lattice_sources=['sim/cpu/cvs_tms5100_lattice_tb.sv','rtl/machine/cvs_tms5100_lattice.sv',sources['tms5100_pcm']]
+    sequence_sources=['sim/cpu/cvs_tms5100_sequence_tb.sv','rtl/machine/cvs_tms5100_sequence.sv',sources['tms5100_tables']]
+    engine_sources=['sim/cpu/cvs_tms5100_engine_rom_tb.sv','rtl/machine/cvs_tms5100_engine.sv',
+                    'rtl/machine/cvs_tms5100_sequence.sv',sources['tms5100_control'],sources['tms5100_frames'],
+                    'rtl/machine/cvs_tms5100_lattice.sv',sources['tms5100_pcm'],sources['tms5100_tables'],sources['speech_bus']]
     if args.mode == 'lint':
         warnings = []
         lint_sources = {**{('cvs_'+k):[v] for k,v in sources.items()}, 'cvs_main_memory':banked_sources,
@@ -53,8 +57,11 @@ def main():
                         'cvs_s2636_bank':['rtl/machine/cvs_s2636_bank.sv',sources['s2636_objects']],
                         'cvs_character_tb':character_sources,'cvs_scan':scan_sources,'cvs_video_join':join_sources,
                         'cvs_character_video':['rtl/machine/cvs_character_video.sv'],
+                        'cvs_mister_pixel_enable':['rtl/machine/cvs_mister_pixel_enable.sv'],
                         'cvs_tms5100_frame_rom_tb':frame_rom_sources,
-                        'cvs_tms5100_lattice_tb':lattice_sources}
+                        'cvs_tms5100_lattice_tb':lattice_sources,
+                        'cvs_tms5100_sequence_tb':sequence_sources,
+                        'cvs_tms5100_engine_rom_tb':engine_sources}
         for name, source in lint_sources.items():
             logfile = work / (name + '.log')
             with logfile.open('w') as log:
@@ -67,11 +74,15 @@ def main():
         return 0
     mode = 'video_timing' if args.mode == 'video_timing_alt' else args.mode
     top = 'cvs_main_memory' if mode in ('banked','display') else 'cvs_character_tb' if mode=='character' else 'cvs_' + mode
-    mode_sources = lattice_sources if mode=='tms5100_lattice' else frame_rom_sources if mode=='tms5100_frame_rom' else scan_sources if mode=='scan' else character_sources if mode=='character' else bus_sources if mode == 'main_bus' else banked_sources if mode in ('banked','display') else [sources[mode]]
+    mode_sources = engine_sources if mode=='tms5100_engine' else sequence_sources if mode=='tms5100_sequence' else lattice_sources if mode=='tms5100_lattice' else frame_rom_sources if mode=='tms5100_frame_rom' else scan_sources if mode=='scan' else character_sources if mode=='character' else bus_sources if mode == 'main_bus' else banked_sources if mode in ('banked','display') else [sources[mode]]
     if mode=='tms5100_frame_rom':
         top='cvs_tms5100_frame_rom_tb';mode_sources=frame_rom_sources
     if mode=='tms5100_lattice':
         top='cvs_tms5100_lattice_tb';mode_sources=lattice_sources
+    if mode=='tms5100_sequence':
+        top='cvs_tms5100_sequence_tb';mode_sources=sequence_sources
+    if mode=='tms5100_engine':
+        top='cvs_tms5100_engine_rom_tb';mode_sources=engine_sources
     extra_options = ['-GV_LINES=317'] if args.mode == 'video_timing_alt' else []
     extra_cflags = ' -DV_LINES_EXPECTED=317' if args.mode == 'video_timing_alt' else ''
     with (work / 'compile.log').open('w') as log:

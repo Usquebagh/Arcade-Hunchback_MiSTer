@@ -4,7 +4,8 @@ module cvs_machine_tb;
     reg clk=0,reset=1,reset_na=0,video_reset=1,scan_run=0,ready=1,dl_wr=0;
     reg [15:0] dl_addr=0;
     reg [7:0] dl_data=0;
-    wire pixel_valid,bullet_present,background_collision,hsync_n,vsync_n,audio_trigger,intack;
+    wire pixel_valid,pixel_ce_all,display_enable,bullet_present,background_collision,hsync_n,vsync_n,audio_trigger,intack;
+    wire mister_pixel_ce;
     wire req,wr,memory_space,extended,data_port,flag;
     wire [7:0] out_x,out_y,red,green,blue,collision_events,collision,video_fx,audio_command;
     wire [7:0] write_data,read_data,h_count;
@@ -14,10 +15,12 @@ module cvs_machine_tb;
     wire [1:0] phase;
     wire [8:0] v_count;
     cvs_machine dut(.*,.in0(8'hff),.in1(8'hff),.in2(8'hff),.in3(8'hff),.dsw1(8'hff),.dsw2(8'hff));
+    cvs_mister_pixel_enable pixel_enable_delay(.clk(clk),.reset(video_reset),
+        .pixel_ce_in(pixel_ce_all),.pixel_ce_out(mister_pixel_ce));
     reg [7:0] program_bytes[0:4095],image_bytes[0:51231];
     reg [23:0] boot_expected[0:1023];
     reg boot=0,trace_on=0;
-    reg [5:0] valid_expect=0,hs_expect=63,vs_expect=63;
+    reg [5:0] valid_expect=0,hs_expect=63,vs_expect=63,ce_expect=0;
     integer cycle=0,size=256,stores=0,pixels=0,scan_steps=0,trace_start=-1;
     integer frame_ticks=70824,tick_count,hor,vert,frame_position;
     integer x_want,y_want,pen_want,events_want,active,r_want,g_want,b_want;
@@ -40,7 +43,7 @@ module cvs_machine_tb;
                     check(write_data===(stores==0?8'hff:stores==1?8'd0:8'd8),"assembly_cpu_readback",stores==0?255:stores==1?0:8,write_data);stores=stores+1;
                 end
             end
-            if(video_reset)begin valid_expect=0;hs_expect=63;vs_expect=63;scan_steps=0;end
+            if(video_reset)begin valid_expect=0;hs_expect=63;vs_expect=63;ce_expect=0;scan_steps=0;end
             else begin
                 tick_count=scan_steps/16;hor=tick_count%227;
                 vert=((tick_count+frame_ticks-6)/227)%312+1;
@@ -49,9 +52,14 @@ module cvs_machine_tb;
                 valid_expect={valid_expect[4:0],request_want};
                 hs_expect={hs_expect[4:0],!(hor>=11 && hor<28)};
                 vs_expect={vs_expect[4:0],!(frame_position>=2292 && frame_position<3183)};
+                ce_expect={ce_expect[4:0],scan_run && scan_steps%16==15};
             end
+            check(pixel_ce_all===(!video_reset && scan_run && scan_steps%16==15),
+                "assembly_pixel_ce",!video_reset && scan_run && scan_steps%16==15,pixel_ce_all);
             clk=1;#5;cycle=cycle+1;
             check(pixel_valid===valid_expect[5],"assembly_latency",valid_expect[5],pixel_valid);
+            check(mister_pixel_ce===ce_expect[5],"assembly_mister_ce",ce_expect[5],mister_pixel_ce);
+            check(display_enable===(pixel_valid && out_x>=8'd44),"assembly_display_enable",pixel_valid && out_x>=8'd44,display_enable);
             check(hsync_n===hs_expect[5] && vsync_n===vs_expect[5],"assembly_sync",hs_expect[5]+2*vs_expect[5],hsync_n+2*vsync_n);
             if(!video_reset && scan_run)scan_steps=scan_steps+1;
             if(!boot && pixel_valid)begin

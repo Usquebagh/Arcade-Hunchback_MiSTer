@@ -19,7 +19,7 @@ module cvs_character_video (
     output wire video_palette_rd,
     output wire [3:0] video_palette_addr,
     input wire [7:0] video_palette,
-    output reg pixel_valid,
+    output reg pixel_valid, display_enable,
     output reg [7:0] out_x, out_y, red, green, blue,
     output reg [2:0] raw_pixel,
     output reg [3:0] palette_index,
@@ -78,12 +78,12 @@ module cvs_character_video (
             endcase
         end
         if (reset) begin
-            v0<=0;v1<=0;v2<=0;v3<=0;pixel_valid<=0;
+            v0<=0;v1<=0;v2<=0;v3<=0;pixel_valid<=0;display_enable<=0;
             out_x<=0;out_y<=0;red<=0;green<=0;blue<=0;
             raw_pixel<=0;palette_index<=0;bullet_present<=0;background_collision<=0;
             collision_events<=0;collision<=0;
         end else begin
-            v0<=pixel_ce;v1<=v0;v2<=v1;v3<=v2;pixel_valid<=v3;
+            v0<=pixel_ce;v1<=v0;v2<=v1;v3<=v2;pixel_valid<=v3;display_enable<=v3 && visible3;
             if (pixel_ce) begin
                 x0<=pixel_x;y0<=pixel_y;row0<=source_y[2:0];mode0<=char_mode;
                 sprites0<=sprites;visible0<=visible;

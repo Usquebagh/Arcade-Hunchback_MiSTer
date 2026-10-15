@@ -26,7 +26,7 @@ module cvs_video_join (
     output wire video_palette_rd,
     output wire [3:0] video_palette_addr,
     input wire [7:0] video_palette,
-    output wire pixel_valid,
+    output wire pixel_valid, display_enable,
     output wire [7:0] out_x, out_y, red, green, blue,
     output wire [2:0] raw_pixel,
     output wire [3:0] palette_index,
@@ -62,7 +62,7 @@ module cvs_video_join (
         .video_code(video_code),.video_attr(video_attr),.video_bullet(video_bullet),
         .video_glyph_rd(video_glyph_rd),.video_glyph_addr(video_glyph_addr),.video_glyph(video_glyph),
         .video_palette_rd(video_palette_rd),.video_palette_addr(video_palette_addr),.video_palette(video_palette),
-        .pixel_valid(pixel_valid),.out_x(out_x),.out_y(out_y),
+        .pixel_valid(pixel_valid),.display_enable(display_enable),.out_x(out_x),.out_y(out_y),
         .red(red),.green(green),.blue(blue),
         .raw_pixel(raw_pixel),.palette_index(palette_index),.bullet_present(bullet_present),
         .background_collision(background_collision),.collision_events(collision_events),.collision(collision));

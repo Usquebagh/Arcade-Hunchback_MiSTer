@@ -18,9 +18,12 @@ conversions are separate boards; their ROMs are not interchangeable with CVS.
 > PVIs and CPU status reads. The unchanged parent ROM matches 4,143 initialization
 > writes and its return. Longer two-state diagnostics display the title and game
 > field after coin/start; independent attract/gameplay verification remains open.
-> Mixed game video, physical inputs, audio and MiSTer integration remain unfinished.
-> A standalone audio CPU and digital DAC/discrete controls pass synthetic checks;
-> analog sound, speech and connected machine audio remain unfinished.
+> The actual three-CPU main/audio/speech assembly now passes a synthetic
+> integration check. A MiSTer shell, PLL and Quartus project are wired for
+> bring-up, but have not passed Quartus or actual hardware testing. Physical
+> input/DIP wiring, complete game/reference coverage and audio calibration remain.
+> The normalized speech engine can produce PCM from the local ROM; physical TMS
+> protocol, channel mix and analog sound remain unverified.
 > Actual MiSTer testing is pending.
 
 ## Original hardware
@@ -28,10 +31,10 @@ conversions are separate boards; their ROMs are not interchangeable with CVS.
 | Subsystem | Reference hardware | Current implementation |
 | --- | --- | --- |
 | Main CPU | Signetics S2650A, crystal / 8 | Connected synthetic ROM/RAM/I/O program passes; full CPU and game coverage pending |
-| Audio/speech CPUs | Two S2650As, crystal / 16 | CPU implementation available; sound-board instances pending |
+| Audio/speech CPUs | Two S2650As, crystal / 16 | Three actual CPU instances in a synthetic main/audio/speech assembly; hardware timing and full game behavior pending |
 | Video | Signetics 2621 PAL timing, three S2636 sprite chips, character ROM/RAM | Timing, S2636 objects/status, character/bullet/mixer and shared-memory CPU checks; physical phases, complete PVI and composed game coverage pending |
 | Program | Five 4 KiB EPROMs, staggered in four 8 KiB pages | Downloadable ROM and mirrored 1 KiB system RAM |
-| Sound | 8/4-bit DAC, discrete circuits, TMS5100 speech | Pending |
+| Sound | 8/4-bit DAC, discrete circuits, TMS5100 speech | Raw digital channels and normalized speech PCM reach a provisional MiSTer mix; physical gain, discrete path, speech protocol and analog references pending |
 
 ## ROMs and installation
 

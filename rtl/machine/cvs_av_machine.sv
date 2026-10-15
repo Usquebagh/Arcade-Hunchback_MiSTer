@@ -7,7 +7,7 @@ module cvs_av_machine (
     input wire [15:0] dl_addr,
     input wire [7:0] dl_data,
     input wire [7:0] in0, in1, in2, in3, dsw1, dsw2,
-    output wire pixel_valid,
+    output wire pixel_valid, pixel_ce_all, display_enable,
     output wire [7:0] out_x, out_y, red, green, blue,
     output wire [2:0] raw_pixel, pvi_irq,
     output wire [3:0] palette_index,

@@ -2,7 +2,7 @@
 // Provisional identity viewport, not measured PCK/PIXCLK/display phases.
 module cvs_scan (
     input wire clk, reset, run,
-    output wire pixel_ce, line_start, frame_start, vrst, visible,
+    output wire pixel_ce, pixel_ce_all, line_start, frame_start, vrst, visible,
     output wire [7:0] pixel_x, pixel_y,
     output wire hsync_n, vsync_n, hrst, cbf,
     output wire [7:0] h_count,
@@ -20,6 +20,7 @@ module cvs_scan (
     assign line_start=run && !reset && line_delay[1];
     wire viewport=v_count>=9'd43 && v_count<9'd299;
     assign pixel_ce=ce_position && viewport;
+    assign pixel_ce_all=ce_position;
     assign pixel_x=h_count>=8'd6 ? h_count-8'd6 : h_count+8'd221;
     assign pixel_y=8'(v_count-9'd43);
     assign visible=viewport && !blank;

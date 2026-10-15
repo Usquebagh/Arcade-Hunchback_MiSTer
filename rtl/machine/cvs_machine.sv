@@ -6,7 +6,7 @@ module cvs_machine (
     input wire [15:0] dl_addr,
     input wire [7:0] dl_data,
     input wire [7:0] in0, in1, in2, in3, dsw1, dsw2,
-    output wire pixel_valid,
+    output wire pixel_valid, pixel_ce_all, display_enable,
     output wire [7:0] out_x, out_y, red, green, blue,
     output wire [2:0] raw_pixel, pvi_irq,
     output wire [3:0] palette_index,
@@ -24,7 +24,7 @@ module cvs_machine (
     wire [7:0] pixel_x,pixel_y,scroll;
     wire [1:0] char_mode;
     wire [1:0] unused_char_page;
-    wire unused_frame_start,unused_hrst,unused_cbf;
+    wire unused_frame_start,unused_hrst,unused_cbf,scan_pixel_ce_all;
     wire [11:0] unused_object_masks;
     wire [2:0] chip_select;
     wire sprite_rd,sprite_wr,collision_clear;
@@ -37,7 +37,7 @@ module cvs_machine (
     wire unused_main_ce,unused_audio_ce,unused_audio_step;
     cvs_clock clocks(.clk(clk),.reset(reset),.ce_main(unused_main_ce),.ce_audio(unused_audio_ce),
         .ce_main_step(ce),.ce_audio_step(unused_audio_step));
-    cvs_scan scan(.clk(clk),.reset(video_reset),.run(scan_run),.pixel_ce(pixel_ce),
+    cvs_scan scan(.clk(clk),.reset(video_reset),.run(scan_run),.pixel_ce(pixel_ce),.pixel_ce_all(scan_pixel_ce_all),
         .line_start(line_start),.frame_start(unused_frame_start),.vrst(vrst),.visible(visible),
         .pixel_x(pixel_x),.pixel_y(pixel_y),.hsync_n(hsync_in),.vsync_n(vsync_in),
         .hrst(unused_hrst),.cbf(unused_cbf),.h_count(h_count),.v_count(v_count));
@@ -66,7 +66,8 @@ module cvs_machine (
         .video_code(video_code),.video_attr(video_attr),.video_bullet(video_bullet),
         .video_glyph_rd(video_glyph_rd),.video_glyph_addr(video_glyph_addr),.video_glyph(video_glyph),
         .video_palette_rd(video_palette_rd),.video_palette_addr(video_palette_addr),.video_palette(video_palette),
-        .pixel_valid(pixel_valid),.out_x(out_x),.out_y(out_y),.red(red),.green(green),.blue(blue),
+        .pixel_valid(pixel_valid),.display_enable(display_enable),.out_x(out_x),.out_y(out_y),.red(red),.green(green),.blue(blue),
         .raw_pixel(raw_pixel),.palette_index(palette_index),.bullet_present(bullet_present),
         .background_collision(background_collision),.collision_events(collision_events),.collision(collision));
+    assign pixel_ce_all=scan_pixel_ce_all;
 endmodule

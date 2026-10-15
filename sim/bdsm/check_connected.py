@@ -12,7 +12,7 @@ from check_ghdl import emit
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--seed', type=int, default=1)
-    parser.add_argument('--mode', choices=['main_connected','video_connected','s2636_connected','character_connected','assembly_connected','bootstrap_connected','startup_connected','audio_connected','speech_connected','tms5100_connected','av_connected','cold_connected'], default='main_connected')
+    parser.add_argument('--mode', choices=['main_connected','video_connected','s2636_connected','character_connected','assembly_connected','bootstrap_connected','startup_connected','audio_connected','speech_connected','tms5100_connected','speech_machine_connected','full_connected','mister_shell_connected','av_connected','cold_connected'], default='main_connected')
     args = parser.parse_args()
     work = Path('build/bdsm-' + args.mode).resolve()
     work.mkdir(parents=True, exist_ok=True)
@@ -65,20 +65,40 @@ def main():
         top='cvs_tms5100_cpu_tb'
         sources=['rtl/machine/cvs_speech_cpu.sv','rtl/machine/cvs_speech_bus.sv',
                  'rtl/machine/cvs_tms5100_control.sv','rtl/machine/cvs_clock.sv']
+    if args.mode=='speech_machine_connected':
+        top='cvs_speech_machine_tb'
+        sources=['rtl/machine/cvs_speech_machine.sv','rtl/machine/cvs_speech_cpu.sv','rtl/machine/cvs_speech_bus.sv',
+                 'rtl/machine/cvs_clock.sv','rtl/machine/cvs_tms5100_engine.sv','rtl/machine/cvs_tms5100_rate.sv',
+                 'rtl/machine/cvs_tms5100_control.sv','rtl/machine/cvs_tms5100_frames.sv','rtl/machine/cvs_tms5100_sequence.sv',
+                 'rtl/machine/cvs_tms5100_lattice.sv','rtl/machine/cvs_tms5100_pcm.sv','rtl/vendor/tms5100/cvs_tms5100_tables.sv']
     if args.mode=='video_connected':
         sources += ['rtl/machine/cvs_video_timing.sv','rtl/machine/cvs_vblank_irq.sv']
     if args.mode=='s2636_connected':
         sources += ['rtl/machine/cvs_s2636_objects.sv','rtl/machine/cvs_s2636_bank.sv']
     if args.mode=='character_connected':
         sources += ['rtl/machine/cvs_character_video.sv']
-    if args.mode in ('assembly_connected','bootstrap_connected','startup_connected','av_connected'):
+    if args.mode in ('assembly_connected','bootstrap_connected','startup_connected','av_connected','full_connected'):
         sources += ['rtl/machine/cvs_machine.sv','rtl/machine/cvs_scan.sv','rtl/machine/cvs_video_timing.sv',
-                    'rtl/machine/cvs_vblank_irq.sv','rtl/machine/cvs_video_join.sv',
+                    'rtl/machine/cvs_vblank_irq.sv','rtl/machine/cvs_video_join.sv','rtl/machine/cvs_mister_pixel_enable.sv',
                     'rtl/machine/cvs_s2636_bank.sv','rtl/machine/cvs_s2636_objects.sv','rtl/machine/cvs_character_video.sv']
     if args.mode=='av_connected':
         top='cvs_av_machine_tb'
         sources += ['rtl/machine/cvs_av_machine.sv','rtl/machine/cvs_audio_cpu.sv','rtl/machine/cvs_audio_bus.sv','rtl/machine/cvs_audio_samples.sv']
-    sources += ['sim/cpu/'+top+'.sv']
+    if args.mode=='full_connected':
+        top='cvs_full_machine_tb'
+        sources += ['rtl/machine/cvs_full_machine.sv','rtl/machine/cvs_av_machine.sv',
+                    'rtl/machine/cvs_audio_cpu.sv','rtl/machine/cvs_audio_bus.sv','rtl/machine/cvs_audio_samples.sv',
+                    'rtl/machine/cvs_speech_machine.sv','rtl/machine/cvs_speech_cpu.sv','rtl/machine/cvs_speech_bus.sv',
+                    'rtl/machine/cvs_tms5100_engine.sv','rtl/machine/cvs_tms5100_rate.sv','rtl/machine/cvs_tms5100_control.sv',
+                    'rtl/machine/cvs_tms5100_frames.sv','rtl/machine/cvs_tms5100_sequence.sv',
+                    'rtl/machine/cvs_tms5100_lattice.sv','rtl/machine/cvs_tms5100_pcm.sv','rtl/vendor/tms5100/cvs_tms5100_tables.sv']
+    if args.mode=='mister_shell_connected':
+        top='emu'
+        sources=['sim/bdsm/mister_shell_stubs.sv','Arcade-Hunchback.sv',
+                 *sorted(str(p) for p in Path('rtl/machine').glob('*.sv')),
+                 'rtl/vendor/tms5100/cvs_tms5100_tables.sv']
+    if args.mode!='mister_shell_connected':
+        sources += ['sim/cpu/'+top+'.sv']
     compile_run=subprocess.run(['iverilog','-g2012','-Wall','-s',top,'-o',str(work/'test.vvp'),
                                 str(cpu_file),*sources],capture_output=True,text=True)
     (work/'compile.log').write_text(compile_run.stdout+compile_run.stderr)
@@ -91,10 +111,18 @@ def main():
     # exact text in the result/log; every other diagnostic remains unreviewed.
     array_note=re.compile(r"rtl/machine/cvs_s2636_objects\.sv:\d+: warning: @\* is sensitive to all (256 words in array 'registers'|4 words in array '(active_duplicate|duplicate_hc|render_row|scale|active_line|in_object|next_row)')\.")
     for line in (compile_run.stdout+compile_run.stderr).splitlines():
-        if args.mode in ('s2636_connected','assembly_connected','bootstrap_connected','startup_connected','av_connected') and array_note.fullmatch(line):
+        if args.mode in ('s2636_connected','assembly_connected','bootstrap_connected','startup_connected','av_connected','full_connected','mister_shell_connected') and array_note.fullmatch(line):
             reviewed_messages.append({'message':line,'review':'Full-array sensitivity is required for the declared combinational indexed register/engine read; Verilator -Wall finds no latch or sensitivity fault.'})
         else:
             diagnostics += line+'\n'
+    if args.mode=='mister_shell_connected':
+        event={'status':'PASS','observed':'MiSTer emu shell structurally elaborates with the actual GHDL-synthesized S2650 hierarchy; HPS and PLL are interface stubs in this compile-only check.'}
+        if reviewed_messages:event['reviewed_diagnostics']=reviewed_messages
+        if diagnostics.strip():
+            emit('WARNING',observed=diagnostics.strip(),diagnostics=[str(work/'synth.log'),str(work/'compile.log')])
+        else:
+            emit(**event)
+        return 0
     command=['vvp',str(work/'test.vvp')]
     if bootstrap:
         command += ['+boot','+image='+str(Path('build/roms/hunchback.bin').resolve()),'+expect='+str(work/'bootstrap.expect')]
