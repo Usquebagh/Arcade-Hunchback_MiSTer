@@ -125,3 +125,14 @@ baseline passes. Removing the saved relative offset in disposable copies fails
 `birr_branch_skips_fallthrough` at cycle 1080 twice; this proof is retained as
 `lost_relative_bidr_offset`. Page-boundary relative BIRR/BDRR cases and the
 remaining branch families still need coverage.
+
+Conditional absolute BCTA now proves `=` false with positive CC and true with
+zero CC, checking both the fall-through and target markers. RETC `=` false must
+preserve the call frame so a subsequent RETC `>` can return after setting a
+register signature. These behaviors follow the pinned MAME `M_BRA`/`M_RET`
+contracts, with synthetic byte programs. The baseline passes. In disposable
+copies, inverting CC equality fails `bcta_false_fallthrough` at cycle 1320
+twice; making RETC unconditional fails `retc_false_then_true` at cycle 1425
+twice. Both mutations are retained in the adapter. Conditional relative/false
+branches, conditional BSTR/BSTA, RETE condition/interrupt interaction and all
+CC/register combinations are still uncovered.

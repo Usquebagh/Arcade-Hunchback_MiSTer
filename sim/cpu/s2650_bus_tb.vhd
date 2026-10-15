@@ -211,13 +211,34 @@ begin
     check(memory(16#1c26#)=x"40","bdrr_branch_skips_fallthrough",16#40#,to_integer(memory(16#1c26#)));
     check(memory(16#1c27#)=x"77","bdrr_nonzero_taken",16#77#,to_integer(memory(16#1c27#)));
 
+    -- BCTA '=' is false for positive CC and true for zero CC.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#04#,1,
+      16#1c#,0,16#c0#,16#05#,16#11#,16#cd#,16#1c#,16#30#,
+      16#04#,0,16#1c#,0,16#e0#,16#05#,16#22#,16#cd#,16#1c#,16#31#,16#40#));
+    program(16#c0#,(16#05#,16#33#,16#cd#,16#1c#,16#32#,16#40#));
+    program(16#e0#,(16#05#,16#44#,16#cd#,16#1c#,16#33#,16#40#));
+    start;for n in 1 to 120 loop tick;end loop;
+    check(memory(16#1c30#)=x"11","bcta_false_fallthrough",16#11#,to_integer(memory(16#1c30#)));
+    check(memory(16#1c31#)=x"40","bcta_true_skips_fallthrough",16#40#,to_integer(memory(16#1c31#)));
+    check(memory(16#1c32#)=x"40","bcta_false_skips_target",16#40#,to_integer(memory(16#1c32#)));
+    check(memory(16#1c33#)=x"44","bcta_zero_taken",16#44#,to_integer(memory(16#1c33#)));
+
+    -- RETC '=' must leave the stack intact when false; RETC '>' then returns.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#bf#,0,16#c0#,
+      16#cd#,16#1c#,16#34#,16#40#));
+    program(16#c0#,(16#04#,1,16#14#,16#05#,16#5a#,16#15#,16#40#));
+    start;for n in 1 to 100 loop tick;end loop;
+    check(memory(16#1c34#)=x"5a","retc_false_then_true",16#5a#,to_integer(memory(16#1c34#)));
+
     -- Relative branch wraps inside its current 8 KiB page, not into page 1.
     memory:=(others=>x"40");
     program(0,(16#1f#,16#1f#,16#fb#));
     program(16#1ffb#,(16#75#,16#ff#,16#1b#,3));
     branch_armed:=true;start;for n in 1 to 25 loop tick;end loop;
     check(branch_seen,"relative_branch_progress",1,0);
-    write(line_out,string'("BDSM {""status"":""PASS"",""observed"":""Synthetic CPU register/status/addressing/bus/IO/nested returns/relative and absolute increment-decrement branches/HALT interrupt scenarios""}"));
+    write(line_out,string'("BDSM {""status"":""PASS"",""observed"":""Synthetic CPU register/status/addressing/bus/IO/nested returns/conditional return/relative and absolute branch scenarios/HALT interrupt""}"));
     writeline(output,line_out);stop(0);wait;
   end process;
 end;

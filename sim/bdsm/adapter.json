@@ -378,7 +378,7 @@
         "ghdl"
       ],
       "timeout": 120,
-      "expectation": "Synthetic register banks, addressing, one- and two-level subroutine return-stack entries, relative and absolute BIRR/BDRR modulo, offset and branch outcomes, memory/IO, stall, sense/FLAG and HALT/interrupt resume signatures match pinned instruction expectations.",
+      "expectation": "Synthetic register banks, addressing, one- and two-level subroutine return-stack entries, relative/absolute BIRR/BDRR, BCTA condition/fall-through, RETC stack preservation, memory/IO, stall, sense/FLAG and HALT/interrupt resume signatures match pinned instruction expectations.",
       "reference": "MAME S2650 and Signetics user manual; prime opcode bus contract and software initialization explicitly modeled."
     },
     {
@@ -978,6 +978,24 @@
       "new": "iar_c<=page_inc(iar);",
       "failure_label": "birr_branch_skips_fallthrough",
       "reason": "Taken relative increment/decrement branches discard the signed page-relative offset."
+    },
+    {
+      "id": "inverted_cc_branch_match",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "cond_v:=(ri(1 DOWNTO 0)=psl_cc OR ri(1 DOWNTO 0)=\"11\");",
+      "new": "cond_v:=(ri(1 DOWNTO 0)/=psl_cc OR ri(1 DOWNTO 0)=\"11\");",
+      "failure_label": "bcta_false_fallthrough",
+      "reason": "Condition-code equality tests invert for conditional branch/return instructions."
+    },
+    {
+      "id": "retc_ignores_condition",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "WHEN RET  => -- Return from Subroutine, Conditional\n              IF cond_v THEN",
+      "new": "WHEN RET  => -- Return from Subroutine, Conditional\n              IF true THEN",
+      "failure_label": "retc_false_then_true",
+      "reason": "Conditional return pops the stack even when the condition is false."
     },
     {
       "id": "ignored_cpu_enable",
