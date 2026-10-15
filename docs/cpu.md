@@ -190,6 +190,14 @@ retains both targeted mutations. Reversing the BIRR increment fails
 `bdrr_zero_not_taken`; both direction mutations are retained in the adapter.
 Indirect and conditional relative boundary cases remain open.
 
+The bus bench also places BCFR `=` at 1FFE with a positive condition code and
+checks its taken target at 0010 after the relative operand wraps the page. This
+combines the documented false-condition predicate with the independently
+checked page-relative base. The focused bus baseline passes. Existing retained
+mutations separately reverse the BCFR predicate and remove relative page
+wrapping; neither is a dedicated combined-case mutation. Other conditional
+relative boundary combinations remain uncovered.
+
 Focused checks after these bench-only changes passed `hunchback.cpu.bus`,
 `hunchback.cpu.alu`, `hunchback.cpu.edge_regressions`,
 `hunchback.cpu.synthesis`, and `hunchback.cpu.cold_self_xor`. The required
