@@ -378,7 +378,7 @@
         "ghdl"
       ],
       "timeout": 120,
-      "expectation": "Synthetic register banks, addressing, one- and two-level subroutine return-stack entries, relative/absolute BIRR/BDRR, BCTA/BCTR/BCFR condition and fall-through, RETC stack preservation, memory/IO, stall, sense/FLAG and HALT/interrupt resume signatures match pinned instruction expectations.",
+      "expectation": "Synthetic register banks, addressing, one- and two-level subroutine return-stack entries, relative/absolute BIRR/BDRR, BCTA/BCTR/BCFR and BSTA condition/fall-through, RETC/RETE stack and interrupt return behavior, memory/IO, stall, sense/FLAG and HALT resume signatures match pinned instruction expectations.",
       "reference": "MAME S2650 and Signetics user manual; prime opcode bus contract and software initialization explicitly modeled."
     },
     {
@@ -1005,6 +1005,24 @@
       "new": "(ri(7 DOWNTO 6)=\"10\" AND cond_v) OR",
       "failure_label": "bcfr_taken_skips_fallthrough",
       "reason": "BCFR/BCFA/BSFR/BSFA invert the branch predicate and take on true instead of false."
+    },
+    {
+      "id": "bsta_ignores_condition",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "WHEN BSTF |  -- Branch to sub on condition True/False absolute\n                 BSN  => -- Branch to sub on register non-zero, absolute\n              IF (ri(7 DOWNTO 6)=\"00\" AND cond_v) OR",
+      "new": "WHEN BSTF |  -- Branch to sub on condition True/False absolute\n                 BSN  => -- Branch to sub on register non-zero, absolute\n              IF (ri(7 DOWNTO 6)=\"00\" AND true) OR",
+      "failure_label": "bsta_false_skips_subroutine",
+      "reason": "Absolute conditional subroutine branches ignore the condition code and push the stack on a false condition."
+    },
+    {
+      "id": "rete_ignores_condition",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "IF cond_v THEN",
+      "new": "IF cond_v OR ri(5)='1' THEN",
+      "failure_label": "rete_false_handler_path",
+      "reason": "A false RETE returns and reenables interrupts despite a false condition."
     },
     {
       "id": "ignored_cpu_enable",

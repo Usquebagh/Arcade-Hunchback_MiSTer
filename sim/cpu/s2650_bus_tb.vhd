@@ -243,6 +243,32 @@ begin
     start;for n in 1 to 100 loop tick;end loop;
     check(memory(16#1c34#)=x"5a","retc_false_then_true",16#5a#,to_integer(memory(16#1c34#)));
 
+    -- BSTA '=' must skip on positive CC, then call and return on zero CC.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#04#,1,
+      16#3c#,0,16#c0#,16#05#,16#11#,16#cd#,16#1c#,16#50#,
+      16#04#,0,16#3c#,0,16#e0#,16#05#,16#22#,16#cd#,16#1c#,16#51#,16#40#));
+    program(16#c0#,(16#05#,16#33#,16#cd#,16#1c#,16#52#,16#17#));
+    program(16#e0#,(16#05#,16#44#,16#cd#,16#1c#,16#53#,16#17#));
+    start;for n in 1 to 130 loop tick;end loop;
+    check(memory(16#1c50#)=x"11","bsta_false_fallthrough",16#11#,to_integer(memory(16#1c50#)));
+    check(memory(16#1c51#)=x"22","bsta_return_marker",16#22#,to_integer(memory(16#1c51#)));
+    check(memory(16#1c52#)=x"40","bsta_false_skips_subroutine",16#40#,to_integer(memory(16#1c52#)));
+    check(memory(16#1c53#)=x"44","bsta_zero_subroutine",16#44#,to_integer(memory(16#1c53#)));
+
+    -- Interrupt handler's false RETE must not return; true RETE resumes after HALT.
+    memory:=(others=>x"40");io_writes:=0;irq_acks:=0;
+    program(0,(16#1f#,0,16#60#));
+    program(16#60#,(16#75#,16#ff#,16#77#,16#0a#,16#04#,16#11#,
+      16#cc#,16#1c#,0,16#40#,16#04#,16#22#,16#cc#,16#1c#,1,16#40#));
+    program(16#30#,(16#04#,1,16#34#,16#05#,16#66#,16#cd#,16#1c#,2,16#35#,16#40#));
+    start;for n in 1 to 50 loop tick;end loop;
+    check(memory(16#1c00#)=x"11","rete_before_halt",16#11#,to_integer(memory(16#1c00#)));
+    irq<='1';for n in 1 to 160 loop tick;end loop;
+    check(memory(16#1c02#)=x"66","rete_false_handler_path",16#66#,to_integer(memory(16#1c02#)));
+    check(memory(16#1c01#)=x"22","rete_true_resume",16#22#,to_integer(memory(16#1c01#)));
+    check(irq_acks=1,"rete_ack_count",1,irq_acks);
+
     -- Relative branch wraps inside its current 8 KiB page, not into page 1.
     memory:=(others=>x"40");
     program(0,(16#1f#,16#1f#,16#fb#));

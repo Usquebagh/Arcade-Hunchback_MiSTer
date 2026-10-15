@@ -133,14 +133,24 @@ register signature. These behaviors follow the pinned MAME `M_BRA`/`M_RET`
 contracts, with synthetic byte programs. The baseline passes. In disposable
 copies, inverting CC equality fails `bcta_false_fallthrough` at cycle 1320
 twice; making RETC unconditional fails `retc_false_then_true` at cycle 1425
-twice. Both mutations are retained in the adapter. Conditional relative/false
-branches, conditional BSTR/BSTA, RETE condition/interrupt interaction and all
-CC/register combinations are still uncovered.
+twice. Both mutations are retained in the adapter. Conditional relative BCTR/BCFR,
+BCTA, RETC, BSTA and RETE interrupt handling now have directed coverage.
+Conditional BSTR/BSFA, RETE enable timing and all CC/register combinations remain
+uncovered.
 
 Relative BCTR `=` with positive CC is checked as a non-taken fall-through;
 BCFR `=` under the same CC must take and skip the fall-through store. The pinned
 MAME `M_BRR` contract and instruction table define this inverse condition
 relationship. Baseline passes. Reversing the false-branch predicate in a
 disposable copy fails `bcfr_taken_skips_fallthrough` at cycle 1435 twice; the
-adapter retains `bcfr_uses_true_predicate`. Conditional relative subroutine
-branches and RETE conditions are still open.
+adapter retains `bcfr_uses_true_predicate`.
+
+Absolute BSTA `=` now checks positive-CC non-taken behavior and zero-CC call,
+subroutine signature and return. The interrupt handler checks false RETE does
+not return before its signature, then true RETE `>` resumes the interrupted
+HALT sequence with one acknowledge. These are synthetic MAME-compatibility
+scenarios, not physical interrupt timing measurements. The baseline passes.
+Forcing BSTA on the false path fails `bsta_false_skips_subroutine` at cycle 1675
+twice; permitting false RETE to return fails `rete_false_handler_path` at cycle
+1890 twice. Both mutations are retained. RETE interrupt inhibit/enable edge
+timing and interrupt arrival around conditional return remain untested.
