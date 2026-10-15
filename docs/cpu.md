@@ -204,3 +204,15 @@ Focused checks after these bench-only changes passed `hunchback.cpu.bus`,
 it was not suppressed or treated as a pass. Full opcode/cycle differential,
 physical board timing, I/O decode, video, inputs, audio, game-level behavior,
 Quartus timing, and actual MiSTer checks remain incomplete.
+
+Startup audit: the Signetics user manual says the 2650 has no internal startup
+procedure, requires RESET for at least three clocks, then fetches address zero.
+The testbench currently holds reset for five clocks and its startup code clears
+and sets status before its directed conditional tests. An isolated diagnostic
+copy with only the synthesis-excluded instruction Trace process removed drops
+the six `TO_INTEGER` warnings (from printing unknown PSL condition bits), but
+still reports fifteen vector-comparison warnings from early CPU operation. The
+VCD also shows unknown PSL, instruction-register and return-address-stack values
+before software initialization. This audit explains part of the warning source,
+but does not prove every startup unknown harmless; the native diagnostic remains
+WARNING and the candidate blocker stays in place. No warning was suppressed.
