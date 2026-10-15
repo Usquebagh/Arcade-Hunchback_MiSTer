@@ -31,6 +31,7 @@ begin
     variable clocks, io_writes, irq_acks : natural := 0;
     variable first_store, second_store : natural := 0;
     variable branch_armed, branch_next, branch_seen : boolean := false;
+    variable wrap_target_seen, wrap_return_seen : boolean := false;
     variable line_out : line;
     procedure check(condition : boolean; label_text : string; want, got : integer) is
     begin
@@ -71,7 +72,11 @@ begin
             memory(address):=dw;
             if address=16#1c00# and first_store=0 then first_store:=clocks;end if;
             if address=16#1c01# and second_store=0 then second_store:=clocks;end if;
-          else read_value:=memory(address);update_read:=true;end if;
+          else
+            if wrap_target_seen and address=0 then wrap_return_seen:=true;end if;
+            if address=16#10# then wrap_target_seen:=true;end if;
+            read_value:=memory(address);update_read:=true;
+          end if;
         elsif wr='0' then
           if ene='1' then
             check(address=16#a7#,"extended_read_address",16#a7#,address);read_value:=x"d2";update_read:=true;
@@ -273,9 +278,27 @@ begin
     memory:=(others=>x"40");
     program(0,(16#1f#,16#1f#,16#fe#));
     program(16#1ffe#,(16#3b#,16));
-    program(16#10#,(16#04#,16#5a#,16#cc#,16#1c#,16#90#,16#40#));
+    program(16#10#,(16#04#,16#5a#,16#cc#,16#1c#,16#90#,16#17#));
+    wrap_target_seen:=false;wrap_return_seen:=false;
     start;for n in 1 to 45 loop tick;end loop;
     check(memory(16#1c90#)=x"5a","bstr_page_wrap_target",16#5a#,to_integer(memory(16#1c90#)));
+    check(wrap_return_seen,"bstr_page_wrap_return",1,boolean'pos(wrap_return_seen));
+
+    -- BIRR increments R0 and branches from 1FFF to offset 0010 in page zero.
+    memory:=(others=>x"40");
+    program(0,(16#04#,0,16#1f#,16#1f#,16#fe#));
+    program(16#1ffe#,(16#d8#,16));
+    program(16#10#,(16#05#,16#6b#,16#cd#,16#1c#,16#91#,16#40#));
+    start;for n in 1 to 45 loop tick;end loop;
+    check(memory(16#1c91#)=x"6b","birr_page_wrap_target",16#6b#,to_integer(memory(16#1c91#)));
+
+    -- BDRR decrements a nonzero R0 and takes the same page-wrapped target.
+    memory:=(others=>x"40");
+    program(0,(16#04#,2,16#1f#,16#1f#,16#fe#));
+    program(16#1ffe#,(16#f8#,16));
+    program(16#10#,(16#05#,16#7b#,16#cd#,16#1c#,16#92#,16#40#));
+    start;for n in 1 to 45 loop tick;end loop;
+    check(memory(16#1c92#)=x"7b","bdrr_page_wrap_target",16#7b#,to_integer(memory(16#1c92#)));
 
     -- Eight active calls fill the complete three-bit hardware return stack.
     memory:=(others=>x"40");

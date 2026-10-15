@@ -1070,6 +1070,15 @@
       "reason": "Relative BSTR target drops its page-wrapped signed offset."
     },
     {
+      "id": "bstr_page_wrap_return_address",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "ras(to_integer(psu(2 DOWNTO 0)))<=page_inc(iar);",
+      "new": "ras(to_integer(psu(2 DOWNTO 0)))<=iar+1;",
+      "failure_label": "bstr_page_wrap_return",
+      "reason": "Relative BSTR saves a return address without wrapping at the active 8 KiB page boundary."
+    },
+    {
       "id": "ignored_cpu_enable",
       "check": "hunchback.cpu.bus",
       "file": "rtl/vendor/arcadia/sgs2650.vhd",

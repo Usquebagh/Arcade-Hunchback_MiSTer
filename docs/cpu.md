@@ -183,9 +183,24 @@ coverage is directed; other condition codes, indirect forms and page-boundary
 cases remain open.
 
 An unconditional relative BSTR at 1FFE now crosses the 1FFF page boundary and
-must reach address 0010, where a target signature is written. This checks the
-MAME page-relative target formula against the synthetic bus memory. Baseline
-passes; dropping the saved relative offset fails `bstr_page_wrap_target` at
-cycle 1295 twice in disposable copies. The adapter retains
-`bstr_page_wrap_offset_lost`. The return address wrapping to zero is not yet
-asserted because this scenario deliberately halts in the target.
+must reach address 0010, write its signature, return, and fetch address 0000.
+Directed BIRR and BDRR programs also verify their increment/decrement decisions
+and page-wrapped target at 0010. These are synthetic bus-memory checks against
+the pinned MAME instruction semantics; they are not board measurements. The
+focused bus baseline passes. Dropping the BSTR target offset fails
+`bstr_page_wrap_target`; saving `iar+1` without page wrapping fails
+`bstr_page_wrap_return` at cycle 1295 in two disposable copies. The adapter
+retains both targeted mutations. BIRR/BDRR boundary behavior currently has no
+separate mutation proof; relative branch offset and page-wrap faults are covered
+by other retained mutations. Indirect and conditional relative boundary cases
+remain open.
+
+Focused checks after these bench-only changes passed `hunchback.cpu.bus`,
+`hunchback.cpu.alu`, `hunchback.cpu.edge_regressions`,
+`hunchback.cpu.synthesis`, and `hunchback.cpu.cold_self_xor`. The required
+`hunchback.cpu.runtime_diagnostics` check remains WARNING: native GHDL reports
+`numeric_std` metavalue comparisons from time zero and integer conversions at
+66–146 ns. This is unresolved unknown-state coverage and blocks any candidate;
+it was not suppressed or treated as a pass. Full opcode/cycle differential,
+physical board timing, I/O decode, video, inputs, audio, game-level behavior,
+Quartus timing, and actual MiSTer checks remain incomplete.
