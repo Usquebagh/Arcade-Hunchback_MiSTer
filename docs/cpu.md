@@ -115,5 +115,13 @@ The same bench now checks absolute BIRA/BDRA with zero-wrap non-taken and
 nonzero taken cases against the pinned MAME instruction macros and CPU branch
 decode. Baseline passes; in disposable snapshots, making the BIDR predicate
 unconditionally true fails `bira_wrap_not_taken` at cycle 860 twice. The
-`bidr_zero_wrap_branches` mutation is retained in the adapter. Relative variants,
-all registers/conditions and indirect branch forms remain uncovered.
+`bidr_zero_wrap_branches` mutation is retained in the adapter. Other relative
+cases, all registers/conditions and indirect branch forms remain uncovered.
+
+Relative BIRR/BDRR now also check the signed offset, zero-result non-taken path,
+nonzero-result taken path and skipped fall-through stores. The pinned MAME
+`M_BRR`/BIRR/BDRR macros provide the compatibility expectation. The focused
+baseline passes. Removing the saved relative offset in disposable copies fails
+`birr_branch_skips_fallthrough` at cycle 1080 twice; this proof is retained as
+`lost_relative_bidr_offset`. Page-boundary relative BIRR/BDRR cases and the
+remaining branch families still need coverage.

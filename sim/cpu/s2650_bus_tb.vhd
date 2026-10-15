@@ -189,13 +189,35 @@ begin
     check(memory(16#1c24#)=x"40","bdra_zero_not_taken",16#40#,to_integer(memory(16#1c24#)));
     check(memory(16#1c26#)=x"66","bdra_nonzero_taken",16#66#,to_integer(memory(16#1c26#)));
 
+    -- BIRR relative uses the same post-operand base and modulo register update.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#04#,16#ff#,16#d8#,22,
+      16#05#,16#11#,16#cd#,16#1c#,16#22#,16#04#,0,16#d8#,13,
+      16#05#,16#22#,16#cd#,16#1c#,16#23#,16#40#));
+    program(30,(16#05#,16#33#,16#cd#,16#1c#,16#24#,16#40#));
+    start;for n in 1 to 110 loop tick;end loop;
+    check(memory(16#1c22#)=x"11","birr_wrap_not_taken",16#11#,to_integer(memory(16#1c22#)));
+    check(memory(16#1c23#)=x"40","birr_branch_skips_fallthrough",16#40#,to_integer(memory(16#1c23#)));
+    check(memory(16#1c24#)=x"33","birr_nonzero_taken",16#33#,to_integer(memory(16#1c24#)));
+
+    -- BDRR relative covers 1-to-zero non-taken and zero-to-FF taken cases.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#04#,1,16#f8#,22,
+      16#05#,16#55#,16#cd#,16#1c#,16#25#,16#04#,0,16#f8#,13,
+      16#05#,16#66#,16#cd#,16#1c#,16#26#,16#40#));
+    program(30,(16#05#,16#77#,16#cd#,16#1c#,16#27#,16#40#));
+    start;for n in 1 to 110 loop tick;end loop;
+    check(memory(16#1c25#)=x"55","bdrr_zero_not_taken",16#55#,to_integer(memory(16#1c25#)));
+    check(memory(16#1c26#)=x"40","bdrr_branch_skips_fallthrough",16#40#,to_integer(memory(16#1c26#)));
+    check(memory(16#1c27#)=x"77","bdrr_nonzero_taken",16#77#,to_integer(memory(16#1c27#)));
+
     -- Relative branch wraps inside its current 8 KiB page, not into page 1.
     memory:=(others=>x"40");
     program(0,(16#1f#,16#1f#,16#fb#));
     program(16#1ffb#,(16#75#,16#ff#,16#1b#,3));
     branch_armed:=true;start;for n in 1 to 25 loop tick;end loop;
     check(branch_seen,"relative_branch_progress",1,0);
-    write(line_out,string'("BDSM {""status"":""PASS"",""observed"":""Synthetic CPU register/status/addressing/bus/IO/nested returns/absolute increment-decrement branches/HALT interrupt scenarios""}"));
+    write(line_out,string'("BDSM {""status"":""PASS"",""observed"":""Synthetic CPU register/status/addressing/bus/IO/nested returns/relative and absolute increment-decrement branches/HALT interrupt scenarios""}"));
     writeline(output,line_out);stop(0);wait;
   end process;
 end;

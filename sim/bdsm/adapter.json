@@ -378,7 +378,7 @@
         "ghdl"
       ],
       "timeout": 120,
-      "expectation": "Synthetic register banks, addressing, one- and two-level subroutine return-stack entries, absolute BIRA/BDRA modulo and branch outcomes, memory/IO, stall, sense/FLAG and HALT/interrupt resume signatures match pinned instruction expectations.",
+      "expectation": "Synthetic register banks, addressing, one- and two-level subroutine return-stack entries, relative and absolute BIRR/BDRR modulo, offset and branch outcomes, memory/IO, stall, sense/FLAG and HALT/interrupt resume signatures match pinned instruction expectations.",
       "reference": "MAME S2650 and Signetics user manual; prime opcode bus contract and software initialization explicitly modeled."
     },
     {
@@ -969,6 +969,15 @@
       "new": "true",
       "failure_label": "bira_wrap_not_taken",
       "reason": "Increment/decrement branches incorrectly take when the updated register wraps to zero."
+    },
+    {
+      "id": "lost_relative_bidr_offset",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "iar_c<=page_add(page_inc(iar),sext(dr(6 DOWNTO 0),15));",
+      "new": "iar_c<=page_inc(iar);",
+      "failure_label": "birr_branch_skips_fallthrough",
+      "reason": "Taken relative increment/decrement branches discard the signed page-relative offset."
     },
     {
       "id": "ignored_cpu_enable",
