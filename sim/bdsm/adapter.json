@@ -378,7 +378,7 @@
         "ghdl"
       ],
       "timeout": 120,
-      "expectation": "Synthetic register banks, addressing, one- and two-level subroutine return-stack entries, relative/absolute BIRR/BDRR, BCTA/BCTR/BCFR and BSTA condition/fall-through, RETC/RETE stack and interrupt return behavior, memory/IO, stall, sense/FLAG and HALT resume signatures match pinned instruction expectations.",
+      "expectation": "Synthetic register banks, addressing, one- and two-level subroutine return-stack entries, relative/absolute BIRR/BDRR, BCTA/BCTR/BCFR/BSTA/BSTR/BSFR condition/fall-through and return behavior, RETC/RETE interrupt handling, memory/IO, stall, sense/FLAG and HALT resume signatures match pinned instruction expectations.",
       "reference": "MAME S2650 and Signetics user manual; prime opcode bus contract and software initialization explicitly modeled."
     },
     {
@@ -1023,6 +1023,24 @@
       "new": "IF cond_v OR ri(5)='1' THEN",
       "failure_label": "rete_false_handler_path",
       "reason": "A false RETE returns and reenables interrupts despite a false condition."
+    },
+    {
+      "id": "bstr_ignores_condition",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "WHEN BSTF |  -- Branch to sub on condition True/False Relative\n                       BSN  => -- Branch to sub on register non-zero, Relative\n                    IF (ri(7 DOWNTO 6)=\"00\" AND cond_v) OR",
+      "new": "WHEN BSTF |  -- Branch to sub on condition True/False Relative\n                       BSN  => -- Branch to sub on register non-zero, Relative\n                    IF (ri(7 DOWNTO 6)=\"00\" AND true) OR",
+      "failure_label": "bstr_false_skips_subroutine",
+      "reason": "Relative BSTR takes and pushes the return stack when its condition is false."
+    },
+    {
+      "id": "bsfr_predicate_reversed",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "WHEN BSTF |  -- Branch to sub on condition True/False Relative\n                       BSN  => -- Branch to sub on register non-zero, Relative\n                    IF (ri(7 DOWNTO 6)=\"00\" AND cond_v) OR         -- BSTR\n                       (ri(7 DOWNTO 6)=\"10\" AND NOT cond_v) OR",
+      "new": "WHEN BSTF |  -- Branch to sub on condition True/False Relative\n                       BSN  => -- Branch to sub on register non-zero, Relative\n                    IF (ri(7 DOWNTO 6)=\"00\" AND cond_v) OR         -- BSTR\n                       (ri(7 DOWNTO 6)=\"10\" AND cond_v) OR",
+      "failure_label": "bsfr_positive_subroutine",
+      "reason": "Relative BSFR takes only when the condition is false."
     },
     {
       "id": "ignored_cpu_enable",

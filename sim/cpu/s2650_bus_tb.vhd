@@ -163,7 +163,7 @@ begin
       16#05#,16#a5#,16#cd#,16#1c#,16#21#,16#40#));
     program(16#c0#,(16#bf#,0,16#e0#,16#17#));
     program(16#e0#,(16#04#,16#5a#,16#cc#,16#1c#,16#20#,16#17#));
-    start;for n in 1 to 120 loop tick;end loop;
+    start;for n in 1 to 60 loop tick;end loop;
     check(memory(16#1c20#)=x"5a","nested_inner_return",16#5a#,to_integer(memory(16#1c20#)));
     check(memory(16#1c21#)=x"a5","nested_outer_return",16#a5#,to_integer(memory(16#1c21#)));
 
@@ -174,7 +174,7 @@ begin
       16#05#,16#11#,16#cd#,16#1c#,16#22#,16#40#));
     program(16#c0#,(16#05#,16#22#,16#cd#,16#1c#,16#22#,16#40#));
     program(16#e0#,(16#05#,16#33#,16#cd#,16#1c#,16#23#,16#40#));
-    start;for n in 1 to 100 loop tick;end loop;
+    start;for n in 1 to 50 loop tick;end loop;
     check(memory(16#1c22#)=x"40","bira_wrap_not_taken",16#40#,to_integer(memory(16#1c22#)));
     check(memory(16#1c23#)=x"33","bira_nonzero_taken",16#33#,to_integer(memory(16#1c23#)));
 
@@ -185,7 +185,7 @@ begin
       16#05#,16#55#,16#cd#,16#1c#,16#25#,16#40#));
     program(16#c0#,(16#05#,16#44#,16#cd#,16#1c#,16#24#,16#40#));
     program(16#e0#,(16#05#,16#66#,16#cd#,16#1c#,16#26#,16#40#));
-    start;for n in 1 to 100 loop tick;end loop;
+    start;for n in 1 to 50 loop tick;end loop;
     check(memory(16#1c24#)=x"40","bdra_zero_not_taken",16#40#,to_integer(memory(16#1c24#)));
     check(memory(16#1c26#)=x"66","bdra_nonzero_taken",16#66#,to_integer(memory(16#1c26#)));
 
@@ -195,7 +195,7 @@ begin
       16#05#,16#11#,16#cd#,16#1c#,16#22#,16#04#,0,16#d8#,13,
       16#05#,16#22#,16#cd#,16#1c#,16#23#,16#40#));
     program(30,(16#05#,16#33#,16#cd#,16#1c#,16#24#,16#40#));
-    start;for n in 1 to 110 loop tick;end loop;
+    start;for n in 1 to 55 loop tick;end loop;
     check(memory(16#1c22#)=x"11","birr_wrap_not_taken",16#11#,to_integer(memory(16#1c22#)));
     check(memory(16#1c23#)=x"40","birr_branch_skips_fallthrough",16#40#,to_integer(memory(16#1c23#)));
     check(memory(16#1c24#)=x"33","birr_nonzero_taken",16#33#,to_integer(memory(16#1c24#)));
@@ -206,7 +206,7 @@ begin
       16#05#,16#55#,16#cd#,16#1c#,16#25#,16#04#,0,16#f8#,13,
       16#05#,16#66#,16#cd#,16#1c#,16#26#,16#40#));
     program(30,(16#05#,16#77#,16#cd#,16#1c#,16#27#,16#40#));
-    start;for n in 1 to 110 loop tick;end loop;
+    start;for n in 1 to 55 loop tick;end loop;
     check(memory(16#1c25#)=x"55","bdrr_zero_not_taken",16#55#,to_integer(memory(16#1c25#)));
     check(memory(16#1c26#)=x"40","bdrr_branch_skips_fallthrough",16#40#,to_integer(memory(16#1c26#)));
     check(memory(16#1c27#)=x"77","bdrr_nonzero_taken",16#77#,to_integer(memory(16#1c27#)));
@@ -218,7 +218,7 @@ begin
       16#04#,0,16#1c#,0,16#e0#,16#05#,16#22#,16#cd#,16#1c#,16#31#,16#40#));
     program(16#c0#,(16#05#,16#33#,16#cd#,16#1c#,16#32#,16#40#));
     program(16#e0#,(16#05#,16#44#,16#cd#,16#1c#,16#33#,16#40#));
-    start;for n in 1 to 120 loop tick;end loop;
+    start;for n in 1 to 60 loop tick;end loop;
     check(memory(16#1c30#)=x"11","bcta_false_fallthrough",16#11#,to_integer(memory(16#1c30#)));
     check(memory(16#1c31#)=x"40","bcta_true_skips_fallthrough",16#40#,to_integer(memory(16#1c31#)));
     check(memory(16#1c32#)=x"40","bcta_false_skips_target",16#40#,to_integer(memory(16#1c32#)));
@@ -230,7 +230,7 @@ begin
       16#18#,18,16#05#,16#11#,16#cd#,16#1c#,16#40#,
       16#98#,11,16#05#,16#22#,16#cd#,16#1c#,16#41#,16#40#));
     program(26,(16#05#,16#33#,16#cd#,16#1c#,16#42#,16#40#));
-    start;for n in 1 to 110 loop tick;end loop;
+    start;for n in 1 to 55 loop tick;end loop;
     check(memory(16#1c40#)=x"11","bctr_false_fallthrough",16#11#,to_integer(memory(16#1c40#)));
     check(memory(16#1c41#)=x"40","bcfr_taken_skips_fallthrough",16#40#,to_integer(memory(16#1c41#)));
     check(memory(16#1c42#)=x"33","bcfr_positive_taken",16#33#,to_integer(memory(16#1c42#)));
@@ -240,7 +240,7 @@ begin
     program(0,(16#75#,16#ff#,16#77#,16#0a#,16#bf#,0,16#c0#,
       16#cd#,16#1c#,16#34#,16#40#));
     program(16#c0#,(16#04#,1,16#14#,16#05#,16#5a#,16#15#,16#40#));
-    start;for n in 1 to 100 loop tick;end loop;
+    start;for n in 1 to 50 loop tick;end loop;
     check(memory(16#1c34#)=x"5a","retc_false_then_true",16#5a#,to_integer(memory(16#1c34#)));
 
     -- BSTA '=' must skip on positive CC, then call and return on zero CC.
@@ -250,11 +250,33 @@ begin
       16#04#,0,16#3c#,0,16#e0#,16#05#,16#22#,16#cd#,16#1c#,16#51#,16#40#));
     program(16#c0#,(16#05#,16#33#,16#cd#,16#1c#,16#52#,16#17#));
     program(16#e0#,(16#05#,16#44#,16#cd#,16#1c#,16#53#,16#17#));
-    start;for n in 1 to 130 loop tick;end loop;
+    start;for n in 1 to 65 loop tick;end loop;
     check(memory(16#1c50#)=x"11","bsta_false_fallthrough",16#11#,to_integer(memory(16#1c50#)));
     check(memory(16#1c51#)=x"22","bsta_return_marker",16#22#,to_integer(memory(16#1c51#)));
     check(memory(16#1c52#)=x"40","bsta_false_skips_subroutine",16#40#,to_integer(memory(16#1c52#)));
     check(memory(16#1c53#)=x"44","bsta_zero_subroutine",16#44#,to_integer(memory(16#1c53#)));
+
+    -- BSTR '=' skips on positive CC, then calls on zero CC and returns.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#04#,1,16#38#,32,
+      16#05#,16#11#,16#cd#,16#1c#,16#60#,16#04#,0,16#38#,13,
+      16#05#,16#22#,16#cd#,16#1c#,16#61#,16#40#));
+    program(30,(16#05#,16#33#,16#cd#,16#1c#,16#62#,16#17#));
+    program(40,(16#05#,16#66#,16#cd#,16#1c#,16#65#,16#17#));
+    start;for n in 1 to 60 loop tick;end loop;
+    check(memory(16#1c60#)=x"11","bstr_false_fallthrough",16#11#,to_integer(memory(16#1c60#)));
+    check(memory(16#1c61#)=x"22","bstr_return_marker",16#22#,to_integer(memory(16#1c61#)));
+    check(memory(16#1c62#)=x"33","bstr_true_subroutine",16#33#,to_integer(memory(16#1c62#)));
+    check(memory(16#1c65#)=x"40","bstr_false_skips_subroutine",16#40#,to_integer(memory(16#1c65#)));
+
+    -- BSFR '=' takes for positive CC, returns, then resumes at fall-through.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#04#,1,16#b8#,22,
+      16#05#,16#55#,16#cd#,16#1c#,16#63#,16#40#));
+    program(30,(16#05#,16#44#,16#cd#,16#1c#,16#64#,16#17#));
+    start;for n in 1 to 50 loop tick;end loop;
+    check(memory(16#1c63#)=x"55","bsfr_return_fallthrough",16#55#,to_integer(memory(16#1c63#)));
+    check(memory(16#1c64#)=x"44","bsfr_positive_subroutine",16#44#,to_integer(memory(16#1c64#)));
 
     -- Interrupt handler's false RETE must not return; true RETE resumes after HALT.
     memory:=(others=>x"40");io_writes:=0;irq_acks:=0;
@@ -264,7 +286,7 @@ begin
     program(16#30#,(16#04#,1,16#34#,16#05#,16#66#,16#cd#,16#1c#,2,16#35#,16#40#));
     start;for n in 1 to 50 loop tick;end loop;
     check(memory(16#1c00#)=x"11","rete_before_halt",16#11#,to_integer(memory(16#1c00#)));
-    irq<='1';for n in 1 to 160 loop tick;end loop;
+    irq<='1';for n in 1 to 90 loop tick;end loop;
     check(memory(16#1c02#)=x"66","rete_false_handler_path",16#66#,to_integer(memory(16#1c02#)));
     check(memory(16#1c01#)=x"22","rete_true_resume",16#22#,to_integer(memory(16#1c01#)));
     check(irq_acks=1,"rete_ack_count",1,irq_acks);

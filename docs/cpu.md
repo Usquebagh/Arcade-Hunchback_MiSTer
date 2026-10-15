@@ -135,7 +135,7 @@ copies, inverting CC equality fails `bcta_false_fallthrough` at cycle 1320
 twice; making RETC unconditional fails `retc_false_then_true` at cycle 1425
 twice. Both mutations are retained in the adapter. Conditional relative BCTR/BCFR,
 BCTA, RETC, BSTA and RETE interrupt handling now have directed coverage.
-Conditional BSTR/BSFA, RETE enable timing and all CC/register combinations remain
+Conditional BSFA, RETE enable timing and all CC/register combinations remain
 uncovered.
 
 Relative BCTR `=` with positive CC is checked as a non-taken fall-through;
@@ -154,3 +154,13 @@ Forcing BSTA on the false path fails `bsta_false_skips_subroutine` at cycle 1675
 twice; permitting false RETE to return fails `rete_false_handler_path` at cycle
 1890 twice. Both mutations are retained. RETE interrupt inhibit/enable edge
 timing and interrupt arrival around conditional return remain untested.
+
+Relative BSTR `=` now has distinct false and true targets: the false path must
+skip its subroutine while the zero-CC path calls, writes its signature, returns,
+and resumes at the fall-through. Relative BSFR `=` must call on positive CC and
+return to its caller. Pinned MAME `M_BRR` and `M_RET` semantics define these
+synthetic expectations. The focused baseline passes. Forcing false BSTR to call
+fails `bstr_false_skips_subroutine` at cycle 1240 twice; reversing the BSFR
+predicate fails `bsfr_positive_subroutine` at cycle 1295 twice. Both mutations
+are retained in the adapter. Absolute BSFA and relative branch-to-subroutine
+page-boundary cases remain uncovered.
