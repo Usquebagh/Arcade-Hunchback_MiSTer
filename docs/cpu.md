@@ -325,3 +325,12 @@ the old index for the incremented value and fails
 `absolute_indirect_predecrement_load` at cycle 1103 in both repeats (expected
 7B, observed 40). The distinct pointer-wrap cases for these data-access modes
 remain uncovered.
+
+The indexed LODA effective address also wraps within the 8 KiB page: pointer
+target 1FFF plus R1=1 reads address 0000 (the known startup opcode 75), while
+2000 contains guard value 40. The CPU bus baseline and lint pass. A disposable
+`indirect_loda_index_add_leaks_page` mutant uses linear addition and fails
+`absolute_indirect_indexed_page_wrap` at cycle 1171 twice (expected 75, observed
+40). This complements the separate test for the second pointer byte wrapping
+from 1FFF to 0000. Page-wrap cases for indirect pre-increment and pre-decrement
+data addressing remain open.

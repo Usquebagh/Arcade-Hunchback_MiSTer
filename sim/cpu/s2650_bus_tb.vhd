@@ -260,6 +260,15 @@ begin
     check(memory(16#1ca0#)=x"7b","absolute_indirect_predecrement_load",16#7b#,to_integer(memory(16#1ca0#)));
     check(memory(16#1ca2#)=x"00","absolute_indirect_predecrement_register",0,to_integer(memory(16#1ca2#)));
 
+    -- Indirect indexed address 1FFF plus R1=1 wraps to 0000 within page zero.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#05#,1,16#0d#,16#e0#,16#10#,
+      16#cc#,16#1c#,16#a4#,16#40#));
+    memory(16#10#):=x"1f";memory(16#11#):=x"ff";
+    memory(16#2000#):=x"40";
+    start;for n in 1 to 65 loop tick;end loop;
+    check(memory(16#1ca4#)=x"75","absolute_indirect_indexed_page_wrap",16#75#,to_integer(memory(16#1ca4#)));
+
     -- HALT wake, interrupt entry/RETE and resume at the next instruction.
     memory:=(others=>x"40");io_writes:=0;irq_acks:=0;
     program(0,(16#1f#,0,16#60#));

@@ -378,7 +378,7 @@
         "ghdl"
       ],
       "timeout": 120,
-      "expectation": "Synthetic register banks, addressing, indirect control flow, indexed pointer resolution including indexed pre-increment/decrement and second-byte page wrap, one-, two- and eight-level return stacks, relative/page-wrap and absolute conditional branch/subroutine families, RETC/RETE interrupt handling, memory/IO, stall, sense/FLAG and HALT resume signatures match pinned instruction expectations.",
+      "expectation": "Synthetic register banks, addressing, indirect control flow, indexed pointer resolution including indexed pre-increment/decrement and both pointer-byte and effective-address page wrap, one-, two- and eight-level return stacks, relative/page-wrap and absolute conditional branch/subroutine families, RETC/RETE interrupt handling, memory/IO, stall, sense/FLAG and HALT resume signatures match pinned instruction expectations.",
       "reference": "MAME S2650 and Signetics user manual; prime opcode bus contract and software initialization explicitly modeled."
     },
     {
@@ -1032,6 +1032,15 @@
       "new": "WHEN \"10\"   => -- Pre decrement indexed\n                    rd_v:=rs_v-1;\n                    rd_c<=rd_v;\n                    rd_maj_c<='1';\n                    ad_c<=page_add((rh(6 DOWNTO 0) & dr),resize(rs_v,15));\n                    dw_c<=r0;\n                    indexed_c<='1';",
       "failure_label": "absolute_indirect_predecrement_load",
       "reason": "Indirect pre-decrement addressing must use the updated index register for the effective address."
+    },
+    {
+      "id": "indirect_loda_index_add_leaks_page",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "WHEN OTHERS => -- Indexed\n                    rd_v:=rs_v;\n                    ad_c<=page_add((rh(6 DOWNTO 0) & dr),resize(rd_v,15));\n                    dw_c<=r0;\n                    indexed_c<='1';",
+      "new": "WHEN OTHERS => -- Indexed\n                    rd_v:=rs_v;\n                    ad_c<=(rh(6 DOWNTO 0) & dr)+resize(rd_v,15);\n                    dw_c<=r0;\n                    indexed_c<='1';",
+      "failure_label": "absolute_indirect_indexed_page_wrap",
+      "reason": "The effective address of indirect indexed data access must wrap within the current 8 KiB page."
     },
     {
       "id": "absolute_indirect_branch_bypasses_pointer",
