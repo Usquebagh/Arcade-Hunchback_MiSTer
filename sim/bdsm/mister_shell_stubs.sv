@@ -15,7 +15,9 @@ module hps_io # (parameter CONF_STR="") (
     output wire [15:0] ioctl_index,
     input wire ioctl_wait,
     output wire [31:0] joystick_0,
-    output wire [31:0] joystick_1
+    output wire [31:0] joystick_1,
+    input wire video_rotated,
+    input wire new_vmode
 );
     assign EXT_BUS='0;assign gamma_bus='0;assign forced_scandoubler=0;
     assign buttons=0;assign status=0;assign ioctl_download=0;assign ioctl_wr=0;

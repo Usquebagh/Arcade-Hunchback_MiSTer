@@ -13,6 +13,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -20,18 +21,22 @@ import tempfile
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('archive',type=Path)
+    parser.add_argument('archive',type=Path,nargs='?')
+    parser.add_argument('--image',type=Path,help='Use an already authenticated prepared 0xC820 image')
     parser.add_argument('--output',type=Path)
     parser.add_argument('--cycles',type=int,default=300_000_000)
     parser.add_argument('--seed',type=int,default=1)
     parser.add_argument('--controls',action='store_true',help='Synthetic coin/start/right/jump input windows; see docs/rom-observation.md')
+    parser.add_argument('--credit-test',action='store_true',help='Pulse coin once and assert the running game increments its system-RAM credit byte')
     parser.add_argument('--audio',action='store_true',help='Actual audio CPU/bus and raw 48k samples; nominal external 380 Hz SENSE, no calibrated mixing/speech/analog reference')
     args=parser.parse_args()
     if sys.platform!='linux':parser.error('Run in WSL/Linux with GHDL and Verilator')
     if not 2_000_000<=args.cycles<=1_000_000_000 or not 1<=args.seed<=2147483647:
         parser.error('Cycles must be 2 million..1 billion; seed must be 1..2147483647')
     root=Path(__file__).resolve().parents[1]
-    archive=args.archive.resolve()
+    if args.archive is None and args.image is None:parser.error('Provide an authenticated ROM archive or --image')
+    archive=args.archive.resolve() if args.archive else None
+    prepared_image=args.image.resolve() if args.image else None
     output=(args.output or root/'build'/datetime.now(timezone.utc).strftime('observe-%Y%m%dT%H%M%SZ')).resolve()
     if not output.is_relative_to(root/'build'):
         parser.error('Diagnostic output must stay under this project’s ignored build directory')
@@ -42,7 +47,7 @@ def main():
     files=inventory(root,adapter)
     metadata=dict(status='INCOMPLETE_DIAGNOSTIC',candidate=False,hardware_validation='pending',
         source_sha256=input_hash(files),source_files=files,core=git_metadata(root),seed=args.seed,
-        cycles_requested=args.cycles,controls=args.controls,audio=args.audio,two_state=True,
+        cycles_requested=args.cycles,controls=args.controls,audio=args.audio,credit_test=args.credit_test,two_state=True,
         tools=tools_metadata(['ghdl','verilator','make','g++']),
         provenance='Independent initialization write model; subsequent ROM execution and frames are observations only',
         limitations=['No independent post-initialization CPU/game/frame oracle','Randomized two-state initialization is not X/Z verification',
@@ -59,17 +64,22 @@ def main():
         frozen=Path(temporary)/'core'
         snapshot(root,frozen,files)
         work=Path(temporary)/'work';work.mkdir()
-        archive_before=hashlib.sha256(archive.read_bytes()).hexdigest()
-        with (output/'prepare.log').open('w') as log:
-            ran=subprocess.run([sys.executable,str(frozen/'tools/prepare_hunchback.py'),str(archive),
-                                '--output',str(output/'image.bin')],stdout=log,stderr=subprocess.STDOUT)
-        if ran.returncode:raise ValueError('ROM authentication/preparation failed; see prepare.log')
-        if hashlib.sha256(archive.read_bytes()).hexdigest()!=archive_before:
+        archive_before=hashlib.sha256(archive.read_bytes()).hexdigest() if archive else None
+        if prepared_image:
+            shutil.copyfile(prepared_image,output/'image.bin')
+        else:
+            with (output/'prepare.log').open('w') as log:
+                ran=subprocess.run([sys.executable,str(frozen/'tools/prepare_hunchback.py'),str(archive),
+                                    '--output',str(output/'image.bin')],stdout=log,stderr=subprocess.STDOUT)
+            if ran.returncode:raise ValueError('ROM authentication/preparation failed; see prepare.log')
+        if archive and hashlib.sha256(archive.read_bytes()).hexdigest()!=archive_before:
             raise ValueError('ROM archive changed during preparation')
+        if (output/'image.bin').stat().st_size!=51232:raise ValueError('Prepared image is not the expected 0xC820 bytes')
         sys.path.insert(0,str(frozen/'sim/bdsm'))
         from startup_model import expectations
         reference=expectations(output/'image.bin',output/'startup.expect')
-        metadata.update(archive_sha256=archive_before,image_sha256=reference['image_sha256'],startup_reference=reference)
+        metadata.update(image_sha256=reference['image_sha256'],startup_reference=reference)
+        if archive_before:metadata['archive_sha256']=archive_before
         cpu_sources=[str(frozen/'rtl/vendor/arcadia'/name) for name in ['base_pack.vhd','sgs2650_pack.vhd','sgs2650.vhd']]
         ran=subprocess.run(['ghdl','--synth','--std=08','--out=verilog',*cpu_sources,'-e','sgs2650'],capture_output=True,text=True)
         (output/'synth.log').write_text(ran.stderr)
@@ -77,7 +87,8 @@ def main():
         # Lexical keyword escape only; no substitutions to CPU logic or reset.
         cpu=work/'sgs2650.v';cpu.write_text(re.sub(r'\bint\b',lambda _: '\\int ',ran.stdout))
         metadata['synthesized_cpu_sha256']=hashlib.sha256(cpu.read_bytes()).hexdigest()
-        names=['cvs_machine','cvs_main','cvs_main_bus','cvs_main_io','cvs_main_memory','cvs_banked','cvs_memory','cvs_clock',
+        names=['cvs_machine','cvs_main','cvs_main_bus','cvs_main_io','cvs_main_memory','cvs_banked','cvs_memory',
+               'cvs_sync_ram_1p','cvs_sync_ram_2p','cvs_sync_rom','cvs_clock',
                'cvs_scan','cvs_video_timing','cvs_vblank_irq','cvs_video_join','cvs_s2636_bank','cvs_s2636_objects','cvs_character_video']
         top='cvs_av_machine' if args.audio else 'cvs_machine'
         if args.audio:names += ['cvs_av_machine','cvs_audio_cpu','cvs_audio_bus','cvs_audio_samples']
@@ -91,7 +102,9 @@ def main():
         save()
         if ran.returncode:raise ValueError('Compiled-machine diagnostic build failed; see compile.log')
         print(f'Running private diagnostic; {len(metadata["unreviewed_compiler_findings"])} retained compiler findings.',flush=True)
-        command=[str(work/'obj'/('V'+top)),str(args.cycles),str(args.seed),str(reference['resume']),str(int(args.controls))]
+        control_mode=args.controls or args.credit_test
+        command=[str(work/'obj'/('V'+top)),str(args.cycles),str(args.seed),str(reference['resume']),
+                 str(int(control_mode)),str(int(args.credit_test))]
         with (output/'run.log').open('w') as log:
             process=subprocess.Popen(command,cwd=output,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
             for line in process.stdout:
@@ -108,15 +121,21 @@ def main():
             return 1
         if returncode or not events:raise ValueError('Diagnostic failed or omitted its bounded observation; see run.log')
         metadata['observations']=events[-1]
+        if args.credit_test:
+            passes=[json.loads(line[5:]) for line in lines if line.startswith('BDSM ')
+                    and json.loads(line[5:]).get('status')=='PASS']
+            if not any(item.get('label')=='coin_increments_credit_ram' for item in passes):
+                raise ValueError('Credit assertion did not execute; see run.log')
+            metadata['credit_assertion']=passes[-1]
         metadata['event_logs']=[dict(name=p.name,sha256=hashlib.sha256(p.read_bytes()).hexdigest())
                                 for p in sorted(output.glob('*bus.log'))+sorted(output.glob('*events.log'))+sorted(output.glob('*samples.log'))]
         metadata['captures']=[dict(name=p.name,sha256=hashlib.sha256(p.read_bytes()).hexdigest(),
                                   provenance='Actual machine pixels; observed only, no independent game-frame oracle')
                               for p in sorted(output.glob('frame-*.ppm'))]
     if inventory(root,adapter)!=files:raise ValueError('Maintained source changed during the diagnostic run')
-    if hashlib.sha256(archive.read_bytes()).hexdigest()!=archive_before:raise ValueError('ROM archive changed during execution')
-    metadata['status']='OBSERVED_ONLY';save()
-    print('Private observation retained in '+str(output)+'; no game accuracy or candidate PASS.',flush=True)
+    if archive and hashlib.sha256(archive.read_bytes()).hexdigest()!=archive_before:raise ValueError('ROM archive changed during execution')
+    metadata['status']='FOCUSED_ROM_REGRESSION_PASS' if args.credit_test else 'OBSERVED_ONLY';save()
+    print('Private observation retained in '+str(output)+'; no candidate qualification.',flush=True)
 
 
 if __name__=='__main__':

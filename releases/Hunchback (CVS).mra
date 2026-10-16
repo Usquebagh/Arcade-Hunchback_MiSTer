@@ -4,12 +4,12 @@
     <manufacturer>Century Electronics</manufacturer>
     <category>Platform</category>
     <setname>hunchbak</setname>
-    <rbf>Hunchback</rbf>
+    <rbf>hunchback</rbf>
     <rotation>vertical</rotation>
     <players>2 (alternating)</players>
     <joystick>2-way</joystick>
     <num_buttons>1</num_buttons>
-    <about author="Usquebagh">Private development draft; no working CVS RBF yet. Hardware testing pending.</about>
+    <about author="Usquebagh">Private development; ENGINEERING_UNQUALIFIED build. Hardware retest pending.</about>
     <buttons names="Jump,Start 1,Coin,Start 2" default="A,Start,Select,X" />
     <rom index="0" zip="hunchbak.zip" md5="none">
         <part name="hb-gp1.bin" crc="af801d54" offset="0x0000" length="0x0400" />

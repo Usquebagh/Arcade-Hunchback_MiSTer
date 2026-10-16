@@ -25,3 +25,4 @@
 __pycache__/
 *.pyc
 /trace.log
+/c5_pin_model_dump.txt

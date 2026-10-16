@@ -19,7 +19,12 @@ SENSE is generated from the master clock and shared by audio and speech CPUs;
 physical oscillator phase, drift and CDC are not qualified.
 
 MiSTer reserves status bit 0 for `R[0]` reset, so menu options begin at status
-bit 1. MAME's Hunchback map reads DSW3 at extended port 6 and DSW2 at port 7;
+bit 1. The Orientation option defaults to Rotate CW for the cabinet's vertical
+native raster; Rotate CCW and Native are also exposed. The `screen_rotate`
+framebuffer writer uses MiSTer's DDRAM interface, and its `video_rotated`
+state is fed back to HPS_IO so the OSD follows the game image. The MRA already
+declares `<rotation>vertical</rotation>`. MAME's Hunchback map reads DSW3 at
+extended port 6 and DSW2 at port 7;
 the shell maps coinage/lives to the port-7 input and cabinet/bonus/registration
 to port 6. The behavioral shell check verifies representative raw bytes from
 the menu settings. The physical positions and electrical polarity of the
@@ -39,10 +44,16 @@ bring-up mix. The DAC4 schematic bit significance/resistor weights, discrete
 oscillator path, analog filtering and speech channel gain remain unverified;
 this connection does not constitute calibrated audio coverage.
 
-Joystick mapping follows the pinned MAME Hunchback input-port bit assignments.
-Physical decode, cocktail controls, DIP polarity/defaults and board switch
-wiring have not been independently audited. This shell does not establish a
-gameplay, unchanged-ROM, MiSTer hardware or Quartus timing PASS.
+Joystick mapping follows MAME's active-low Hunchback input-port bits: P1
+Start/Coin are IN0 bits 0/3, P2 Start/Coin bits 1/2, and the P2/P1 jump inputs
+bits 4/5. MiSTer Start/Select/X/A are mapped from their standard joystick
+indices; direction inputs remain on IN1. The local-ROM coin regression checks
+that one P1 coin pulse changes system RAM byte 0x1c70 from 0 to 1, compared
+with an identical no-input run where it stays 0. This is frozen-ROM behavior
+coverage, not a physical input wiring reference. Physical decode, cocktail
+controls, DIP polarity/defaults and board switch wiring have not been
+independently audited. This shell does not establish a general gameplay,
+unchanged-ROM, MiSTer hardware or Quartus timing PASS.
 
 `hunchback.mister.shell_behavior` drives the outputs of an interface-only HPS
 fixture and checks the real wrapper's index-zero download hold/completion,

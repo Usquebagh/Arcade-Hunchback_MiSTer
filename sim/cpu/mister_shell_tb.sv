@@ -7,11 +7,12 @@ module mister_shell_tb;
     wire [63:0] ddram_dout=0;
     wire uart_cts=0,uart_rxd=0,uart_dsr=0,osd_status=0;
     wire [6:0] user_in=0;
+    wire fb_vbl=0,fb_ll=0;
     emu dut(.CLK_50M(clk_50m),.RESET(reset),.HPS_BUS(hps_bus),
         .HDMI_WIDTH(hdmi_width),.HDMI_HEIGHT(hdmi_height),.CLK_AUDIO(clk_audio),
         .SD_MISO(sd_miso),.SD_CD(sd_cd),.DDRAM_BUSY(ddram_busy),
         .DDRAM_DOUT(ddram_dout),.DDRAM_DOUT_READY(ddram_dout_ready),
-        .UART_CTS(uart_cts),.UART_RXD(uart_rxd),.UART_DSR(uart_dsr),
+        .FB_VBL(fb_vbl),.FB_LL(fb_ll),.UART_CTS(uart_cts),.UART_RXD(uart_rxd),.UART_DSR(uart_dsr),
         .USER_IN(user_in),.OSD_STATUS(osd_status));
     always #5 clk_50m=~clk_50m;
 
@@ -72,11 +73,23 @@ module mister_shell_tb;
         menu_status=0;menu_buttons=0;joy0=0;joy1=0;#1;
         if(dut.in0!==8'hff)fail("joystick_idle_in0",8'hff,dut.in0);
         if(dut.in1!==8'hff)fail("joystick_idle_in1",8'hff,dut.in1);
-        joy0=(32'b1<<9)|(32'b1<<10)|(32'b1<<4)|(32'b1<<2);
-        joy1=(32'b1<<9)|(32'b1<<10)|(32'b1<<4)|(32'b1<<3);
+        if(dut.video_rotated!==1'b1 || dut.rotate_ccw!==1'b0 || dut.no_rotate!==1'b0)
+            fail("default_rotation_clockwise",1,{dut.video_rotated,dut.rotate_ccw,dut.no_rotate});
+        if(dut.hps_io.video_rotated!==dut.video_rotated)
+            fail("osd_rotation_feedback",dut.video_rotated,dut.hps_io.video_rotated);
+        menu_status[13:12]=2'd1;#1;
+        if(dut.rotate_ccw!==1'b1 || dut.video_rotated!==1'b1)
+            fail("menu_rotation_ccw",3,{dut.rotate_ccw,dut.video_rotated});
+        menu_status[13:12]=2'd2;#1;
+        if(dut.no_rotate!==1'b1 || dut.video_rotated!==1'b0)
+            fail("menu_rotation_native",2,{dut.no_rotate,dut.video_rotated});
+        menu_status[13:12]=0;
+        // MRA defaults: Jump=A, Start 1=Start, Coin=Select, Start 2=X.
+        joy0=(32'b1<<9)|(32'b1<<8)|(32'b1<<6)|(32'b1<<4)|(32'b1<<2);
+        joy1=(32'b1<<9)|(32'b1<<4)|(32'b1<<3);
         #1;
-        if(dut.in0!==8'b11000000)fail("joystick_player_coin_jump_polarity",8'b11000000,dut.in0);
-        if(dut.in1!==8'b11011011)fail("joystick_jump2_polarity",8'b11011011,dut.in1);
+        if(dut.in0!==8'b11000000)fail("joystick_player_coin_start_polarity",8'b11000000,dut.in0);
+        if(dut.in1!==8'b11011011)fail("joystick_directions_jump2_polarity",8'b11011011,dut.in1);
 
         menu_status=0;
         menu_status[2:1]=2'b01;menu_status[4:3]=2'b10;menu_status[5]=1;

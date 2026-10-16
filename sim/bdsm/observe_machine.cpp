@@ -17,10 +17,10 @@ using Machine=Vcvs_machine;
 #include <vector>
 
 int main(int argc,char** argv) {
-    if(argc!=5)return 2;
+    if(argc!=6)return 2;
     uint64_t limit=std::stoull(argv[1]);
     unsigned seed=std::stoul(argv[2]),resume_pc=std::stoul(argv[3]);
-    bool controls=std::stoul(argv[4])!=0;
+    bool controls=std::stoul(argv[4])!=0,credit_test=std::stoul(argv[5])!=0;
     VerilatedContext context;context.randReset(2);context.randSeed(seed);
     Machine m(&context);
     std::ifstream image("image.bin",std::ios::binary),expected("startup.expect");
@@ -32,6 +32,9 @@ int main(int argc,char** argv) {
     bool initialized=false,last_ack=false;
     unsigned field_pixels=0,coin_samples=0,start_samples=0,input_reads=0,right_samples=0,jump_samples=0;
     std::array<unsigned char,227*256*3> field{};
+    std::array<unsigned char,1024> system_ram{},ram_before_coin{};
+    std::array<bool,1024> system_ram_valid{},ram_before_coin_valid{};
+    bool ram_coin_snapshot=false,ram_coin_delta_reported=false;
     std::ofstream bus("bus.log"),captures("captures.log");
 #ifdef AUDIO_OBSERVE
     std::ofstream audio_bus("audio-bus.log"),audio_events("audio-events.log");
@@ -53,9 +56,9 @@ int main(int argc,char** argv) {
     m.dsw1=0x0c;m.dsw2=0x0f;
     auto tick=[&]() {
         bool coin=controls && frames>=170 && frames<172;
-        bool start=controls && frames>=178 && frames<180;
-        bool right=controls && frames>=300 && frames<330;
-        bool jump=controls && frames>=306 && frames<309;
+        bool start=controls && !credit_test && frames>=178 && frames<180;
+        bool right=controls && !credit_test && frames>=300 && frames<330;
+        bool jump=controls && !credit_test && frames>=306 && frames<309;
         m.in0=255-(coin?8:0)-(start?1:0)-(jump?32:0);
         m.in1=255-(right?16:0);
 #ifdef AUDIO_OBSERVE
@@ -83,6 +86,11 @@ int main(int argc,char** argv) {
                 io_read=true;io_address=m.address;
             }
             if(m.wr) {
+                if(m.memory_space && (m.address&0x1c00u)==0x1c00u) {
+                    unsigned ram_address=m.address&0x03ffu;
+                    system_ram[ram_address]=m.write_data;
+                    system_ram_valid[ram_address]=true;
+                }
                 uint32_t header=m.memory_space?4u:((m.extended<<1)|m.data_port);
                 uint32_t record=(header<<24)|(m.address<<9)|(m.flag<<8)|m.write_data;
                 if(!initialized) {
@@ -134,6 +142,29 @@ int main(int argc,char** argv) {
             if(x==0 && y==0) {
                 if(frames && field_pixels!=227*256)fail("observe_field_count",227*256,field_pixels);
                 ++frames;field_pixels=0;
+                if(frames==170) {
+                    ram_before_coin=system_ram;
+                    ram_before_coin_valid=system_ram_valid;
+                    ram_coin_snapshot=true;
+                }
+                if(frames==178 && ram_coin_snapshot && !ram_coin_delta_reported) {
+                    unsigned before=ram_before_coin[0x70],after=system_ram[0x70];
+                    if(credit_test) {
+                        if(!ram_before_coin_valid[0x70] || !system_ram_valid[0x70])
+                            fail("credit_ram_write_observed",1,0);
+                        if(before!=0 || after!=1)fail("coin_increments_credit_ram",1,after);
+                        std::cout<<"BDSM {\"status\":\"PASS\",\"label\":\"coin_increments_credit_ram\",\"address\":\"0x1c70\",\"before\":"<<before<<",\"after\":"<<after<<"}"<<std::endl;
+                    }
+                    for(unsigned address=0;address<system_ram.size();++address) {
+                        if(ram_before_coin_valid[address] && system_ram_valid[address] &&
+                           ram_before_coin[address]!=system_ram[address])
+                            std::cout<<"RAMDELTA {\"coin_enabled\":"<<(controls?"true":"false")
+                                     <<",\"frame\":178,\"address\":\"0x"<<std::hex
+                                     <<(0x1c00u+address)<<"\",\"before\":"<<unsigned(ram_before_coin[address])
+                                     <<",\"after\":"<<unsigned(system_ram[address])<<std::dec<<"}"<<std::endl;
+                    }
+                    ram_coin_delta_reported=true;
+                }
                 if(frames%16==0)std::cout<<"Observed frame "<<frames<<", IRQ acknowledgements="<<irqs<<std::endl;
             }
             if(x!=field_pixels%227 || y!=field_pixels/227)fail("observe_pixel_order",field_pixels,x+227*y);

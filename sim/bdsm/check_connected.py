@@ -102,7 +102,7 @@ def main():
                     'rtl/machine/cvs_tms5100_lattice.sv','rtl/machine/cvs_tms5100_pcm.sv','rtl/vendor/tms5100/cvs_tms5100_tables.sv']
     if args.mode in ('mister_shell_connected','mister_shell_behavior_connected'):
         top='emu'
-        sources=['sim/bdsm/mister_shell_stubs.sv','Arcade-Hunchback.sv',
+        sources=['sys/arcade_video.v','sim/bdsm/mister_shell_stubs.sv','Arcade-Hunchback.sv',
                  *sorted(str(p) for p in Path('rtl/machine').glob('*.sv')),
                  'rtl/vendor/tms5100/cvs_tms5100_tables.sv']
         if args.mode=='mister_shell_behavior_connected':
@@ -110,7 +110,8 @@ def main():
             sources.append('sim/cpu/mister_shell_tb.sv')
     if args.mode not in ('mister_shell_connected','mister_shell_behavior_connected'):
         sources += ['sim/cpu/'+top+'.sv']
-    compile_run=subprocess.run(['iverilog','-g2012','-Wall','-s',top,'-o',str(work/'test.vvp'),
+    defines=['-DMISTER_FB=1'] if args.mode in ('mister_shell_connected','mister_shell_behavior_connected') else []
+    compile_run=subprocess.run(['iverilog','-g2012','-Wall',*defines,'-s',top,'-o',str(work/'test.vvp'),
                                 str(cpu_file),*sources],capture_output=True,text=True)
     (work/'compile.log').write_text(compile_run.stdout+compile_run.stderr)
     if compile_run.returncode:
@@ -121,9 +122,12 @@ def main():
     # a variable-index combinational read must react to every entry. Keep their
     # exact text in the result/log; every other diagnostic remains unreviewed.
     array_note=re.compile(r"rtl/machine/cvs_s2636_objects\.sv:\d+: warning: @\* is sensitive to all (256 words in array 'registers'|4 words in array '(active_duplicate|duplicate_hc|render_row|scale|active_line|in_object|next_row)')\.")
+    screen_init_note=re.compile(r"sys/arcade_video\.v:(268|300): warning: Static variable initialization requires explicit lifetime in this context\.")
     for line in (compile_run.stdout+compile_run.stderr).splitlines():
         if args.mode in ('s2636_connected','assembly_connected','bootstrap_connected','startup_connected','av_connected','full_connected','mister_shell_connected','mister_shell_behavior_connected') and array_note.fullmatch(line):
             reviewed_messages.append({'message':line,'review':'Full-array sensitivity is required for the declared combinational indexed register/engine read; Verilator -Wall finds no latch or sensitivity fault.'})
+        elif args.mode in ('mister_shell_connected','mister_shell_behavior_connected') and screen_init_note.fullmatch(line):
+            reviewed_messages.append({'message':line,'review':'The pinned MiSTer framebuffer rotation module initializes static local raster counters inside clocked processes; this is supported by Quartus and does not change modeled rotation/control behavior.'})
         else:
             diagnostics += line+'\n'
     if args.mode=='mister_shell_connected':
