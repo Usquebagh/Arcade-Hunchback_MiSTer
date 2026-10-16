@@ -371,7 +371,17 @@ BCTA `<` with negative CC now also resolves its pointer to 0200. The marker
 remains untouched on fall-through and the target stores 55. Together with the
 `=` and `>` cases above, all three concrete PSL condition selectors have a
 taken BCTA indirect example; wildcard and non-taken BCTA selectors remain
-open. This is synthetic CPU model/manual behavior. Bus and lint pass. The
+covered below. This is synthetic CPU model/manual behavior. Bus and lint pass. The
 `bcta_indirect_less_uses_greater` mutant passes its baseline and fails
 `bcta_indirect_less_skips_fallthrough` at cycle 535 twice (expected 40,
 observed 11). Page-boundary targets and physical bus timing remain unqualified.
+
+BCTA `*` with positive CC follows its pointer to 0200, while BCTA `>` with
+negative CC falls through and leaves the pointer target signature untouched.
+These are synthetic CPU instruction expectations, not CVS measurements. CPU
+bus and lint pass. `bcta_indirect_wildcard_requires_cc_match` passes its
+baseline and fails `bcta_indirect_wildcard_skips_fallthrough` at cycle 558
+twice (expected 40, observed 11). `bcta_indirect_greater_negative_takes` passes
+its baseline and fails `bcta_indirect_greater_negative_fallthrough` at cycle
+581 twice (expected 22, observed 40). Other non-taken selectors, subroutine
+branch variants, page-boundary targets and physical bus timing remain open.

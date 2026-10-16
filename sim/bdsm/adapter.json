@@ -1214,6 +1214,24 @@
       "reason": "Absolute BCTA drops the '<' selector and fails to branch when the negative CC matches."
     },
     {
+      "id": "bcta_indirect_wildcard_requires_cc_match",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "              IF (ri(7 DOWNTO 6)=\"00\" AND cond_v) OR         -- BCTA\n                 (ri(7 DOWNTO 6)=\"10\" AND NOT cond_v) OR     -- BCFA\n                 (ri(7 DOWNTO 6)=\"01\" AND rs_v/=x\"00\") OR    -- BRNA\n                 (ri(7 DOWNTO 6)=\"11\" AND rd_v/=x\"00\") THEN  -- BIDA",
+      "new": "              IF (ri(7 DOWNTO 6)=\"00\" AND cond_v AND ri(1 DOWNTO 0)/=\"11\") OR -- BCTA incorrectly rejects wildcard\n                 (ri(7 DOWNTO 6)=\"10\" AND NOT cond_v) OR     -- BCFA\n                 (ri(7 DOWNTO 6)=\"01\" AND rs_v/=x\"00\") OR    -- BRNA\n                 (ri(7 DOWNTO 6)=\"11\" AND rd_v/=x\"00\") THEN  -- BIDA",
+      "failure_label": "bcta_indirect_wildcard_skips_fallthrough",
+      "reason": "BCTA selector '*' must be true independently of the current PSL condition code."
+    },
+    {
+      "id": "bcta_indirect_greater_negative_takes",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "              IF (ri(7 DOWNTO 6)=\"00\" AND cond_v) OR         -- BCTA\n                 (ri(7 DOWNTO 6)=\"10\" AND NOT cond_v) OR     -- BCFA\n                 (ri(7 DOWNTO 6)=\"01\" AND rs_v/=x\"00\") OR    -- BRNA\n                 (ri(7 DOWNTO 6)=\"11\" AND rd_v/=x\"00\") THEN  -- BIDA",
+      "new": "              IF (ri(7 DOWNTO 6)=\"00\" AND (cond_v OR (ri(1 DOWNTO 0)=\"01\" AND psl_cc=\"10\"))) OR -- BCTA wrongly takes '>' for negative CC\n                 (ri(7 DOWNTO 6)=\"10\" AND NOT cond_v) OR     -- BCFA\n                 (ri(7 DOWNTO 6)=\"01\" AND rs_v/=x\"00\") OR    -- BRNA\n                 (ri(7 DOWNTO 6)=\"11\" AND rd_v/=x\"00\") THEN  -- BIDA",
+      "failure_label": "bcta_indirect_greater_negative_fallthrough",
+      "reason": "BCTA '>' must fall through when PSL condition code is negative."
+    },
+    {
       "id": "bstr_page_wrap_offset_lost",
       "check": "hunchback.cpu.bus",
       "file": "rtl/vendor/arcadia/sgs2650.vhd",
