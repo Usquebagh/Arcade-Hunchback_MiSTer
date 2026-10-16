@@ -1187,6 +1187,15 @@
       "reason": "Absolute BSFA uses the true-condition predicate instead of its inverse."
     },
     {
+      "id": "bcfa_indirect_predicate_reversed",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "              IF (ri(7 DOWNTO 6)=\"00\" AND cond_v) OR         -- BCTA\n                 (ri(7 DOWNTO 6)=\"10\" AND NOT cond_v) OR     -- BCFA\n                 (ri(7 DOWNTO 6)=\"01\" AND rs_v/=x\"00\") OR    -- BRNA",
+      "new": "              IF (ri(7 DOWNTO 6)=\"00\" AND cond_v) OR         -- BCTA\n                 (ri(7 DOWNTO 6)=\"10\" AND cond_v) OR     -- BCFA\n                 (ri(7 DOWNTO 6)=\"01\" AND rs_v/=x\"00\") OR    -- BRNA",
+      "failure_label": "bcfa_indirect_skips_fallthrough",
+      "reason": "Absolute indirect BCFA must branch only when the selected condition is false."
+    },
+    {
       "id": "bstr_page_wrap_offset_lost",
       "check": "hunchback.cpu.bus",
       "file": "rtl/vendor/arcadia/sgs2650.vhd",

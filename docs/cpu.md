@@ -343,3 +343,17 @@ observed 40); `indirect_loda_predecrement_add_leaks_page` fails
 `absolute_indirect_predecrement_page_wrap` at cycle 1327 twice (expected 75,
 observed 40). These are synthetic CPU addressing tests, not physical bus
 measurements.
+
+## Conditional absolute-indirect branch regression, 2026-10-16
+
+BCFA `=` with a positive condition code now follows a page-zero pointer at
+0010/0011 to target 0200. The fall-through marker must remain untouched and
+the target writes its signature. This joins the independently covered
+false-condition predicate and absolute-indirect resolution in one actual-CPU
+bus case; expectations are synthetic MAME/manual-compatible behavior, not CVS
+board measurements. The focused `hunchback.cpu.bus` and RTL lint checks pass.
+The `bcfa_indirect_predicate_reversed` disposable mutation passes its untouched
+baseline and fails `bcfa_indirect_skips_fallthrough` at cycle 509 in both
+repeats (expected 40, observed 11). Other conditional absolute-indirect
+condition codes, target/page-boundary combinations, and physical bus timing
+remain open.

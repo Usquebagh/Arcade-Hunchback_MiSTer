@@ -178,6 +178,16 @@ begin
     start;for n in 1 to 55 loop tick;end loop;
     check(memory(16#1c97#)=x"7c","absolute_indirect_branch_target",16#7c#,to_integer(memory(16#1c97#)));
 
+    -- BCFA '=' with positive CC takes the false-condition branch through its pointer.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#04#,1,
+      16#9c#,16#80#,16#10#,16#05#,16#11#,16#cd#,16#1c#,16#30#,16#40#));
+    memory(16#10#):=x"02";memory(16#11#):=x"00";
+    program(16#200#,(16#05#,16#33#,16#cd#,16#1c#,16#31#,16#40#));
+    start;for n in 1 to 25 loop tick;end loop;
+    check(memory(16#1c30#)=x"40","bcfa_indirect_skips_fallthrough",16#40#,to_integer(memory(16#1c30#)));
+    check(memory(16#1c31#)=x"33","bcfa_indirect_target",16#33#,to_integer(memory(16#1c31#)));
+
     -- Direct BXA R3 uses its index after the absolute base address.
     memory:=(others=>x"40");
     program(0,(16#75#,16#ff#,16#77#,16#0a#,16#07#,1,16#9f#,2,0,16#40#));
