@@ -332,5 +332,14 @@ target 1FFF plus R1=1 reads address 0000 (the known startup opcode 75), while
 `indirect_loda_index_add_leaks_page` mutant uses linear addition and fails
 `absolute_indirect_indexed_page_wrap` at cycle 1171 twice (expected 75, observed
 40). This complements the separate test for the second pointer byte wrapping
-from 1FFF to 0000. Page-wrap cases for indirect pre-increment and pre-decrement
-data addressing remain open.
+from 1FFF to 0000.
+
+Indirect pre-increment and pre-decrement effective-address wrapping now have
+separate checks too. Both use a pointer target of 1FFF and an updated index of
+one; each must read address 0000 and retain R1=1. CPU bus and lint baselines
+pass. `indirect_loda_preincrement_add_leaks_page` fails
+`absolute_indirect_preincrement_page_wrap` at cycle 1249 twice (expected 75,
+observed 40); `indirect_loda_predecrement_add_leaks_page` fails
+`absolute_indirect_predecrement_page_wrap` at cycle 1327 twice (expected 75,
+observed 40). These are synthetic CPU addressing tests, not physical bus
+measurements.

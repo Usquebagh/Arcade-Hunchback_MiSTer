@@ -269,6 +269,23 @@ begin
     start;for n in 1 to 65 loop tick;end loop;
     check(memory(16#1ca4#)=x"75","absolute_indirect_indexed_page_wrap",16#75#,to_integer(memory(16#1ca4#)));
 
+    -- Pre-increment R1=0 and pre-decrement R1=2 both wrap 1FFF+1 to 0000.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#05#,0,16#0d#,16#a0#,16#10#,
+      16#cc#,16#1c#,16#a5#,16#cd#,16#1c#,16#a6#,16#40#));
+    memory(16#10#):=x"1f";memory(16#11#):=x"ff";memory(16#2000#):=x"40";
+    start;for n in 1 to 75 loop tick;end loop;
+    check(memory(16#1ca5#)=x"75","absolute_indirect_preincrement_page_wrap",16#75#,to_integer(memory(16#1ca5#)));
+    check(memory(16#1ca6#)=x"01","absolute_indirect_preincrement_page_wrap_register",1,to_integer(memory(16#1ca6#)));
+
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#05#,2,16#0d#,16#c0#,16#10#,
+      16#cc#,16#1c#,16#a7#,16#cd#,16#1c#,16#a8#,16#40#));
+    memory(16#10#):=x"1f";memory(16#11#):=x"ff";memory(16#2000#):=x"40";
+    start;for n in 1 to 75 loop tick;end loop;
+    check(memory(16#1ca7#)=x"75","absolute_indirect_predecrement_page_wrap",16#75#,to_integer(memory(16#1ca7#)));
+    check(memory(16#1ca8#)=x"01","absolute_indirect_predecrement_page_wrap_register",1,to_integer(memory(16#1ca8#)));
+
     -- HALT wake, interrupt entry/RETE and resume at the next instruction.
     memory:=(others=>x"40");io_writes:=0;irq_acks:=0;
     program(0,(16#1f#,0,16#60#));
