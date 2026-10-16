@@ -10,7 +10,7 @@
     <joystick>2-way</joystick>
     <num_buttons>1</num_buttons>
     <about author="Usquebagh">Private development; ENGINEERING_UNQUALIFIED build. Hardware retest pending.</about>
-    <buttons names="Jump,Start 1,Coin,Start 2" default="A,Start,Select,X" />
+    <buttons names="Jump,Start 2,Start 1,Coin" default="A,X,Start,Select" />
     <rom index="0" zip="hunchbak.zip" md5="none">
         <part name="hb-gp1.bin" crc="af801d54" offset="0x0000" length="0x0400" />
         <part name="hb-gp2.bin" crc="b448cc8e" offset="0x0000" length="0x0400" />

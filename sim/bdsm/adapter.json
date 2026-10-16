@@ -51,6 +51,8 @@
     "docs/mister-shell.md"
   ],
   "required_files": [
+    "rtl/machine/cvs_mister_input.sv",
+    "rtl/machine/cvs_rotation_raster.sv",
     "rtl/machine/cvs_reset.sv",
     "rtl/machine/cvs_clock.sv",
     "rtl/machine/cvs_memory.sv",
@@ -99,6 +101,8 @@
     "tools/observe_hunchback.py",
     "tools/render_rom_observation.py",
     "sim/bdsm/observe_machine.cpp",
+    "sim/bdsm/hps_coin_machine.sv",
+    "sim/cpu/screen_rotate_dimensions_tb.sv",
     "rtl/machine/cvs_audio_bus.sv",
     "rtl/machine/cvs_audio_cpu.sv",
     "sim/bdsm/audio_bus.cpp",
@@ -2396,6 +2400,24 @@
       "new": "O[1:0],Coin A,1C1C,3C1C,2C1C,4C1C;",
       "failure_label": "mister_status_reserved",
       "reason": "MiSTer status bit 0 is reserved for the R[0] reset action and must not hold a game option."
+    },
+    {
+      "id": "mister_duplicate_reset_entry",
+      "check": "hunchback.mister.shell_behavior",
+      "file": "Arcade-Hunchback.sv",
+      "old": "\"R[0],Reset;\",",
+      "new": "\"R[0],Reset;\",\n        \"T[0],Reset;\",",
+      "failure_label": "mister_single_reset_binding",
+      "reason": "Only R[0] is the reset action; a duplicate T[0] entry creates a second, incorrectly indexed Reset item."
+    },
+    {
+      "id": "mister_button_order_misaligned",
+      "check": "hunchback.mister.shell_behavior",
+      "file": "Arcade-Hunchback.sv",
+      "old": "J1,Jump,-,Start 2,-,Start 1,Coin;",
+      "new": "J1,Jump,Start 1,Coin,Jump 2,Start 2,Coin 2;",
+      "failure_label": "mister_conf_button_order",
+      "reason": "J1 button names must occupy the virtual A/B/X/Y/Start/Select indices read by the actual input mapper."
     }
   ],
   "build": {

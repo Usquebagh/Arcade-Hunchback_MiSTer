@@ -23,6 +23,41 @@ def main():
         if any(min(first,second)==0 for first,second in ranges) or '"R[0],Reset;"' not in shell:
             emit('FAIL',label='mister_status_reserved',cycle=0,expected=1,observed=0)
             return 1
+        conf=shell.split('localparam CONF_STR=',1)[1].split('};',1)[0]
+        options=re.findall(r'"O\[(\d+)(?::(\d+))?\]',conf)
+        status_bits=[]
+        for first,last in options:
+            lo,hi=sorted((int(first),int(last) if last else int(first)))
+            status_bits.extend(range(lo,hi+1))
+        if len(status_bits)!=len(set(status_bits)) or status_bits!=sorted(status_bits):
+            emit('FAIL',label='mister_status_index_order',cycle=0,expected=1,observed=0)
+            return 1
+        reset_items=re.findall(r'"([RT])\[(\d+)\],Reset;"',conf)
+        if reset_items!=[('R','0')] or 'status[0]' not in shell.split('wire reset_async=',1)[1].split(';',1)[0]:
+            emit('FAIL',label='mister_single_reset_binding',cycle=0,expected=1,observed=len(reset_items))
+            return 1
+        jline=re.search(r'"J1,([^\"]+)"',conf)
+        jnline=re.search(r'"jn,([^\"]+)"',conf)
+        expected_slots=['Jump','-','Start 2','-','Start 1','Coin']
+        mra=Path('releases/Hunchback (CVS).mra').read_text()
+        mra_buttons=re.search(r'<buttons names="([^"]+)" default="([^"]+)"',mra)
+        if (not jline or jline.group(1).split(';')[0].split(',')!=expected_slots or
+            not jnline or jnline.group(1).split(';')[0].split(',')!=['A','X','Start','Select'] or
+            not mra_buttons or mra_buttons.groups()!=('Jump,Start 2,Start 1,Coin','A,X,Start,Select')):
+            emit('FAIL',label='mister_conf_button_order',cycle=0,expected=1,observed=0)
+            return 1
+        executable=work/'screen_rotate_dimensions.vvp'
+        compile_result=subprocess.run(['iverilog','-g2012','-s','screen_rotate_dimensions_tb','-o',str(executable),
+            'rtl/machine/cvs_rotation_raster.sv','sys/arcade_video.v','sim/cpu/screen_rotate_dimensions_tb.sv'],
+            capture_output=True,text=True)
+        if compile_result.returncode:
+            emit('ERROR',reason='Rotation dimension test compile failed: '+compile_result.stderr[-2000:])
+            return 2
+        run_result=subprocess.run(['vvp',str(executable)],capture_output=True,text=True)
+        print(run_result.stdout,end='')
+        if run_result.returncode:
+            if run_result.stderr: print(run_result.stderr,file=sys.stderr,end='')
+            return run_result.returncode
     bootstrap=False
     startup=None
     if args.mode=='startup_connected':
@@ -96,7 +131,7 @@ def main():
         top='cvs_full_machine_tb'
         sources += ['rtl/machine/cvs_full_machine.sv','rtl/machine/cvs_av_machine.sv',
                     'rtl/machine/cvs_audio_cpu.sv','rtl/machine/cvs_audio_bus.sv','rtl/machine/cvs_audio_samples.sv',
-                    'rtl/machine/cvs_speech_machine.sv','rtl/machine/cvs_speech_cpu.sv','rtl/machine/cvs_speech_bus.sv',*sync_ram_sources,
+                    'rtl/machine/cvs_speech_machine.sv','rtl/machine/cvs_speech_cpu.sv','rtl/machine/cvs_speech_bus.sv',
                     'rtl/machine/cvs_tms5100_engine.sv','rtl/machine/cvs_tms5100_rate.sv','rtl/machine/cvs_tms5100_control.sv',
                     'rtl/machine/cvs_tms5100_frames.sv','rtl/machine/cvs_tms5100_sequence.sv',
                     'rtl/machine/cvs_tms5100_lattice.sv','rtl/machine/cvs_tms5100_pcm.sv','rtl/vendor/tms5100/cvs_tms5100_tables.sv']

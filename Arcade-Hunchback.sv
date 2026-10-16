@@ -28,8 +28,6 @@ module emu (
     localparam CONF_STR={
         "Hunchback (CVS);",
         "-;",
-        "O[13:12],Orientation,Rotate CW,Rotate CCW,Native;",
-        "O[122:121],Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
         "O[2:1],Coin A,1C1C,3C1C,2C1C,4C1C;",
         "O[4:3],Coin B,1C2C,1C3C,1C4C,1C5C;",
         "O[5],Lives,3,5;",
@@ -37,11 +35,14 @@ module emu (
         "O[9:8],Bonus life,10k,20k,40k,80k;",
         "O[10],Registration,On,Off;",
         "O[11],Registration length,3,10;",
+        "O[13:12],Orientation,Rotate CW,Rotate CCW,Native;",
+        "O[122:121],Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
         "-;",
-        "J1,Jump,Start 1,Coin 1,Jump 2,Start 2,Coin 2;",
-        "jn,A,B,X,Y,Start,Select;",
+        // J1 positions are MiSTer virtual buttons [4..9]: A,B,X,Y,Start,Select.
+        // Keep their labels at the indices consumed by cvs_mister_input.
+        "J1,Jump,-,Start 2,-,Start 1,Coin;",
+        "jn,A,X,Start,Select;",
         "R[0],Reset;",
-        "T[0],Reset;",
         "V,v"
     };
     hps_io #(.CONF_STR(CONF_STR)) hps_io (
@@ -66,11 +67,8 @@ module emu (
     cvs_reset reset_boundary(.clk(clk_sys),.reset_async(reset_async),.pll_locked(pll_locked),
         .load_active(rom_download),.rom_loaded(rom_loaded),.reset(core_reset));
 
-    // MiSTer standard buttons: A=4, X=6, Start=8, Select=9.
-    // MAME CVS IN0 is active-low: P1 start/coin = bits 0/3,
-    // P2 start/coin = bits 1/2, and upright/cocktail jump = bits 5/4.
-    wire [7:0] in0={2'b11,~joy0[4],~joy1[4],~joy0[9],~joy1[9],~joy0[6],~joy0[8]};
-    wire [7:0] in1={2'b11,~joy0[2],~joy0[3],~joy1[2],~joy1[3],2'b11};
+    wire [7:0] in0,in1;
+    cvs_mister_input controls(.joystick_0(joy0),.joystick_1(joy1),.in0(in0),.in1(in1));
     wire [1:0] coin_b=status[4:3]==2'd0 ? 2'b11 : status[4:3]==2'd1 ? 2'b01 :
                       status[4:3]==2'd2 ? 2'b10 : 2'b00;
     wire [1:0] bonus=status[9:8]==2'd0 ? 2'b11 : status[9:8]==2'd1 ? 2'b01 :
@@ -130,9 +128,13 @@ module emu (
     wire [11:0] fb_width,fb_height;
     wire [31:0] fb_base;
     wire [13:0] fb_stride;
+    wire rotate_pixel_ce,rotate_de;
+    cvs_rotation_raster rotation_raster(.clk(clk_sys),.reset(core_reset),
+        .pixel_ce(mister_pixel_ce),.pixel_valid(pixel_valid),.x(out_x),
+        .rotate_pixel_ce(rotate_pixel_ce),.rotate_de(rotate_de));
     screen_rotate video_rotation (
-        .CLK_VIDEO(CLK_VIDEO),.CE_PIXEL(CE_PIXEL),
-        .VGA_R(red),.VGA_G(green),.VGA_B(blue),.VGA_HS(hsync_n),.VGA_VS(vsync_n),.VGA_DE(display_enable),
+        .CLK_VIDEO(CLK_VIDEO),.CE_PIXEL(rotate_pixel_ce),
+        .VGA_R(red),.VGA_G(green),.VGA_B(blue),.VGA_HS(hsync_n),.VGA_VS(vsync_n),.VGA_DE(rotate_de),
         .rotate_ccw(rotate_ccw),.no_rotate(no_rotate),.flip(1'b0),.video_rotated(video_rotated),
         .FB_EN(fb_en),.FB_FORMAT(fb_format),.FB_WIDTH(fb_width),.FB_HEIGHT(fb_height),
         .FB_BASE(fb_base),.FB_STRIDE(fb_stride),.FB_VBL(FB_VBL),.FB_LL(FB_LL),

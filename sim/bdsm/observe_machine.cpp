@@ -4,8 +4,8 @@
 #include "Vcvs_av_machine.h"
 using Machine=Vcvs_av_machine;
 #else
-#include "Vcvs_machine.h"
-using Machine=Vcvs_machine;
+#include "Vcvs_hps_coin_machine.h"
+using Machine=Vcvs_hps_coin_machine;
 #endif
 #include "verilated.h"
 #include <array>
@@ -50,7 +50,7 @@ int main(int argc,char** argv) {
         std::exit(1);
     };
     m.clk=0;m.reset=1;m.reset_na=0;m.video_reset=1;m.scan_run=0;m.ready=1;m.dl_wr=0;
-    m.in0=m.in1=m.in2=m.in3=255;
+    m.in2=m.in3=255;
     // Pinned MAME's Hunchback switch defaults: DSW2=0C, DSW3=0F.
     // Raw compatibility bytes, not a physical switch/input wiring audit.
     m.dsw1=0x0c;m.dsw2=0x0f;
@@ -59,8 +59,18 @@ int main(int argc,char** argv) {
         bool start=controls && !credit_test && frames>=178 && frames<180;
         bool right=controls && !credit_test && frames>=300 && frames<330;
         bool jump=controls && !credit_test && frames>=306 && frames<309;
+#ifdef AUDIO_OBSERVE
+        // Audio-only observer retains its isolated audio wrapper.
         m.in0=255-(coin?8:0)-(start?1:0)-(jump?32:0);
         m.in1=255-(right?16:0);
+#else
+        // MRA defaults: Coin=Select(bit 9), Start=bit 8, Jump=A(bit 4).
+        // This drives the same HDL mapper used by emu; no CVS port is forced.
+        m.joystick_0=(coin?1u<<9:0)|(start?1u<<8:0)|(jump?1u<<4:0)|
+                     ((!credit_test && controls && frames>=178 && frames<180)?1u<<6:0)|
+                     (right?1u<<3:0);
+        m.joystick_1=0;
+#endif
 #ifdef AUDIO_OBSERVE
         // Nominal external RC fixture only, not a physical audio clock model.
         m.audio_sense=((cycle*760ull/57272724ull)&1u);
@@ -150,10 +160,11 @@ int main(int argc,char** argv) {
                 if(frames==178 && ram_coin_snapshot && !ram_coin_delta_reported) {
                     unsigned before=ram_before_coin[0x70],after=system_ram[0x70];
                     if(credit_test) {
+                        if(!coin_samples)fail("hps_coin_port_sampled",1,0);
                         if(!ram_before_coin_valid[0x70] || !system_ram_valid[0x70])
                             fail("credit_ram_write_observed",1,0);
                         if(before!=0 || after!=1)fail("coin_increments_credit_ram",1,after);
-                        std::cout<<"BDSM {\"status\":\"PASS\",\"label\":\"coin_increments_credit_ram\",\"address\":\"0x1c70\",\"before\":"<<before<<",\"after\":"<<after<<"}"<<std::endl;
+                        std::cout<<"BDSM {\"status\":\"PASS\",\"label\":\"hps_coin_to_credit_ram\",\"input\":\"joystick_0[9]\",\"port\":\"IN0[3]\",\"address\":\"0x1c70\",\"before\":"<<before<<",\"after\":"<<after<<"}"<<std::endl;
                     }
                     for(unsigned address=0;address<system_ram.size();++address) {
                         if(ram_before_coin_valid[address] && system_ram_valid[address] &&

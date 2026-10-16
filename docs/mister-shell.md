@@ -19,7 +19,8 @@ SENSE is generated from the master clock and shared by audio and speech CPUs;
 physical oscillator phase, drift and CDC are not qualified.
 
 MiSTer reserves status bit 0 for `R[0]` reset, so menu options begin at status
-bit 1. The Orientation option defaults to Rotate CW for the cabinet's vertical
+bit 1. Each option range is unique and ordered by status index. There is one
+reset entry, `R[0]`, and the shell consumes `status[0]`. The Orientation option defaults to Rotate CW for the cabinet's vertical
 native raster; Rotate CCW and Native are also exposed. The `screen_rotate`
 framebuffer writer uses MiSTer's DDRAM interface, and its `video_rotated`
 state is fed back to HPS_IO so the OSD follows the game image. The MRA already
@@ -34,7 +35,10 @@ board's two DIP switch banks remain unaudited.
 
 The MiSTer pixel enable follows the scan position tick through horizontal and
 vertical blanking. It is delayed to match the existing five-master-edge RGB,
-display-enable and sync pipeline. The normalized 227 by 256 viewport is
+display-enable and sync pipeline. For rotation, `cvs_rotation_raster` uses the
+full 227-pixel raster and inserts a blank pixel-enable event after x=226; this
+gives `screen_rotate` a DE falling edge between rows and preserves its 256-row
+active field. Its configured rotated buffer is 256 by 227. The normalized 227 by 256 viewport is
 provisional, and the actual board PCK/PIXCLK phases and origins remain open.
 The 227:256 original aspect option represents this provisional viewport.
 
@@ -46,11 +50,15 @@ this connection does not constitute calibrated audio coverage.
 
 Joystick mapping follows MAME's active-low Hunchback input-port bits: P1
 Start/Coin are IN0 bits 0/3, P2 Start/Coin bits 1/2, and the P2/P1 jump inputs
-bits 4/5. MiSTer Start/Select/X/A are mapped from their standard joystick
-indices; direction inputs remain on IN1. The local-ROM coin regression checks
-that one P1 coin pulse changes system RAM byte 0x1c70 from 0 to 1, compared
-with an identical no-input run where it stays 0. This is frozen-ROM behavior
-coverage, not a physical input wiring reference. Physical decode, cocktail
+bits 4/5. `J1` action slots are explicitly aligned with MiSTer's virtual
+A/B/X/Y/Start/Select indices: Jump at A, Start 2 at X, Start 1 at Start, and
+Coin at Select. The `jn` defaults (`A,X,Start,Select`) and MRA button
+names/defaults use that same consumed order.
+Direction inputs remain on IN1. The local-ROM coin regression drives mapped
+`joystick_0[9]` through the shared HPS-to-CVS mapper, requires the actual CPU to
+sample IN0, and checks system RAM byte 0x1c70 changes from 0 to 1; an identical
+no-input run retains 0. This is frozen-ROM behavior coverage, not a physical
+input wiring reference. Physical decode, cocktail
 controls, DIP polarity/defaults and board switch wiring have not been
 independently audited. This shell does not establish a general gameplay,
 unchanged-ROM, MiSTer hardware or Quartus timing PASS.

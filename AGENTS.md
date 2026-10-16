@@ -229,3 +229,19 @@ explicit coverage gaps until separately verified. Build only through
 `tools/bdsm.sh build`; do not use a direct Quartus build or label an output an
 RBF candidate until the frozen complete regression, mutation campaign and
 Quartus timing/constraint gates all pass.
+
+For CONF_STR or joystick-label changes, audit the complete string: option bit
+ranges must be unique and ordered, status bit 0 must have exactly one `R[0]`
+reset action and match the RTL reset expression, and J1 action slots must match
+the fixed virtual A/B/X/Y/Start/Select indices consumed by `cvs_mister_input`.
+Keep MRA button names/defaults aligned with those slots. Run
+`hunchback.mister.shell_behavior` and retain duplicate-reset and misordered-J1
+regressions. Coin tests must drive the raw HPS joystick bit through the shared
+mapper and actual CPU/game RAM path; an internal CVS port pulse is downstream
+coverage only.
+
+For `screen_rotate` integration, preserve a blank CE/DE boundary between CVS
+rows while retaining every pixel in the full 227 by 256 active raster. Run
+the rotation dimension check inside `hunchback.mister.shell_behavior` against
+the actual MiSTer rotation module and require its measured rotated buffer
+dimensions to be 256 by 227.

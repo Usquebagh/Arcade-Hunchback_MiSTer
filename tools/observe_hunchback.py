@@ -27,7 +27,7 @@ def main():
     parser.add_argument('--cycles',type=int,default=300_000_000)
     parser.add_argument('--seed',type=int,default=1)
     parser.add_argument('--controls',action='store_true',help='Synthetic coin/start/right/jump input windows; see docs/rom-observation.md')
-    parser.add_argument('--credit-test',action='store_true',help='Pulse coin once and assert the running game increments its system-RAM credit byte')
+    parser.add_argument('--credit-test',action='store_true',help='Pulse mapped joystick_0[9] and assert the running game increments its system-RAM credit byte')
     parser.add_argument('--audio',action='store_true',help='Actual audio CPU/bus and raw 48k samples; nominal external 380 Hz SENSE, no calibrated mixing/speech/analog reference')
     args=parser.parse_args()
     if sys.platform!='linux':parser.error('Run in WSL/Linux with GHDL and Verilator')
@@ -87,14 +87,16 @@ def main():
         # Lexical keyword escape only; no substitutions to CPU logic or reset.
         cpu=work/'sgs2650.v';cpu.write_text(re.sub(r'\bint\b',lambda _: '\\int ',ran.stdout))
         metadata['synthesized_cpu_sha256']=hashlib.sha256(cpu.read_bytes()).hexdigest()
-        names=['cvs_machine','cvs_main','cvs_main_bus','cvs_main_io','cvs_main_memory','cvs_banked','cvs_memory',
+        names=['cvs_mister_input','cvs_machine','cvs_main','cvs_main_bus','cvs_main_io','cvs_main_memory','cvs_banked','cvs_memory',
                'cvs_sync_ram_1p','cvs_sync_ram_2p','cvs_sync_rom','cvs_clock',
                'cvs_scan','cvs_video_timing','cvs_vblank_irq','cvs_video_join','cvs_s2636_bank','cvs_s2636_objects','cvs_character_video']
-        top='cvs_av_machine' if args.audio else 'cvs_machine'
+        top='cvs_av_machine' if args.audio else 'cvs_hps_coin_machine'
         if args.audio:names += ['cvs_av_machine','cvs_audio_cpu','cvs_audio_bus','cvs_audio_samples']
+        machine_sources=[frozen/'rtl/machine'/f'{name}.sv' for name in names]
+        if not args.audio:machine_sources.append(frozen/'sim/bdsm/hps_coin_machine.sv')
         command=['verilator','--cc','--exe','--build','-j','4','--top-module',top,'-Wall','-Wno-fatal',
             '--x-initial','unique','--x-assign','unique','--Mdir',str(work/'obj'),'-CFLAGS','-O3 -std=c++17'+(' -DAUDIO_OBSERVE' if args.audio else ''),str(cpu),
-            *[str(frozen/'rtl/machine'/f'{name}.sv') for name in names],str(frozen/'sim/bdsm/observe_machine.cpp')]
+            *[str(path) for path in machine_sources],str(frozen/'sim/bdsm/observe_machine.cpp')]
         metadata['compile_command']=command
         with (output/'compile.log').open('w') as log:
             ran=subprocess.run(command,cwd=frozen,stdout=log,stderr=subprocess.STDOUT)
@@ -124,7 +126,7 @@ def main():
         if args.credit_test:
             passes=[json.loads(line[5:]) for line in lines if line.startswith('BDSM ')
                     and json.loads(line[5:]).get('status')=='PASS']
-            if not any(item.get('label')=='coin_increments_credit_ram' for item in passes):
+            if not any(item.get('label')=='hps_coin_to_credit_ram' for item in passes):
                 raise ValueError('Credit assertion did not execute; see run.log')
             metadata['credit_assertion']=passes[-1]
         metadata['event_logs']=[dict(name=p.name,sha256=hashlib.sha256(p.read_bytes()).hexdigest())
