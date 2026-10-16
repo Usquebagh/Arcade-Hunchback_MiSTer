@@ -355,5 +355,14 @@ board measurements. The focused `hunchback.cpu.bus` and RTL lint checks pass.
 The `bcfa_indirect_predicate_reversed` disposable mutation passes its untouched
 baseline and fails `bcfa_indirect_skips_fallthrough` at cycle 509 in both
 repeats (expected 40, observed 11). Other conditional absolute-indirect
-condition codes, target/page-boundary combinations, and physical bus timing
+condition selectors, target/page-boundary combinations, and physical bus timing
 remain open.
+
+BCTA `>` with positive condition code now also resolves an indirect pointer to
+0200; its fall-through marker stays untouched and the target records 44. This
+is the synthetic instruction condition rule `selected condition == PSL CC`,
+based on the pinned CPU model/manual, not a board measurement. CPU bus and lint
+pass. The `bcta_indirect_greater_uses_equality` mutation has a passing baseline
+and fails `bcta_indirect_greater_skips_fallthrough` at cycle 512 in both repeats
+(expected 40, observed 11). BCFA/BCTA other CC selectors, absolute-indirect
+page-boundary targets, and physical bus timing remain uncovered.
