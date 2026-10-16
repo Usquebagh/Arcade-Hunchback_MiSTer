@@ -1196,6 +1196,15 @@
       "reason": "Indirect BSFA must call through the pointer when its selected condition is false."
     },
     {
+      "id": "bsfa_indirect_non_taken_pushes_stack",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "              ELSE\n                iar_c<=page_inc(iar);\n                state_c<=sOPCODE;\n              END IF;\n\n            WHEN BSXA => -- Branch to sub indexed absolute unconditional",
+      "new": "              ELSE\n                pushsub_c<='1';\n                iar_c<=page_inc(iar);\n                state_c<=sOPCODE;\n              END IF;\n\n            WHEN BSXA => -- Branch to sub indexed absolute unconditional",
+      "failure_label": "bsfa_indirect_non_taken_stack",
+      "reason": "A non-taken absolute subroutine branch must not increment the return stack."
+    },
+    {
       "id": "bcfa_indirect_predicate_reversed",
       "check": "hunchback.cpu.bus",
       "file": "rtl/vendor/arcadia/sgs2650.vhd",

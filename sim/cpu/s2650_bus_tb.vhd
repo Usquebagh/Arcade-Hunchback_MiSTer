@@ -228,6 +228,18 @@ begin
     check(memory(16#1c38#)=x"22","bcta_indirect_greater_negative_fallthrough",16#22#,to_integer(memory(16#1c38#)));
     check(memory(16#1c39#)=x"40","bcta_indirect_greater_negative_skips_target",16#40#,to_integer(memory(16#1c39#)));
 
+    -- Non-taken BSFA '=' must neither enter its pointer nor increment the return stack.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#74#,16#ff#,16#04#,0,
+      16#bc#,16#b0#,16#30#,16#12#,16#cc#,16#1c#,16#42#,
+      16#04#,16#66#,16#cc#,16#1c#,16#43#,16#40#));
+    memory(16#30#):=x"02";memory(16#31#):=x"00";
+    program(16#200#,(16#05#,16#44#,16#cc#,16#1c#,16#44#,16#40#));
+    start;for n in 1 to 35 loop tick;end loop;
+    check(memory(16#1c42#)=x"80","bsfa_indirect_non_taken_stack",16#80#,to_integer(memory(16#1c42#)));
+    check(memory(16#1c43#)=x"66","bsfa_indirect_non_taken_fallthrough",16#66#,to_integer(memory(16#1c43#)));
+    check(memory(16#1c44#)=x"40","bsfa_indirect_non_taken_skips_target",16#40#,to_integer(memory(16#1c44#)));
+
     -- BSFA '<' with positive CC calls through its pointer, then returns to the caller.
     memory:=(others=>x"40");
     program(0,(16#75#,16#ff#,16#77#,16#0a#,16#04#,1,
@@ -252,7 +264,7 @@ begin
     memory(16#10#):=x"03";memory(16#11#):=x"00";
     memory(16#300#):=x"40";
     program(16#301#,(16#05#,16#7d#,16#cd#,16#1c#,16#99#,16#40#));
-    start;for n in 1 to 45 loop tick;end loop;
+    start;for n in 1 to 35 loop tick;end loop;
     check(memory(16#1c99#)=x"7d","bxa_indirect_indexed_target",16#7d#,to_integer(memory(16#1c99#)));
 
     -- Direct BSXA R3 calls through base+index and returns to the caller.
@@ -281,7 +293,7 @@ begin
     program(0,(16#75#,16#ff#,16#77#,16#0a#,16#18#,16#8a#,16#40#));
     memory(16#10#):=x"02";memory(16#11#):=x"00";
     program(16#200#,(16#05#,16#6b#,16#cd#,16#1c#,16#94#,16#40#));
-    start;for n in 1 to 55 loop tick;end loop;
+    start;for n in 1 to 40 loop tick;end loop;
     check(memory(16#1c94#)=x"6b","relative_indirect_target",16#6b#,to_integer(memory(16#1c94#)));
 
     -- Absolute BSTA indirect pushes the caller PC, resolves the pointer and returns.
@@ -290,7 +302,7 @@ begin
       16#05#,16#55#,16#cd#,16#1c#,16#96#,16#40#));
     memory(16#10#):=x"02";memory(16#11#):=x"00";
     program(16#200#,(16#05#,16#44#,16#cd#,16#1c#,16#95#,16#17#));
-    start;for n in 1 to 45 loop tick;end loop;
+    start;for n in 1 to 35 loop tick;end loop;
     check(memory(16#1c95#)=x"44","absolute_indirect_subroutine",16#44#,to_integer(memory(16#1c95#)));
     check(memory(16#1c96#)=x"55","absolute_indirect_return",16#55#,to_integer(memory(16#1c96#)));
 

@@ -398,3 +398,13 @@ board evidence. CPU bus and RTL lint pass. The
 observed 40). Other conditional indirect subroutine selectors, non-taken
 indirect-call return-stack effects, page-boundary targets and physical bus
 timing remain unqualified.
+
+A non-taken BSFA `=` with zero CC now checks both fall-through and return-stack
+state. It clears PSU, executes the false-branch form while equality is true,
+then reads PSU with SPSU; the expected `80` includes the active SENSE input on
+bit 7 and a zero stack pointer in bits 2:0. The pointer target remains
+untouched, and the caller writes 66. CPU bus and lint pass. The
+`bsfa_indirect_non_taken_pushes_stack` mutation injects a push on the non-taken
+path and fails `bsfa_indirect_non_taken_stack` at cycle 619 in both repeats
+(expected 80, observed 81). Other non-taken subroutine selectors and physical
+return-stack behavior remain unqualified.
