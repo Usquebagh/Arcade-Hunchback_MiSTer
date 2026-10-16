@@ -112,7 +112,8 @@ def main():
         if ran.returncode:
             emit('ERROR', reason='VHDL analysis/elaboration failed')
             return 2
-    command = ['ghdl', '-r', *options, top, '--assert-level=error', '--stop-time=20us']
+    stop_time = '30us' if args.mode == 'cpu_bus' else '20us'
+    command = ['ghdl', '-r', *options, top, '--assert-level=error', '--stop-time=' + stop_time]
     ran = subprocess.run(command, capture_output=True, text=True)
     print(ran.stdout, end=''); print(ran.stderr, end='', file=sys.stderr)
     events = [json.loads(line[5:]) for line in ran.stdout.splitlines() if line.startswith('BDSM ')]
@@ -126,8 +127,8 @@ def main():
         return 0
     events[-1]['runtime_warning_count'] = len(warnings)
     if args.mode == 'cpu_bus' and events[-1]['status'] == 'FAIL':
-        # The entire directed bench is <700 clocks; a 20us stop cap is 2000
-        # 10ns clocks. Neither unbounded traces nor live ROMs enter this harness.
+        # The directed bench is bounded; neither unbounded traces nor live ROMs
+        # enter this harness. The bus suite gets extra time for growing coverage.
         trace = (work/'failure.vcd').resolve()
         replay = subprocess.run(command + ['--vcd=' + str(trace)],capture_output=True,text=True)
         replay_events = [json.loads(line[5:]) for line in replay.stdout.splitlines() if line.startswith('BDSM ')]

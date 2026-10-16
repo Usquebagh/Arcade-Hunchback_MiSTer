@@ -177,6 +177,23 @@ begin
     start;for n in 1 to 55 loop tick;end loop;
     check(memory(16#1c97#)=x"7c","absolute_indirect_branch_target",16#7c#,to_integer(memory(16#1c97#)));
 
+    -- Direct BXA R3 uses its index after the absolute base address.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#07#,1,16#9f#,2,0,16#40#));
+    memory(16#200#):=x"40";
+    program(16#201#,(16#05#,16#6d#,16#cd#,16#1c#,16#98#,16#40#));
+    start;for n in 1 to 55 loop tick;end loop;
+    check(memory(16#1c98#)=x"6d","bxa_indexed_target",16#6d#,to_integer(memory(16#1c98#)));
+
+    -- BXA R3 indirect resolves the base pointer before adding the index.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#07#,1,16#9f#,16#80#,16#10#,16#40#));
+    memory(16#10#):=x"03";memory(16#11#):=x"00";
+    memory(16#300#):=x"40";
+    program(16#301#,(16#05#,16#7d#,16#cd#,16#1c#,16#99#,16#40#));
+    start;for n in 1 to 60 loop tick;end loop;
+    check(memory(16#1c99#)=x"7d","bxa_indirect_indexed_target",16#7d#,to_integer(memory(16#1c99#)));
+
     -- Relative BCTR indirect resolves a page-local pointer before fetching its target.
     memory:=(others=>x"40");
     program(0,(16#75#,16#ff#,16#77#,16#0a#,16#18#,16#8a#,16#40#));

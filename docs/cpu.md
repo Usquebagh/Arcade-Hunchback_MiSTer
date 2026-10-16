@@ -245,3 +245,15 @@ mutation advances the resolved control target by one byte and fails
 and fails `absolute_indirect_branch_target` at cycle 481 twice (expected 7C,
 observed 40). Other absolute-indirect condition variants, pointer-page boundary
 cases, full indexed-indirect combinations and hardware bus timing remain open.
+
+Direct and indirect BXA R3 indexing are now checked separately. The direct case
+uses base 0200 with R3=1 and must execute at 0201; the indirect case resolves
+pointer 0010/0011 to 0300, adds R3, and must execute at 0301. Expectations are
+synthetic CPU-bus behavior from the pinned MAME S2650 model and manufacturer
+instruction description, not board measurements. The focused bus baseline
+passes. `bxa_direct_index_ignored` fails `bxa_indexed_target` at cycle 539 in
+both repeats (expected 6D, observed 40); `bxa_indirect_index_ignored` fails
+`bxa_indirect_indexed_target` at cycle 602 in both repeats (expected 7D,
+observed 40). Both mutations are retained in the adapter. Indexed BXA is
+covered, while indexed BSXA, pointer-page boundaries, other indexed-indirect
+combinations and hardware bus timing remain open.

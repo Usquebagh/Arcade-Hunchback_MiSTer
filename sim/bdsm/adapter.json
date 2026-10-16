@@ -1007,6 +1007,24 @@
       "reason": "Absolute conditional branch ignores the indirect-address bit and branches to the pointer bytes."
     },
     {
+      "id": "bxa_direct_index_ignored",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "WHEN BXA => -- Branch indexed absolute, unconditional\n              IF rh(7)='1' THEN -- INDIRECT\n                state_c<=sINDIRECT;\n                ad_c <=rh(6 DOWNTO 0) & dr;\n                ph_c<=phINDIRECT;\n              ELSE\n                state_c<=sOPCODE;\n                iar_c<=(rh(6 DOWNTO 0) & dr) + rs_v; -- RS=R3 : Index\n                ad_c <=(rh(6 DOWNTO 0) & dr) + rs_v;",
+      "new": "WHEN BXA => -- Branch indexed absolute, unconditional\n              IF rh(7)='1' THEN -- INDIRECT\n                state_c<=sINDIRECT;\n                ad_c <=rh(6 DOWNTO 0) & dr;\n                ph_c<=phINDIRECT;\n              ELSE\n                state_c<=sOPCODE;\n                iar_c<=(rh(6 DOWNTO 0) & dr); -- RS=R3 : Index\n                ad_c <=(rh(6 DOWNTO 0) & dr);",
+      "failure_label": "bxa_indexed_target",
+      "reason": "Direct BXA must add the selected R3 index to its absolute base."
+    },
+    {
+      "id": "bxa_indirect_index_ignored",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "WHEN BXA |   -- Branch indexed absolute, unconditional\n                   BSXA => -- Branch to sub indexed absolute unconditional\n                state_c<=sOPCODE;\n                iar_c<=(rh(6 DOWNTO 0) & dr)+rs_v; -- RS=R3 : Index\n                ad_c <=(rh(6 DOWNTO 0) & dr)+rs_v;",
+      "new": "WHEN BXA |   -- Branch indexed absolute, unconditional\n                   BSXA => -- Branch to sub indexed absolute unconditional\n                state_c<=sOPCODE;\n                iar_c<=rh(6 DOWNTO 0) & dr; -- RS=R3 : Index\n                ad_c <=rh(6 DOWNTO 0) & dr;",
+      "failure_label": "bxa_indirect_indexed_target",
+      "reason": "Indirect BXA must add R3 after resolving the absolute pointer."
+    },
+    {
       "id": "inverted_cc_branch_match",
       "check": "hunchback.cpu.bus",
       "file": "rtl/vendor/arcadia/sgs2650.vhd",
