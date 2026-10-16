@@ -195,8 +195,10 @@ checks its taken target at 0010 after the relative operand wraps the page. This
 combines the documented false-condition predicate with the independently
 checked page-relative base. The focused bus baseline passes. Existing retained
 mutations separately reverse the BCFR predicate and remove relative page
-wrapping; neither is a dedicated combined-case mutation. Other conditional
-relative boundary combinations remain uncovered.
+wrapping. A dedicated `bcfr_relative_target_plus_one` mutation now adds one to
+relative conditional-branch displacement; it fails `bcfr_page_wrap_target` at
+cycle 843 in both repeats (expected 6C, observed 40). Other conditional relative
+boundary combinations remain uncovered.
 
 Focused checks after these bench-only changes passed `hunchback.cpu.bus`,
 `hunchback.cpu.alu`, `hunchback.cpu.edge_regressions`,

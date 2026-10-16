@@ -214,6 +214,14 @@ begin
     check(memory(16#1c24#)=x"40","bdra_zero_not_taken",16#40#,to_integer(memory(16#1c24#)));
     check(memory(16#1c26#)=x"66","bdra_nonzero_taken",16#66#,to_integer(memory(16#1c26#)));
 
+    -- A false '=' condition makes BCFR take across the 1FFF page boundary.
+    memory:=(others=>x"40");
+    program(0,(16#04#,1,16#1f#,16#1f#,16#fe#));
+    program(16#1ffe#,(16#98#,16));
+    program(16#10#,(16#05#,16#6c#,16#cd#,16#1c#,16#93#,16#40#));
+    start;for n in 1 to 45 loop tick;end loop;
+    check(memory(16#1c93#)=x"6c","bcfr_page_wrap_target",16#6c#,to_integer(memory(16#1c93#)));
+
     -- BIRR relative uses the same post-operand base and modulo register update.
     memory:=(others=>x"40");
     program(0,(16#75#,16#ff#,16#77#,16#0a#,16#04#,16#ff#,16#d8#,22,
@@ -319,14 +327,6 @@ begin
     program(16#10#,(16#05#,16#7b#,16#cd#,16#1c#,16#92#,16#40#));
     start;for n in 1 to 45 loop tick;end loop;
     check(memory(16#1c92#)=x"7b","bdrr_page_wrap_target",16#7b#,to_integer(memory(16#1c92#)));
-
-    -- A false '=' condition makes BCFR take across the 1FFF page boundary.
-    memory:=(others=>x"40");
-    program(0,(16#04#,1,16#1f#,16#1f#,16#fe#));
-    program(16#1ffe#,(16#98#,16));
-    program(16#10#,(16#05#,16#6c#,16#cd#,16#1c#,16#93#,16#40#));
-    start;for n in 1 to 45 loop tick;end loop;
-    check(memory(16#1c93#)=x"6c","bcfr_page_wrap_target",16#6c#,to_integer(memory(16#1c93#)));
 
     -- Eight active calls fill the complete three-bit hardware return stack.
     memory:=(others=>x"40");

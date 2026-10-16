@@ -980,6 +980,15 @@
       "reason": "Taken relative increment/decrement branches discard the signed page-relative offset."
     },
     {
+      "id": "bcfr_relative_target_plus_one",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "IF (ri(7 DOWNTO 6)=\"00\" AND cond_v) OR         -- BCTR\n                       (ri(7 DOWNTO 6)=\"10\" AND NOT cond_v) OR     -- BCFR\n                       (ri(7 DOWNTO 6)=\"01\" AND rs_v/=x\"00\") OR    -- BRN\n                       (ri(7 DOWNTO 6)=\"11\" AND rd_v/=x\"00\") THEN  -- BIDR\n                      ad_c <=page_add(page_inc(iar),sext(dr(6 DOWNTO 0),15));\n                      iar_c<=page_add(page_inc(iar),sext(dr(6 DOWNTO 0),15));",
+      "new": "IF (ri(7 DOWNTO 6)=\"00\" AND cond_v) OR         -- BCTR\n                       (ri(7 DOWNTO 6)=\"10\" AND NOT cond_v) OR     -- BCFR\n                       (ri(7 DOWNTO 6)=\"01\" AND rs_v/=x\"00\") OR    -- BRN\n                       (ri(7 DOWNTO 6)=\"11\" AND rd_v/=x\"00\") THEN  -- BIDR\n                      ad_c <=page_add(page_inc(iar),sext(dr(6 DOWNTO 0),15));\n                      iar_c<=page_add(page_inc(iar),sext(dr(6 DOWNTO 0),15)+1);",
+      "failure_label": "bcfr_page_wrap_target",
+      "reason": "Relative branch target adds one extra byte to the condition-branch displacement."
+    },
+    {
       "id": "inverted_cc_branch_match",
       "check": "hunchback.cpu.bus",
       "file": "rtl/vendor/arcadia/sgs2650.vhd",
