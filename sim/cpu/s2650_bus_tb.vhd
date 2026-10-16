@@ -169,6 +169,14 @@ begin
     check(io_writes=2,"io_write_count",2,io_writes);check(flag='1',"flag_pin",1,0);
     check(second_store-first_store=8,"instruction_cadence",8,second_store-first_store);
 
+    -- Absolute BCTA indirect reads the pointer before fetching the branch target.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#1c#,16#80#,16#10#,16#40#));
+    memory(16#10#):=x"02";memory(16#11#):=x"00";
+    program(16#200#,(16#05#,16#7c#,16#cd#,16#1c#,16#97#,16#40#));
+    start;for n in 1 to 55 loop tick;end loop;
+    check(memory(16#1c97#)=x"7c","absolute_indirect_branch_target",16#7c#,to_integer(memory(16#1c97#)));
+
     -- Relative BCTR indirect resolves a page-local pointer before fetching its target.
     memory:=(others=>x"40");
     program(0,(16#75#,16#ff#,16#77#,16#0a#,16#18#,16#8a#,16#40#));

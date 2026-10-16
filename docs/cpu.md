@@ -233,13 +233,15 @@ physical hardware.
 ## Indirect control-flow regressions, 2026-10-16
 
 The bus bench now verifies a relative BCTR indirect operand resolving through
-pointer bytes at 0010/0011 to target 0200, and an absolute BSTA indirect call
-through the same pointer followed by a RETC and a caller-resume signature. The
-expected pointer-byte order and target are synthetic S2650 bus scenarios based
-on the pinned MAME instruction behavior and manufacturer addressing description;
-they are not board measurements. The focused bus baseline passes. A disposable
-`indirect_control_target_plus_one` mutation advances the resolved control target
-by one byte and fails `relative_indirect_target` at cycle 481 twice (expected
-6B, observed 40). Absolute indirect non-subroutine branches, pointer-page
-boundary cases, full indexed-indirect combinations and hardware bus timing
-remain open.
+pointer bytes at 0010/0011 to target 0200, an absolute BCTA indirect branch to
+0200, and an absolute BSTA indirect call through the same pointer followed by a
+RETC and caller-resume signature. The expected pointer-byte order and target
+are synthetic S2650 bus scenarios based on the pinned MAME instruction behavior
+and manufacturer addressing description; they are not board measurements. The
+focused bus baseline passes. A disposable `indirect_control_target_plus_one`
+mutation advances the resolved control target by one byte and fails
+`relative_indirect_target` at cycle 481 twice (expected 6B, observed 40). The
+`absolute_indirect_branch_bypasses_pointer` mutation ignores the indirect bit
+and fails `absolute_indirect_branch_target` at cycle 481 twice (expected 7C,
+observed 40). Other absolute-indirect condition variants, pointer-page boundary
+cases, full indexed-indirect combinations and hardware bus timing remain open.

@@ -998,6 +998,15 @@
       "reason": "Indirect branch and subroutine targets advance one byte after pointer resolution."
     },
     {
+      "id": "absolute_indirect_branch_bypasses_pointer",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "                 (ri(7 DOWNTO 6)=\"11\" AND rd_v/=x\"00\") THEN  -- BIDA\n                iar_c<=rh(6 DOWNTO 0) & dr;\n                ad_c <=rh(6 DOWNTO 0) & dr;\n                IF rh(7)='1' THEN -- INDIRECT",
+      "new": "                 (ri(7 DOWNTO 6)=\"11\" AND rd_v/=x\"00\") THEN  -- BIDA\n                iar_c<=rh(6 DOWNTO 0) & dr;\n                ad_c <=rh(6 DOWNTO 0) & dr;\n                IF rh(7)='0' THEN -- INDIRECT",
+      "failure_label": "absolute_indirect_branch_target",
+      "reason": "Absolute conditional branch ignores the indirect-address bit and branches to the pointer bytes."
+    },
+    {
       "id": "inverted_cc_branch_match",
       "check": "hunchback.cpu.bus",
       "file": "rtl/vendor/arcadia/sgs2650.vhd",
