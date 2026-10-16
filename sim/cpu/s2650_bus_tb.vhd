@@ -13,6 +13,7 @@ architecture test of s2650_bus_tb is
   signal reset : std_logic := '1';
   signal reset_na : std_logic := '0';
   signal ack, irq, sense : std_logic := '0';
+  signal ivec : uv8 := x"30";
   signal ce : std_logic := '1';
   signal req, wr, mio, ene, dc, intack, flag : std_logic;
   signal ad : uv15;
@@ -22,7 +23,7 @@ begin
   cpu : entity work.sgs2650
     generic map(VER_B=>false)
     port map(req=>req,ack=>ack,ad=>ad,wr=>wr,dw=>dw,dr=>dr,mio=>mio,
-      ene=>ene,dc=>dc,ph=>ph,int=>irq,intack=>intack,ivec=>x"30",
+      ene=>ene,dc=>dc,ph=>ph,int=>irq,intack=>intack,ivec=>ivec,
       sense=>sense,flag=>flag,reset=>reset,ce=>ce,clk=>clk,reset_na=>reset_na);
   process
     type memory_type is array(0 to 32767) of uv8;
@@ -442,6 +443,20 @@ begin
     check(memory(16#1c02#)=x"66","rete_false_handler_path",16#66#,to_integer(memory(16#1c02#)));
     check(memory(16#1c01#)=x"22","rete_true_resume",16#22#,to_integer(memory(16#1c01#)));
     check(irq_acks=1,"rete_ack_count",1,irq_acks);
+
+    -- Indirect interrupt vector reads a page-zero pointer before handler entry.
+    memory:=(others=>x"40");io_writes:=0;irq_acks:=0;ivec<=x"b0";
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#40#,16#05#,16#22#,
+      16#cd#,16#1c#,16#a1#,16#40#));
+    memory(16#30#):=x"00";memory(16#31#):=x"50";
+    program(16#50#,(16#05#,16#d8#,16#cd#,16#1c#,16#a2#,16#37#));
+    start;for n in 1 to 50 loop tick;end loop;
+    check(memory(16#1ca1#)=x"40","indirect_vector_before_irq",16#40#,to_integer(memory(16#1ca1#)));
+    irq<='1';for n in 1 to 120 loop tick;end loop;
+    check(memory(16#1ca2#)=x"d8","interrupt_indirect_vector_handler",16#d8#,to_integer(memory(16#1ca2#)));
+    check(memory(16#1ca1#)=x"22","interrupt_indirect_vector_return",16#22#,to_integer(memory(16#1ca1#)));
+    check(irq_acks=1,"indirect_vector_ack_count",1,irq_acks);
+    ivec<=x"30";
 
     -- Relative branch wraps inside its current 8 KiB page, not into page 1.
     memory:=(others=>x"40");

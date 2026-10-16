@@ -112,7 +112,7 @@ def main():
         if ran.returncode:
             emit('ERROR', reason='VHDL analysis/elaboration failed')
             return 2
-    stop_time = '30us' if args.mode == 'cpu_bus' else '20us'
+    stop_time = '30us' if args.mode in ['cpu_bus', 'cpu_diagnostics'] else '20us'
     command = ['ghdl', '-r', *options, top, '--assert-level=error', '--stop-time=' + stop_time]
     ran = subprocess.run(command, capture_output=True, text=True)
     print(ran.stdout, end=''); print(ran.stderr, end='', file=sys.stderr)

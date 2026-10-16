@@ -811,9 +811,8 @@ BEGIN
           iar_c<="00"  & sext(ivec(6 DOWNTO 0),13);
           ad_c <="00"  & sext(ivec(6 DOWNTO 0),13);
           IF ivec(7)='1' THEN -- INDIRECT
-            -- <TESTER !>
-            iar_c<="00"  & sext(dr(6 DOWNTO 0),13);
-            ad_c <="00"  & sext(dr(6 DOWNTO 0),13);
+            iar_c<="00"  & sext(ivec(6 DOWNTO 0),13);
+            ad_c <="00"  & sext(ivec(6 DOWNTO 0),13);
             state_c<=sINDIRECT;
             ph_c<=phINDIRECT;
           ELSE

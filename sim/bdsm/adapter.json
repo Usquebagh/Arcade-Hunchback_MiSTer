@@ -1034,6 +1034,15 @@
       "reason": "Direct indexed subroutine calls must add R3 before saving and entering the target."
     },
     {
+      "id": "interrupt_indirect_vector_uses_stale_bus",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "IF ivec(7)='1' THEN -- INDIRECT\n            iar_c<=\"00\"  & sext(ivec(6 DOWNTO 0),13);\n            ad_c <=\"00\"  & sext(ivec(6 DOWNTO 0),13);",
+      "new": "IF ivec(7)='1' THEN -- INDIRECT\n            iar_c<=\"00\"  & sext(dr(6 DOWNTO 0),13);\n            ad_c <=\"00\"  & sext(dr(6 DOWNTO 0),13);",
+      "failure_label": "interrupt_indirect_vector_handler",
+      "reason": "Indirect interrupt entry must fetch its two-byte target pointer from the page-zero address carried by ivec, not stale CPU bus data."
+    },
+    {
       "id": "inverted_cc_branch_match",
       "check": "hunchback.cpu.bus",
       "file": "rtl/vendor/arcadia/sgs2650.vhd",

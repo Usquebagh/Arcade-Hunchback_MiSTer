@@ -268,3 +268,23 @@ measurements. A disposable `bsxa_direct_index_ignored` mutation fails
 its shared BXA/BSXA resolution logic is only mutation-checked at the earlier
 BXA assertion. Pointer-page boundaries, remaining indexed-indirect combinations
 and hardware bus timing remain open.
+
+## Indirect interrupt-vector regression, 2026-10-16
+
+The synthetic bus now exercises an indirect vector `B0`: its low seven bits
+select pointer bytes at page-zero addresses 0030/0031, which contain handler
+address 0050. The actual CPU must enter that handler, write its signature, and
+return after HALT to complete a second signature. This follows the Signetics
+Instructor 50 User's Guide description of the interrupt vector's indirect bit
+and the two-byte handler address stored at the selected vector location
+([interrupt mechanism](https://www.vintagecomputer.net/fjkraan/comp/divcomp/doc/SigneticsInstructor50UserGuide.pdf)); it is a processor-manual expectation, not a CVS board measurement.
+
+The initial regression exposed a defect: indirect entry formed 4030 from stale
+CPU bus data instead of reading the selected page-zero pointer. The CPU now
+starts its normal indirect fetch at the address carried by `ivec(6:0)`. The
+focused bus regression passes. The retained `interrupt_indirect_vector_uses_stale_bus`
+mutation restores the old source and fails `interrupt_indirect_vector_handler`
+at cycle 2404 in both repeats (expected D8, observed 40). Native CPU ALU, edge,
+cold-start, synthesis, runtime-diagnostic and lint checks pass; main-bus and
+connected-CPU checks pass as well. Other vector values, nested/edge-timed IRQ
+cases and physical interrupt-bus timing remain open.
