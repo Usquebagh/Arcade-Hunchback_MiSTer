@@ -112,7 +112,8 @@ nonzero taken cases against the pinned MAME instruction macros and CPU branch
 decode. Baseline passes; in disposable snapshots, making the BIDR predicate
 unconditionally true fails `bira_wrap_not_taken` at cycle 860 twice. The
 `bidr_zero_wrap_branches` mutation is retained in the adapter. Other relative
-cases, all registers/conditions and indirect branch forms remain uncovered.
+cases, all registers/conditions and absolute indirect branch forms remain
+uncovered.
 
 Relative BIRR/BDRR now also check the signed offset, zero-result non-taken path,
 nonzero-result taken path and skipped fall-through stores. The pinned MAME
@@ -228,3 +229,17 @@ yields WARNING/ERROR. Two disposable injections of a post-marker warning were
 rejected. It does not suppress simulator output. This validates the
 software-initialized synthetic CPU path; it does not qualify power-up state on
 physical hardware.
+
+## Indirect control-flow regressions, 2026-10-16
+
+The bus bench now verifies a relative BCTR indirect operand resolving through
+pointer bytes at 0010/0011 to target 0200, and an absolute BSTA indirect call
+through the same pointer followed by a RETC and a caller-resume signature. The
+expected pointer-byte order and target are synthetic S2650 bus scenarios based
+on the pinned MAME instruction behavior and manufacturer addressing description;
+they are not board measurements. The focused bus baseline passes. A disposable
+`indirect_control_target_plus_one` mutation advances the resolved control target
+by one byte and fails `relative_indirect_target` at cycle 481 twice (expected
+6B, observed 40). Absolute indirect non-subroutine branches, pointer-page
+boundary cases, full indexed-indirect combinations and hardware bus timing
+remain open.

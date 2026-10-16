@@ -169,6 +169,24 @@ begin
     check(io_writes=2,"io_write_count",2,io_writes);check(flag='1',"flag_pin",1,0);
     check(second_store-first_store=8,"instruction_cadence",8,second_store-first_store);
 
+    -- Relative BCTR indirect resolves a page-local pointer before fetching its target.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#18#,16#8a#,16#40#));
+    memory(16#10#):=x"02";memory(16#11#):=x"00";
+    program(16#200#,(16#05#,16#6b#,16#cd#,16#1c#,16#94#,16#40#));
+    start;for n in 1 to 55 loop tick;end loop;
+    check(memory(16#1c94#)=x"6b","relative_indirect_target",16#6b#,to_integer(memory(16#1c94#)));
+
+    -- Absolute BSTA indirect pushes the caller PC, resolves the pointer and returns.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#3c#,16#80#,16#10#,
+      16#05#,16#55#,16#cd#,16#1c#,16#96#,16#40#));
+    memory(16#10#):=x"02";memory(16#11#):=x"00";
+    program(16#200#,(16#05#,16#44#,16#cd#,16#1c#,16#95#,16#17#));
+    start;for n in 1 to 65 loop tick;end loop;
+    check(memory(16#1c95#)=x"44","absolute_indirect_subroutine",16#44#,to_integer(memory(16#1c95#)));
+    check(memory(16#1c96#)=x"55","absolute_indirect_return",16#55#,to_integer(memory(16#1c96#)));
+
     -- HALT wake, interrupt entry/RETE and resume at the next instruction.
     memory:=(others=>x"40");io_writes:=0;irq_acks:=0;
     program(0,(16#1f#,0,16#60#));

@@ -378,7 +378,7 @@
         "ghdl"
       ],
       "timeout": 120,
-      "expectation": "Synthetic register banks, addressing, one-, two- and eight-level return stacks, relative/page-wrap and absolute conditional branch/subroutine families, RETC/RETE interrupt handling, memory/IO, stall, sense/FLAG and HALT resume signatures match pinned instruction expectations.",
+      "expectation": "Synthetic register banks, addressing, indirect control flow and pointer resolution, one-, two- and eight-level return stacks, relative/page-wrap and absolute conditional branch/subroutine families, RETC/RETE interrupt handling, memory/IO, stall, sense/FLAG and HALT resume signatures match pinned instruction expectations.",
       "reference": "MAME S2650 and Signetics user manual; prime opcode bus contract and software initialization explicitly modeled."
     },
     {
@@ -987,6 +987,15 @@
       "new": "IF (ri(7 DOWNTO 6)=\"00\" AND cond_v) OR         -- BCTR\n                       (ri(7 DOWNTO 6)=\"10\" AND NOT cond_v) OR     -- BCFR\n                       (ri(7 DOWNTO 6)=\"01\" AND rs_v/=x\"00\") OR    -- BRN\n                       (ri(7 DOWNTO 6)=\"11\" AND rd_v/=x\"00\") THEN  -- BIDR\n                      ad_c <=page_add(page_inc(iar),sext(dr(6 DOWNTO 0),15));\n                      iar_c<=page_add(page_inc(iar),sext(dr(6 DOWNTO 0),15)+1);",
       "failure_label": "bcfr_page_wrap_target",
       "reason": "Relative branch target adds one extra byte to the condition-branch displacement."
+    },
+    {
+      "id": "indirect_control_target_plus_one",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "              WHEN BCTF |  -- Branch on condition True/False, Absolute\n                   BRN  |  -- Branch on register non-zero, Absolute\n                   BIDR |  -- Branch on Inc / Dec Register, Absolute\n                   BSTF |  -- Branch to sub on condition True/False Relative\n                   BSN  => -- Branch to sub on register non-zero, Relative\n                state_c<=sOPCODE;\n                iar_c<=rh(6 DOWNTO 0) & dr;\n                ad_c <=rh(6 DOWNTO 0) & dr;",
+      "new": "              WHEN BCTF |  -- Branch on condition True/False, Absolute\n                   BRN  |  -- Branch on register non-zero, Absolute\n                   BIDR |  -- Branch on Inc / Dec Register, Absolute\n                   BSTF |  -- Branch to sub on condition True/False Relative\n                   BSN  => -- Branch to sub on register non-zero, Relative\n                state_c<=sOPCODE;\n                iar_c<=(rh(6 DOWNTO 0) & dr)+to_unsigned(1,15);\n                ad_c <=(rh(6 DOWNTO 0) & dr)+to_unsigned(1,15);",
+      "failure_label": "relative_indirect_target",
+      "reason": "Indirect branch and subroutine targets advance one byte after pointer resolution."
     },
     {
       "id": "inverted_cc_branch_match",
