@@ -8,7 +8,7 @@ module mister_shell_tb;
     wire uart_cts=0,uart_rxd=0,uart_dsr=0,osd_status=0;
     wire [6:0] user_in=0;
     wire fb_vbl=0,fb_ll=0;
-    emu dut(.CLK_50M(clk_50m),.RESET(reset),.HPS_BUS(hps_bus),
+    emu #(.DIAGNOSTIC_PROBES(1'b1)) dut(.CLK_50M(clk_50m),.RESET(reset),.HPS_BUS(hps_bus),
         .HDMI_WIDTH(hdmi_width),.HDMI_HEIGHT(hdmi_height),.CLK_AUDIO(clk_audio),
         .SD_MISO(sd_miso),.SD_CD(sd_cd),.DDRAM_BUSY(ddram_busy),
         .DDRAM_DOUT(ddram_dout),.DDRAM_DOUT_READY(ddram_dout_ready),
@@ -36,6 +36,16 @@ module mister_shell_tb;
 
     task automatic clocks(input integer count);
         repeat(count)begin @(posedge clk_50m);#1;end
+    endtask
+
+    task automatic check_input(input [31:0] player0,input [31:0] player1,
+                               input [7:0] expected_in0,input [7:0] expected_in1,
+                               input [255:0] label_text);
+        begin
+            joy0=player0;joy1=player1;#1;
+            if(dut.in0!==expected_in0)fail(label_text,expected_in0,dut.in0);
+            if(dut.in1!==expected_in1)fail(label_text,expected_in1,dut.in1);
+        end
     endtask
 
     initial begin
@@ -73,6 +83,35 @@ module mister_shell_tb;
         menu_status=0;menu_buttons=0;joy0=0;joy1=0;#1;
         if(dut.in0!==8'hff)fail("joystick_idle_in0",8'hff,dut.in0);
         if(dut.in1!==8'hff)fail("joystick_idle_in1",8'hff,dut.in1);
+        for(integer input_bit=0;input_bit<8;input_bit=input_bit+1)begin
+            if(dut.in0[input_bit]!==1'b1)fail("joystick_idle_each_in0_bit",1,dut.in0[input_bit]);
+            if(dut.in1[input_bit]!==1'b1)fail("joystick_idle_each_in1_bit",1,dut.in1[input_bit]);
+        end
+        if(dut.diagnostic_video_probes.diag_credit1!==1'b0 ||
+           dut.diagnostic_video_probes.diag_credit2!==1'b0)
+            fail("diagnostic_coin_idle",0,
+                 {dut.diagnostic_video_probes.diag_credit1,dut.diagnostic_video_probes.diag_credit2});
+        check_input(32'b1<<4,0,8'hdf,8'hff,"joystick_jump_active_low");
+        check_input(0,32'b1<<4,8'hef,8'hff,"joystick_jump2_active_low");
+        check_input(32'b1<<9,0,8'hf7,8'hff,"joystick_coin1_active_low");
+        check_input(0,32'b1<<9,8'hfb,8'hff,"joystick_coin2_active_low");
+        check_input(32'b1<<6,0,8'hfd,8'hff,"joystick_start1_active_low");
+        check_input(32'b1<<8,0,8'hfe,8'hff,"joystick_start2_active_low");
+        check_input(32'b1<<2,0,8'hff,8'hdf,"joystick_p1_left_active_low");
+        check_input(32'b1<<3,0,8'hff,8'hef,"joystick_p1_right_active_low");
+        check_input(0,32'b1<<2,8'hff,8'hf7,"joystick_p2_left_active_low");
+        check_input(0,32'b1<<3,8'hff,8'hfb,"joystick_p2_right_active_low");
+        // Reset the fixture between controls, then prove status remains visible
+        // even if a coin bit is held; the diagnostic priority is intentional.
+        joy0=(32'b1<<9);joy1=0;menu_status=0;#1;
+        if(dut.diagnostic_green!==8'hff)fail("diagnostic_coin1_pressed",8'hff,dut.diagnostic_green);
+        menu_status[14]=1;#1;
+        if({dut.diagnostic_red,dut.diagnostic_green,dut.diagnostic_blue}!==24'hff0000)
+            fail("diagnostic_status_priority",24'hff0000,
+                 {dut.diagnostic_red,dut.diagnostic_green,dut.diagnostic_blue});
+        menu_status=0;joy0=0;joy1=(32'b1<<9);#1;
+        if(dut.diagnostic_blue!==8'hff)fail("diagnostic_coin2_pressed",8'hff,dut.diagnostic_blue);
+        joy1=0;
         if(dut.video_rotated!==1'b1 || dut.rotate_ccw!==1'b0 || dut.no_rotate!==1'b0)
             fail("default_rotation_clockwise",1,{dut.video_rotated,dut.rotate_ccw,dut.no_rotate});
         if(dut.hps_io.video_rotated!==dut.video_rotated)

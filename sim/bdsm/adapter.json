@@ -2377,11 +2377,11 @@
     {
       "id": "mister_shell_joystick_polarity",
       "check": "hunchback.mister.shell_behavior",
-      "file": "Arcade-Hunchback.sv",
-      "old": "~joy0[9]",
-      "new": "joy0[9]",
+      "file": "rtl/machine/cvs_mister_input.sv",
+      "old": "~joystick_0[9]",
+      "new": "joystick_0[9]",
       "failure_label": "joystick_idle_in0",
-      "reason": "MAME-compatible active-low player-one coin mapping must preserve its documented polarity."
+      "reason": "MiSTer idle-high CVS matrix lines require inversion of the active-high HPS coin bit."
     },
     {
       "id": "mister_shell_dsw_port_swap",

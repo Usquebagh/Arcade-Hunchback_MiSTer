@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Private MiSTer shell integration; board clocks, input wiring and analog mix remain provisional.
-module emu (
+module emu #(
+    parameter DIAGNOSTIC_PROBES = 1'b0
+) (
     `include "sys/emu_ports.vh"
 );
     assign ADC_BUS='Z;
@@ -36,7 +38,7 @@ module emu (
         "O[10],Registration,On,Off;",
         "O[11],Registration length,3,10;",
         "O[13:12],Orientation,Rotate CW,Rotate CCW,Native;",
-        "O[14],HPS Status Probe,Normal,Red;",
+        DIAGNOSTIC_PROBES ? "O[14],HPS Status Probe,Normal,Red;" : "",
         "O[122:121],Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
         "-;",
         // J1 positions are MiSTer virtual buttons [4..9]: A,B,X,Y,Start,Select.
@@ -97,31 +99,37 @@ module emu (
     wire [7:0] h_count;
     wire [8:0] v_count;
 
-    // Hardware-only boundary probe: these HPS_IO outputs bypass the game and
-    // force unmistakable colors at the video input. Hold Credit 1/2 to select
-    // green/blue; select HPS Status Probe=Red for status[14]; Reset is white.
-    reg [26:0] reset_probe_hold = 27'd0;
-    always @(posedge clk_sys) begin
-        if (!pll_locked) reset_probe_hold <= 27'd0;
-        else if (status[0]) reset_probe_hold <= 27'd100_000_000;
-        else if (reset_probe_hold != 0) reset_probe_hold <= reset_probe_hold - 27'd1;
-    end
-    wire diag_reset = status[0] || (reset_probe_hold != 0);
-    wire diag_status = status[14];
-    wire diag_credit1 = ~joy0[9];
-    wire diag_credit2 = ~joy1[9];
-    assign diagnostic_red = diag_reset ? 8'hff :
-                            diag_status ? 8'hff :
-                            diag_credit1 ? 8'h00 :
-                            diag_credit2 ? 8'h00 : red;
-    assign diagnostic_green = diag_reset ? 8'hff :
-                              diag_status ? 8'h00 :
-                              diag_credit1 ? 8'hff :
-                              diag_credit2 ? 8'h00 : green;
-    assign diagnostic_blue = diag_reset ? 8'hff :
-                             diag_status ? 8'h00 :
-                             diag_credit1 ? 8'h00 :
-                             diag_credit2 ? 8'hff : blue;
+    // Optional HPS-boundary video probes for shell diagnostics. MiSTer joystick
+    // bits are active-high; cvs_mister_input converts them to active-low CVS
+    // matrix levels. Give status/reset priority so a held button cannot hide them.
+    generate if (DIAGNOSTIC_PROBES) begin : diagnostic_video_probes
+        reg [26:0] reset_probe_hold = 27'd0;
+        always @(posedge clk_sys) begin
+            if (!pll_locked) reset_probe_hold <= 27'd0;
+            else if (status[0]) reset_probe_hold <= 27'd100_000_000;
+            else if (reset_probe_hold != 0) reset_probe_hold <= reset_probe_hold - 27'd1;
+        end
+        wire diag_reset = status[0] || (reset_probe_hold != 0);
+        wire diag_status = status[14];
+        wire diag_credit1 = joy0[9];
+        wire diag_credit2 = joy1[9];
+        assign diagnostic_red = diag_reset ? 8'hff :
+                                diag_status ? 8'hff :
+                                diag_credit1 ? 8'h00 :
+                                diag_credit2 ? 8'h00 : red;
+        assign diagnostic_green = diag_reset ? 8'hff :
+                                  diag_status ? 8'h00 :
+                                  diag_credit1 ? 8'hff :
+                                  diag_credit2 ? 8'h00 : green;
+        assign diagnostic_blue = diag_reset ? 8'hff :
+                                 diag_status ? 8'h00 :
+                                 diag_credit1 ? 8'h00 :
+                                 diag_credit2 ? 8'hff : blue;
+    end else begin : normal_video
+        assign diagnostic_red = red;
+        assign diagnostic_green = green;
+        assign diagnostic_blue = blue;
+    end endgenerate
     wire [15:0] speech_bit_address;
     wire speech_sample_tick,speech_sample_valid,speech_protocol_error,speech_talk_status;
     wire signed [15:0] pcm8,pcm4,speech_pcm;
