@@ -1025,6 +1025,15 @@
       "reason": "Indirect BXA must add R3 after resolving the absolute pointer."
     },
     {
+      "id": "bsxa_direct_index_ignored",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "WHEN BSXA => -- Branch to sub indexed absolute unconditional\n              pushsub_c<='1';\n              IF rh(7)='1' THEN -- INDIRECT\n                state_c<=sINDIRECT;\n                ad_c<=rh(6 DOWNTO 0) & dr;\n                ph_c<=phINDIRECT;\n              ELSE\n                iar_c<=(rh(6 DOWNTO 0) & dr)+rs_v;\n                ad_c <=(rh(6 DOWNTO 0) & dr)+rs_v;",
+      "new": "WHEN BSXA => -- Branch to sub indexed absolute unconditional\n              pushsub_c<='1';\n              IF rh(7)='1' THEN -- INDIRECT\n                state_c<=sINDIRECT;\n                ad_c<=rh(6 DOWNTO 0) & dr;\n                ph_c<=phINDIRECT;\n              ELSE\n                iar_c<=rh(6 DOWNTO 0) & dr;\n                ad_c <=rh(6 DOWNTO 0) & dr;",
+      "failure_label": "bsxa_indexed_subroutine",
+      "reason": "Direct indexed subroutine calls must add R3 before saving and entering the target."
+    },
+    {
       "id": "inverted_cc_branch_match",
       "check": "hunchback.cpu.bus",
       "file": "rtl/vendor/arcadia/sgs2650.vhd",

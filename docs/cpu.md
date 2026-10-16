@@ -255,5 +255,16 @@ passes. `bxa_direct_index_ignored` fails `bxa_indexed_target` at cycle 539 in
 both repeats (expected 6D, observed 40); `bxa_indirect_index_ignored` fails
 `bxa_indirect_indexed_target` at cycle 602 in both repeats (expected 7D,
 observed 40). Both mutations are retained in the adapter. Indexed BXA is
-covered, while indexed BSXA, pointer-page boundaries, other indexed-indirect
-combinations and hardware bus timing remain open.
+covered; pointer-page boundaries, other indexed-indirect combinations and
+hardware bus timing remain open.
+
+Direct and indirect indexed BSXA calls are now checked through both the
+subroutine target and the caller's return signature. The direct call resolves
+0400+R3; the indirect call resolves pointer 0010/0011 to 0400, then adds R3.
+These are synthetic MAME/manual-compatible CPU expectations, not board
+measurements. A disposable `bsxa_direct_index_ignored` mutation fails
+`bsxa_indexed_subroutine` at cycle 675 in both repeats (expected A6, observed
+40). It is retained in the adapter. The indirect call/return path passes, but
+its shared BXA/BSXA resolution logic is only mutation-checked at the earlier
+BXA assertion. Pointer-page boundaries, remaining indexed-indirect combinations
+and hardware bus timing remain open.

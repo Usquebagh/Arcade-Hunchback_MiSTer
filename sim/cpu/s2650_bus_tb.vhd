@@ -194,6 +194,27 @@ begin
     start;for n in 1 to 60 loop tick;end loop;
     check(memory(16#1c99#)=x"7d","bxa_indirect_indexed_target",16#7d#,to_integer(memory(16#1c99#)));
 
+    -- Direct BSXA R3 calls through base+index and returns to the caller.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#07#,1,16#bf#,4,0,
+      16#05#,16#55#,16#cd#,16#1c#,16#9b#,16#40#));
+    memory(16#400#):=x"40";
+    program(16#401#,(16#05#,16#a6#,16#cd#,16#1c#,16#9a#,16#17#));
+    start;for n in 1 to 70 loop tick;end loop;
+    check(memory(16#1c9a#)=x"a6","bsxa_indexed_subroutine",16#a6#,to_integer(memory(16#1c9a#)));
+    check(memory(16#1c9b#)=x"55","bsxa_indexed_return",16#55#,to_integer(memory(16#1c9b#)));
+
+    -- Indirect BSXA resolves the pointer, adds R3 and preserves the return PC.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#07#,1,16#bf#,16#80#,16#10#,
+      16#05#,16#66#,16#cd#,16#1c#,16#9d#,16#40#));
+    memory(16#10#):=x"04";memory(16#11#):=x"00";
+    memory(16#400#):=x"40";
+    program(16#401#,(16#05#,16#b7#,16#cd#,16#1c#,16#9c#,16#17#));
+    start;for n in 1 to 75 loop tick;end loop;
+    check(memory(16#1c9c#)=x"b7","bsxa_indirect_indexed_subroutine",16#b7#,to_integer(memory(16#1c9c#)));
+    check(memory(16#1c9d#)=x"66","bsxa_indirect_indexed_return",16#66#,to_integer(memory(16#1c9d#)));
+
     -- Relative BCTR indirect resolves a page-local pointer before fetching its target.
     memory:=(others=>x"40");
     program(0,(16#75#,16#ff#,16#77#,16#0a#,16#18#,16#8a#,16#40#));
