@@ -288,3 +288,17 @@ at cycle 2404 in both repeats (expected D8, observed 40). Native CPU ALU, edge,
 cold-start, synthesis, runtime-diagnostic and lint checks pass; main-bus and
 connected-CPU checks pass as well. Other vector values, nested/edge-timed IRQ
 cases and physical interrupt-bus timing remain open.
+
+## Indirect pointer page-wrap regression, 2026-10-16
+
+The actual CPU now resolves an absolute indirect branch whose two-byte pointer
+straddles the end of an 8 KiB page: the high byte is read from 1FFF and the low
+byte from 0000, producing target 0200 and the expected store signature. This
+is a synthetic S2650 addressing expectation based on the pinned MAME behavior
+and the manufacturer page-addressing description; it is not a board timing
+measurement. The focused CPU bus baseline and RTL lint pass. A disposable
+`indirect_pointer_second_byte_leaks_page` mutant replaces page-aware pointer
+increment with linear increment and fails
+`absolute_indirect_pointer_page_wrap` at cycle 2515 in both repeats (expected
+7C, observed 40). Other pointer/index combinations and hardware bus timing
+remain open.

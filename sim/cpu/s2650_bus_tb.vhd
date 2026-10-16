@@ -464,6 +464,17 @@ begin
     program(16#1ffb#,(16#75#,16#ff#,16#1b#,3));
     branch_armed:=true;start;for n in 1 to 25 loop tick;end loop;
     check(branch_seen,"relative_branch_progress",1,0);
+
+    -- The second byte of an absolute indirect pointer wraps within its 8 KiB page.
+    -- Start at 1F80, read the pointer high byte at 1FFF and its low byte at 0000.
+    memory:=(others=>x"40");
+    program(0,(16#00#,16#1c#,16#1f#,16#80#));
+    program(16#1f80#,(16#75#,16#ff#,16#77#,16#0a#,16#1c#,16#9f#,16#ff#));
+    memory(16#1fff#):=x"02";
+    program(16#200#,(16#05#,16#7c#,16#cd#,16#1c#,16#97#,16#40#));
+    start;for n in 1 to 80 loop tick;end loop;
+    check(memory(16#1c97#)=x"7c","absolute_indirect_pointer_page_wrap",16#7c#,to_integer(memory(16#1c97#)));
+
     write(line_out,string'("BDSM {""status"":""PASS"",""observed"":""Synthetic CPU register/status/addressing/bus/IO/nested returns/conditional return/relative and absolute branch scenarios/HALT interrupt""}"));
     writeline(output,line_out);stop(0);wait;
   end process;

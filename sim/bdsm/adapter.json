@@ -378,7 +378,7 @@
         "ghdl"
       ],
       "timeout": 120,
-      "expectation": "Synthetic register banks, addressing, indirect control flow and pointer resolution, one-, two- and eight-level return stacks, relative/page-wrap and absolute conditional branch/subroutine families, RETC/RETE interrupt handling, memory/IO, stall, sense/FLAG and HALT resume signatures match pinned instruction expectations.",
+      "expectation": "Synthetic register banks, addressing, indirect control flow and pointer resolution including second-byte page wrap, one-, two- and eight-level return stacks, relative/page-wrap and absolute conditional branch/subroutine families, RETC/RETE interrupt handling, memory/IO, stall, sense/FLAG and HALT resume signatures match pinned instruction expectations.",
       "reference": "MAME S2650 and Signetics user manual; prime opcode bus contract and software initialization explicitly modeled."
     },
     {
@@ -996,6 +996,15 @@
       "new": "              WHEN BCTF |  -- Branch on condition True/False, Absolute\n                   BRN  |  -- Branch on register non-zero, Absolute\n                   BIDR |  -- Branch on Inc / Dec Register, Absolute\n                   BSTF |  -- Branch to sub on condition True/False Relative\n                   BSN  => -- Branch to sub on register non-zero, Relative\n                state_c<=sOPCODE;\n                iar_c<=(rh(6 DOWNTO 0) & dr)+to_unsigned(1,15);\n                ad_c <=(rh(6 DOWNTO 0) & dr)+to_unsigned(1,15);",
       "failure_label": "relative_indirect_target",
       "reason": "Indirect branch and subroutine targets advance one byte after pointer resolution."
+    },
+    {
+      "id": "indirect_pointer_second_byte_leaks_page",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "WHEN sINDIRECT  =>\n          state_c<=sINDIRECT2;\n          ad_c<=page_inc(ad_i);\n          rh_c<=dr;",
+      "new": "WHEN sINDIRECT  =>\n          state_c<=sINDIRECT2;\n          ad_c<=ad_i+to_unsigned(1,15);\n          rh_c<=dr;",
+      "failure_label": "absolute_indirect_pointer_page_wrap",
+      "reason": "The second byte of an indirect pointer must wrap within its current 8 KiB page."
     },
     {
       "id": "absolute_indirect_branch_bypasses_pointer",
