@@ -312,5 +312,16 @@ instruction expectation based on the pinned MAME behavior and manufacturer
 addressing description, not a board measurement. The focused CPU bus test and
 RTL lint pass. A disposable `indirect_loda_ignores_index` mutant removes the
 post-pointer index addition and fails `absolute_indirect_indexed_load` at cycle
-947 in both repeats (expected 6D, observed 40). Pre-increment and
-pre-decrement indirect data modes and their page boundaries remain uncovered.
+947 in both repeats (expected 6D, observed 40). That mutant covers the mode-3
+indexed case; pre-increment and pre-decrement are checked separately below.
+
+Indirect LODA pre-increment and pre-decrement cases now also verify the
+effective data address and updated R1 value: starting at 1, pre-increment reads
+0302 and leaves R1=2; pre-decrement reads 0300 and leaves R1=0. The CPU bus
+baseline and lint pass. `indirect_loda_preincrement_uses_old_index` substitutes
+the old index for the incremented value and fails
+`absolute_indirect_preincrement_load` at cycle 1025 in both repeats (expected
+6E, observed 40). `indirect_loda_predecrement_uses_old_index` fails
+`absolute_indirect_predecrement_load` at cycle 1103 in both repeats (expected
+7B, observed 40). The distinct pointer-wrap cases for these data-access modes
+remain uncovered.

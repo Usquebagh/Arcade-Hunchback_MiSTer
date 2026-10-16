@@ -242,6 +242,24 @@ begin
     start;for n in 1 to 65 loop tick;end loop;
     check(memory(16#1c9e#)=x"6d","absolute_indirect_indexed_load",16#6d#,to_integer(memory(16#1c9e#)));
 
+    -- Indirect pre-increment indexes 0300 with updated R1=2 and retains it.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#05#,1,16#0d#,16#a0#,16#10#,
+      16#cc#,16#1c#,16#9f#,16#cd#,16#1c#,16#a1#,16#40#));
+    memory(16#10#):=x"03";memory(16#11#):=x"00";memory(16#302#):=x"6e";
+    start;for n in 1 to 75 loop tick;end loop;
+    check(memory(16#1c9f#)=x"6e","absolute_indirect_preincrement_load",16#6e#,to_integer(memory(16#1c9f#)));
+    check(memory(16#1ca1#)=x"02","absolute_indirect_preincrement_register",2,to_integer(memory(16#1ca1#)));
+
+    -- Indirect pre-decrement indexes 0300 with updated R1=0 and retains it.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#05#,1,16#0d#,16#c0#,16#10#,
+      16#cc#,16#1c#,16#a0#,16#cd#,16#1c#,16#a2#,16#40#));
+    memory(16#10#):=x"03";memory(16#11#):=x"00";memory(16#300#):=x"7b";
+    start;for n in 1 to 75 loop tick;end loop;
+    check(memory(16#1ca0#)=x"7b","absolute_indirect_predecrement_load",16#7b#,to_integer(memory(16#1ca0#)));
+    check(memory(16#1ca2#)=x"00","absolute_indirect_predecrement_register",0,to_integer(memory(16#1ca2#)));
+
     -- HALT wake, interrupt entry/RETE and resume at the next instruction.
     memory:=(others=>x"40");io_writes:=0;irq_acks:=0;
     program(0,(16#1f#,0,16#60#));
