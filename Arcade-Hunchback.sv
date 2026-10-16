@@ -36,6 +36,7 @@ module emu (
         "O[10],Registration,On,Off;",
         "O[11],Registration length,3,10;",
         "O[13:12],Orientation,Rotate CW,Rotate CCW,Native;",
+        "O[14],HPS Status Probe,Normal,Red;",
         "O[122:121],Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
         "-;",
         // J1 positions are MiSTer virtual buttons [4..9]: A,B,X,Y,Start,Select.
@@ -86,6 +87,7 @@ module emu (
 
     wire pixel_valid,pixel_ce_all,display_enable;
     wire [7:0] out_x,out_y,red,green,blue,audio_command;
+    wire [7:0] diagnostic_red,diagnostic_green,diagnostic_blue;
     wire [2:0] raw_pixel,pvi_irq;
     wire [3:0] palette_index,dac4,discrete;
     wire bullet_present,background_collision,hsync_n,vsync_n;
@@ -94,6 +96,32 @@ module emu (
     wire [7:0] dac8;
     wire [7:0] h_count;
     wire [8:0] v_count;
+
+    // Hardware-only boundary probe: these HPS_IO outputs bypass the game and
+    // force unmistakable colors at the video input. Hold Credit 1/2 to select
+    // green/blue; select HPS Status Probe=Red for status[14]; Reset is white.
+    reg [26:0] reset_probe_hold = 27'd0;
+    always @(posedge clk_sys) begin
+        if (!pll_locked) reset_probe_hold <= 27'd0;
+        else if (status[0]) reset_probe_hold <= 27'd100_000_000;
+        else if (reset_probe_hold != 0) reset_probe_hold <= reset_probe_hold - 27'd1;
+    end
+    wire diag_reset = status[0] || (reset_probe_hold != 0);
+    wire diag_status = status[14];
+    wire diag_credit1 = ~joy0[9];
+    wire diag_credit2 = ~joy1[9];
+    assign diagnostic_red = diag_reset ? 8'hff :
+                            diag_status ? 8'hff :
+                            diag_credit1 ? 8'h00 :
+                            diag_credit2 ? 8'h00 : red;
+    assign diagnostic_green = diag_reset ? 8'hff :
+                              diag_status ? 8'h00 :
+                              diag_credit1 ? 8'hff :
+                              diag_credit2 ? 8'h00 : green;
+    assign diagnostic_blue = diag_reset ? 8'hff :
+                             diag_status ? 8'h00 :
+                             diag_credit1 ? 8'h00 :
+                             diag_credit2 ? 8'hff : blue;
     wire [15:0] speech_bit_address;
     wire speech_sample_tick,speech_sample_valid,speech_protocol_error,speech_talk_status;
     wire signed [15:0] pcm8,pcm4,speech_pcm;
@@ -134,7 +162,8 @@ module emu (
         .rotate_pixel_ce(rotate_pixel_ce),.rotate_de(rotate_de));
     screen_rotate video_rotation (
         .CLK_VIDEO(CLK_VIDEO),.CE_PIXEL(rotate_pixel_ce),
-        .VGA_R(red),.VGA_G(green),.VGA_B(blue),.VGA_HS(hsync_n),.VGA_VS(vsync_n),.VGA_DE(rotate_de),
+        .VGA_R(diagnostic_red),.VGA_G(diagnostic_green),.VGA_B(diagnostic_blue),
+        .VGA_HS(hsync_n),.VGA_VS(vsync_n),.VGA_DE(rotate_de),
         .rotate_ccw(rotate_ccw),.no_rotate(no_rotate),.flip(1'b0),.video_rotated(video_rotated),
         .FB_EN(fb_en),.FB_FORMAT(fb_format),.FB_WIDTH(fb_width),.FB_HEIGHT(fb_height),
         .FB_BASE(fb_base),.FB_STRIDE(fb_stride),.FB_VBL(FB_VBL),.FB_LL(FB_LL),
@@ -151,9 +180,9 @@ module emu (
     assign FB_FORCE_BLANK=1'b0;
     assign VIDEO_ARX=!ar ? (video_rotated ? 13'd256 : 13'd227) : ar==2'd1 ? 13'd0 : ar==2'd2 ? 13'd1 : 13'd2;
     assign VIDEO_ARY=!ar ? (video_rotated ? 13'd227 : 13'd256) : ar==2'd1 ? 13'd0 : 13'd0;
-    assign VGA_R=red;
-    assign VGA_G=green;
-    assign VGA_B=blue;
+    assign VGA_R=diagnostic_red;
+    assign VGA_G=diagnostic_green;
+    assign VGA_B=diagnostic_blue;
     assign VGA_HS=hsync_n;
     assign VGA_VS=vsync_n;
     assign VGA_DE=display_enable;
