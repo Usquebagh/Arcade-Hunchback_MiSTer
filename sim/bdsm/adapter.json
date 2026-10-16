@@ -1187,6 +1187,15 @@
       "reason": "Absolute BSFA uses the true-condition predicate instead of its inverse."
     },
     {
+      "id": "bsfa_indirect_predicate_reversed",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "              IF (ri(7 DOWNTO 6)=\"00\" AND cond_v) OR         -- BSTA\n                 (ri(7 DOWNTO 6)=\"10\" AND NOT cond_v) OR     -- BSFA\n                 (ri(7 DOWNTO 6)=\"01\" AND rs_v/=x\"00\") THEN  -- BSN",
+      "new": "              IF (ri(7 DOWNTO 6)=\"00\" AND cond_v) OR         -- BSTA\n                 (ri(7 DOWNTO 6)=\"10\" AND cond_v) OR     -- BSFA\n                 (ri(7 DOWNTO 6)=\"01\" AND rs_v/=x\"00\") THEN  -- BSN",
+      "failure_label": "bsfa_indirect_target_signature",
+      "reason": "Indirect BSFA must call through the pointer when its selected condition is false."
+    },
+    {
       "id": "bcfa_indirect_predicate_reversed",
       "check": "hunchback.cpu.bus",
       "file": "rtl/vendor/arcadia/sgs2650.vhd",

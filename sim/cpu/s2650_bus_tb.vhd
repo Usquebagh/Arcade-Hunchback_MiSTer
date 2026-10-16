@@ -228,6 +228,16 @@ begin
     check(memory(16#1c38#)=x"22","bcta_indirect_greater_negative_fallthrough",16#22#,to_integer(memory(16#1c38#)));
     check(memory(16#1c39#)=x"40","bcta_indirect_greater_negative_skips_target",16#40#,to_integer(memory(16#1c39#)));
 
+    -- BSFA '<' with positive CC calls through its pointer, then returns to the caller.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#04#,1,
+      16#be#,16#80#,16#10#,16#05#,16#66#,16#cd#,16#1c#,16#40#,16#40#));
+    memory(16#10#):=x"02";memory(16#11#):=x"00";
+    program(16#200#,(16#05#,16#44#,16#cd#,16#1c#,16#41#,16#17#));
+    start;for n in 1 to 40 loop tick;end loop;
+    check(memory(16#1c41#)=x"44","bsfa_indirect_target_signature",16#44#,to_integer(memory(16#1c41#)));
+    check(memory(16#1c40#)=x"66","bsfa_indirect_return_signature",16#66#,to_integer(memory(16#1c40#)));
+
     -- Direct BXA R3 uses its index after the absolute base address.
     memory:=(others=>x"40");
     program(0,(16#75#,16#ff#,16#77#,16#0a#,16#07#,1,16#9f#,2,0,16#40#));
@@ -262,7 +272,7 @@ begin
     memory(16#10#):=x"04";memory(16#11#):=x"00";
     memory(16#400#):=x"40";
     program(16#401#,(16#05#,16#b7#,16#cd#,16#1c#,16#9c#,16#17#));
-    start;for n in 1 to 75 loop tick;end loop;
+    start;for n in 1 to 50 loop tick;end loop;
     check(memory(16#1c9c#)=x"b7","bsxa_indirect_indexed_subroutine",16#b7#,to_integer(memory(16#1c9c#)));
     check(memory(16#1c9d#)=x"66","bsxa_indirect_indexed_return",16#66#,to_integer(memory(16#1c9d#)));
 
@@ -280,7 +290,7 @@ begin
       16#05#,16#55#,16#cd#,16#1c#,16#96#,16#40#));
     memory(16#10#):=x"02";memory(16#11#):=x"00";
     program(16#200#,(16#05#,16#44#,16#cd#,16#1c#,16#95#,16#17#));
-    start;for n in 1 to 65 loop tick;end loop;
+    start;for n in 1 to 45 loop tick;end loop;
     check(memory(16#1c95#)=x"44","absolute_indirect_subroutine",16#44#,to_integer(memory(16#1c95#)));
     check(memory(16#1c96#)=x"55","absolute_indirect_return",16#55#,to_integer(memory(16#1c96#)));
 

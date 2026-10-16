@@ -385,3 +385,16 @@ twice (expected 40, observed 11). `bcta_indirect_greater_negative_takes` passes
 its baseline and fails `bcta_indirect_greater_negative_fallthrough` at cycle
 581 twice (expected 22, observed 40). Other non-taken selectors, subroutine
 branch variants, page-boundary targets and physical bus timing remain open.
+
+## Conditional indirect subroutine regression, 2026-10-16
+
+BSFA `<` with positive CC now calls through the page-zero pointer at 0010/0011
+to 0200. The target writes 44 and returns with RETC `>`; the caller then writes
+66. Both target and return signatures are checked against the actual CPU and
+synthetic bus. This is MAME/manual-compatible instruction behavior, not CVS
+board evidence. CPU bus and RTL lint pass. The
+`bsfa_indirect_predicate_reversed` mutant passes its baseline and fails
+`bsfa_indirect_target_signature` at cycle 624 in both repeats (expected 44,
+observed 40). Other conditional indirect subroutine selectors, non-taken
+indirect-call return-stack effects, page-boundary targets and physical bus
+timing remain unqualified.
