@@ -378,7 +378,7 @@
         "ghdl"
       ],
       "timeout": 120,
-      "expectation": "Synthetic register banks, addressing, indirect control flow and pointer resolution including second-byte page wrap, one-, two- and eight-level return stacks, relative/page-wrap and absolute conditional branch/subroutine families, RETC/RETE interrupt handling, memory/IO, stall, sense/FLAG and HALT resume signatures match pinned instruction expectations.",
+      "expectation": "Synthetic register banks, addressing, indirect control flow, indexed pointer resolution and second-byte page wrap, one-, two- and eight-level return stacks, relative/page-wrap and absolute conditional branch/subroutine families, RETC/RETE interrupt handling, memory/IO, stall, sense/FLAG and HALT resume signatures match pinned instruction expectations.",
       "reference": "MAME S2650 and Signetics user manual; prime opcode bus contract and software initialization explicitly modeled."
     },
     {
@@ -1005,6 +1005,15 @@
       "new": "WHEN sINDIRECT  =>\n          state_c<=sINDIRECT2;\n          ad_c<=ad_i+to_unsigned(1,15);\n          rh_c<=dr;",
       "failure_label": "absolute_indirect_pointer_page_wrap",
       "reason": "The second byte of an indirect pointer must wrap within its current 8 KiB page."
+    },
+    {
+      "id": "indirect_loda_ignores_index",
+      "check": "hunchback.cpu.bus",
+      "file": "rtl/vendor/arcadia/sgs2650.vhd",
+      "old": "WHEN OTHERS => -- Indexed\n                    rd_v:=rs_v;\n                    ad_c<=page_add((rh(6 DOWNTO 0) & dr),resize(rd_v,15));\n                    dw_c<=r0;\n                    indexed_c<='1';",
+      "new": "WHEN OTHERS => -- Indexed\n                    rd_v:=rs_v;\n                    ad_c<=(rh(6 DOWNTO 0) & dr);\n                    dw_c<=r0;\n                    indexed_c<='1';",
+      "failure_label": "absolute_indirect_indexed_load",
+      "reason": "Indirect indexed LODA must add its selected register after resolving the pointer."
     },
     {
       "id": "absolute_indirect_branch_bypasses_pointer",

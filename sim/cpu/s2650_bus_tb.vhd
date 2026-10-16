@@ -234,6 +234,14 @@ begin
     check(memory(16#1c95#)=x"44","absolute_indirect_subroutine",16#44#,to_integer(memory(16#1c95#)));
     check(memory(16#1c96#)=x"55","absolute_indirect_return",16#55#,to_integer(memory(16#1c96#)));
 
+    -- LODA R1 indirect indexed resolves the pointer, adds R1, then loads R0.
+    memory:=(others=>x"40");
+    program(0,(16#75#,16#ff#,16#77#,16#0a#,16#05#,1,16#0d#,16#e0#,16#10#,
+      16#cc#,16#1c#,16#9e#,16#40#));
+    memory(16#10#):=x"03";memory(16#11#):=x"00";memory(16#301#):=x"6d";
+    start;for n in 1 to 65 loop tick;end loop;
+    check(memory(16#1c9e#)=x"6d","absolute_indirect_indexed_load",16#6d#,to_integer(memory(16#1c9e#)));
+
     -- HALT wake, interrupt entry/RETE and resume at the next instruction.
     memory:=(others=>x"40");io_writes:=0;irq_acks:=0;
     program(0,(16#1f#,0,16#60#));

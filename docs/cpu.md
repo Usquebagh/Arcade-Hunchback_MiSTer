@@ -243,8 +243,8 @@ mutation advances the resolved control target by one byte and fails
 `relative_indirect_target` at cycle 481 twice (expected 6B, observed 40). The
 `absolute_indirect_branch_bypasses_pointer` mutation ignores the indirect bit
 and fails `absolute_indirect_branch_target` at cycle 481 twice (expected 7C,
-observed 40). Other absolute-indirect condition variants, pointer-page boundary
-cases, full indexed-indirect combinations and hardware bus timing remain open.
+observed 40). Other absolute-indirect condition variants, additional pointer-
+page boundary/indexed-indirect combinations and hardware bus timing remain open.
 
 Direct and indirect BXA R3 indexing are now checked separately. The direct case
 uses base 0200 with R3=1 and must execute at 0201; the indirect case resolves
@@ -255,8 +255,8 @@ passes. `bxa_direct_index_ignored` fails `bxa_indexed_target` at cycle 539 in
 both repeats (expected 6D, observed 40); `bxa_indirect_index_ignored` fails
 `bxa_indirect_indexed_target` at cycle 602 in both repeats (expected 7D,
 observed 40). Both mutations are retained in the adapter. Indexed BXA is
-covered; pointer-page boundaries, other indexed-indirect combinations and
-hardware bus timing remain open.
+covered; indexed-indirect pointer-page boundaries, other indexed-indirect
+combinations and hardware bus timing remain open.
 
 Direct and indirect indexed BSXA calls are now checked through both the
 subroutine target and the caller's return signature. The direct call resolves
@@ -266,8 +266,8 @@ measurements. A disposable `bsxa_direct_index_ignored` mutation fails
 `bsxa_indexed_subroutine` at cycle 675 in both repeats (expected A6, observed
 40). It is retained in the adapter. The indirect call/return path passes, but
 its shared BXA/BSXA resolution logic is only mutation-checked at the earlier
-BXA assertion. Pointer-page boundaries, remaining indexed-indirect combinations
-and hardware bus timing remain open.
+BXA assertion. Indexed-indirect pointer-page boundaries, remaining indexed-
+indirect combinations and hardware bus timing remain open.
 
 ## Indirect interrupt-vector regression, 2026-10-16
 
@@ -302,3 +302,15 @@ increment with linear increment and fails
 `absolute_indirect_pointer_page_wrap` at cycle 2515 in both repeats (expected
 7C, observed 40). Other pointer/index combinations and hardware bus timing
 remain open.
+
+## Absolute indirect indexed data-read regression, 2026-10-16
+
+LODA R1 now has a directed indirect-indexed read case: pointer 0010/0011
+resolves to 0300, R1 contributes an index of one, and the actual CPU loads byte
+6D from 0301 into R0 before storing the signature. This is a synthetic S2650
+instruction expectation based on the pinned MAME behavior and manufacturer
+addressing description, not a board measurement. The focused CPU bus test and
+RTL lint pass. A disposable `indirect_loda_ignores_index` mutant removes the
+post-pointer index addition and fails `absolute_indirect_indexed_load` at cycle
+947 in both repeats (expected 6D, observed 40). Pre-increment and
+pre-decrement indirect data modes and their page boundaries remain uncovered.
