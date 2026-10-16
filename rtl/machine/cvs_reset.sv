@@ -8,7 +8,7 @@ module cvs_reset (
     input wire rom_loaded,
     output wire reset
 );
-    (* async_reg = "true" *) reg [1:0] release_pipe;
+    (* altera_attribute = "-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [1:0] release_pipe;
     always @(posedge clk or posedge reset_async) begin
         if (reset_async) release_pipe <= 2'b11;
         else release_pipe <= {release_pipe[0], 1'b0};
