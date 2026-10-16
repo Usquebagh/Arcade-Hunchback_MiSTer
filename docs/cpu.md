@@ -408,3 +408,10 @@ untouched, and the caller writes 66. CPU bus and lint pass. The
 path and fails `bsfa_indirect_non_taken_stack` at cycle 619 in both repeats
 (expected 80, observed 81). Other non-taken subroutine selectors and physical
 return-stack behavior remain unqualified.
+
+## Deferred CPU coverage
+
+- TODO: Add an indirect BSTA condition-code call/return regression, including
+  taken and non-taken behavior and return-stack effects. Deferred while
+  prioritizing a hardware-testable build; no test or HDL change is included in
+  this pause.

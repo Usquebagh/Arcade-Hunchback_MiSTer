@@ -23,6 +23,9 @@ set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_scan.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_speech_bus.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_speech_cpu.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_speech_machine.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_sync_ram_1p.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_sync_ram_2p.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_sync_rom.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_tms5100_control.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_tms5100_engine.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_tms5100_frames.sv

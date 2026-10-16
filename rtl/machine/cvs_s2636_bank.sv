@@ -13,7 +13,9 @@ module cvs_s2636_bank (
     output wire [11:0] pixels, object_masks
 );
     wire [23:0] read_bytes;
-    for (genvar i=0;i<3;i=i+1) begin : pvi
+    genvar i;
+    generate
+    for (i=0;i<3;i=i+1) begin : pvi
         cvs_s2636_objects chip(.clk(clk),.reset(reset),
             .cpu_rd(cpu_rd && chip_select[i]),.cpu_wr(cpu_wr && chip_select[i]),
             .cpu_addr(cpu_addr),.cpu_din(cpu_din),.cpu_dout(read_bytes[i*8 +: 8]),
@@ -21,6 +23,7 @@ module cvs_s2636_bank (
             .intack(intack[i]),.irq(irq[i]),.object_mask(object_masks[i*4 +: 4]),
             .pixel_colour(pixels[i*4 +: 3]),.pixel_present(pixels[i*4+3]));
     end
+    endgenerate
     always @* begin
         case (chip_select)
             3'b001: cpu_dout=read_bytes[7:0];

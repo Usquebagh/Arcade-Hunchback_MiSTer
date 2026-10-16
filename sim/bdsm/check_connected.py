@@ -58,23 +58,24 @@ def main():
     generated = re.sub(r'\bint\b',lambda _: '\\int ',ran.stdout)
     cpu_file=work/'sgs2650.v'
     cpu_file.write_text(generated)
+    sync_ram_sources=['rtl/machine/cvs_sync_ram_1p.sv','rtl/machine/cvs_sync_ram_2p.sv','rtl/machine/cvs_sync_rom.sv']
     sources=['rtl/machine/cvs_main.sv','rtl/machine/cvs_main_bus.sv','rtl/machine/cvs_main_io.sv',
              'rtl/machine/cvs_main_memory.sv','rtl/machine/cvs_banked.sv',
-             'rtl/machine/cvs_memory.sv','rtl/machine/cvs_clock.sv']
+             'rtl/machine/cvs_memory.sv',*sync_ram_sources,'rtl/machine/cvs_clock.sv']
     top = {'video_connected':'cvs_video_cpu_tb','s2636_connected':'cvs_s2636_cpu_tb','character_connected':'cvs_character_cpu_tb','cold_connected':'cvs_cold_cpu_tb','assembly_connected':'cvs_machine_tb','bootstrap_connected':'cvs_machine_tb','startup_connected':'cvs_startup_tb'}.get(args.mode,'cvs_main_tb')
     if args.mode=='audio_connected':
         top='cvs_audio_cpu_tb'
-        sources=['rtl/machine/cvs_audio_cpu.sv','rtl/machine/cvs_audio_bus.sv','rtl/machine/cvs_clock.sv']
+        sources=['rtl/machine/cvs_audio_cpu.sv','rtl/machine/cvs_audio_bus.sv',*sync_ram_sources,'rtl/machine/cvs_clock.sv']
     if args.mode=='speech_connected':
         top='cvs_speech_cpu_tb'
-        sources=['rtl/machine/cvs_speech_cpu.sv','rtl/machine/cvs_speech_bus.sv','rtl/machine/cvs_clock.sv']
+        sources=['rtl/machine/cvs_speech_cpu.sv','rtl/machine/cvs_speech_bus.sv',*sync_ram_sources,'rtl/machine/cvs_clock.sv']
     if args.mode=='tms5100_connected':
         top='cvs_tms5100_cpu_tb'
-        sources=['rtl/machine/cvs_speech_cpu.sv','rtl/machine/cvs_speech_bus.sv',
+        sources=['rtl/machine/cvs_speech_cpu.sv','rtl/machine/cvs_speech_bus.sv',*sync_ram_sources,
                  'rtl/machine/cvs_tms5100_control.sv','rtl/machine/cvs_clock.sv']
     if args.mode=='speech_machine_connected':
         top='cvs_speech_machine_tb'
-        sources=['rtl/machine/cvs_speech_machine.sv','rtl/machine/cvs_speech_cpu.sv','rtl/machine/cvs_speech_bus.sv',
+        sources=['rtl/machine/cvs_speech_machine.sv','rtl/machine/cvs_speech_cpu.sv','rtl/machine/cvs_speech_bus.sv',*sync_ram_sources,
                  'rtl/machine/cvs_clock.sv','rtl/machine/cvs_tms5100_engine.sv','rtl/machine/cvs_tms5100_rate.sv',
                  'rtl/machine/cvs_tms5100_control.sv','rtl/machine/cvs_tms5100_frames.sv','rtl/machine/cvs_tms5100_sequence.sv',
                  'rtl/machine/cvs_tms5100_lattice.sv','rtl/machine/cvs_tms5100_pcm.sv','rtl/vendor/tms5100/cvs_tms5100_tables.sv']
@@ -95,7 +96,7 @@ def main():
         top='cvs_full_machine_tb'
         sources += ['rtl/machine/cvs_full_machine.sv','rtl/machine/cvs_av_machine.sv',
                     'rtl/machine/cvs_audio_cpu.sv','rtl/machine/cvs_audio_bus.sv','rtl/machine/cvs_audio_samples.sv',
-                    'rtl/machine/cvs_speech_machine.sv','rtl/machine/cvs_speech_cpu.sv','rtl/machine/cvs_speech_bus.sv',
+                    'rtl/machine/cvs_speech_machine.sv','rtl/machine/cvs_speech_cpu.sv','rtl/machine/cvs_speech_bus.sv',*sync_ram_sources,
                     'rtl/machine/cvs_tms5100_engine.sv','rtl/machine/cvs_tms5100_rate.sv','rtl/machine/cvs_tms5100_control.sv',
                     'rtl/machine/cvs_tms5100_frames.sv','rtl/machine/cvs_tms5100_sequence.sv',
                     'rtl/machine/cvs_tms5100_lattice.sv','rtl/machine/cvs_tms5100_pcm.sv','rtl/vendor/tms5100/cvs_tms5100_tables.sv']

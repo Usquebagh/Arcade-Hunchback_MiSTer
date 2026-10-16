@@ -12,6 +12,8 @@
 /build/
 /results/
 /output_files/
+/build_id.v
+/jtag.cdf
 /db/
 /incremental_db/
 *.qws

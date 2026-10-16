@@ -9,27 +9,46 @@ module cvs_memory (
     input wire cpu_rd,
     input wire cpu_wr,
     input wire [7:0] cpu_din,
-    output reg [7:0] cpu_dout,
+    output wire [7:0] cpu_dout,
     input wire dl_wr,
     input wire [14:0] dl_addr,
     input wire [7:0] dl_data
 );
-    reg [7:0] program_rom [0:32767];
-    reg [7:0] system_ram [0:1023];
     wire rom_selected = cpu_addr[12:0] < 13'h1400;
     wire ram_selected = cpu_addr[12:10] == 3'b111;
+    wire rom_collision = dl_wr && dl_addr == cpu_addr;
+    wire [7:0] rom_q, ram_q;
+    wire rom_read = cpu_rd && rom_selected && !rom_collision;
+    wire ram_read = cpu_rd && ram_selected && !cpu_wr;
+    reg [1:0] response_q;
+    reg [7:0] response_data_q;
+
+    cvs_sync_rom #(.ADDR_WIDTH(15), .DEPTH(32768)) program_rom (
+        .clk(clk), .write_enable(dl_wr), .write_address(dl_addr), .write_data(dl_data),
+        .read_enable(rom_read), .read_address(cpu_addr), .read_data(rom_q));
+    cvs_sync_ram_1p #(.ADDR_WIDTH(10), .DEPTH(1024)) system_ram (
+        .clk(clk), .write_enable(cpu_wr && ram_selected), .address(cpu_addr[9:0]),
+        .write_data(cpu_din), .read_enable(ram_read), .read_data(ram_q));
+
+    assign cpu_dout = response_q == 2'd1 ? rom_q :
+                      response_q == 2'd2 ? ram_q : response_data_q;
+
     always @(posedge clk) begin
-        if (dl_wr) program_rom[dl_addr] <= dl_data;
-        if (cpu_wr && ram_selected) system_ram[cpu_addr[9:0]] <= cpu_din;
         if (cpu_rd) begin
             if (rom_selected) begin
-                if (dl_wr && dl_addr == cpu_addr) cpu_dout <= dl_data;
-                else cpu_dout <= program_rom[cpu_addr];
+                if (rom_collision) begin
+                    response_q <= 2'd0;
+                    response_data_q <= dl_data;
+                end else response_q <= 2'd1;
             end else if (ram_selected) begin
-                // Explicit write-through for same-address RAM read/write.
-                if (cpu_wr) cpu_dout <= cpu_din;
-                else cpu_dout <= system_ram[cpu_addr[9:0]];
-            end else cpu_dout <= 8'hff;
+                if (cpu_wr) begin
+                    response_q <= 2'd0;
+                    response_data_q <= cpu_din;
+                end else response_q <= 2'd2;
+            end else begin
+                response_q <= 2'd0;
+                response_data_q <= 8'hff;
+            end
         end
     end
 endmodule

@@ -7,7 +7,7 @@ module cvs_speech_bus (
     input wire [6:0] command,
     input wire ctl_status,
     output wire ack,
-    output reg [7:0] dout,
+    output wire [7:0] dout,
     input wire program_dl_wr,
     input wire [10:0] program_dl_addr,
     input wire data_dl_wr,
@@ -21,23 +21,33 @@ module cvs_speech_bus (
     output reg bit_valid,bit_data,
     output reg [15:0] bit_address
 );
-    reg [7:0] program_rom[0:2047];
     reg [7:0] data_rom[0:4095];
     wire accepted=req && ready;
     wire write_transfer=accepted && wr && memory_space && !reset;
     wire pointer_write=write_transfer && (address==15'h1d00 || address==15'h1d40);
+    wire program_collision=program_dl_wr && program_dl_addr==address[10:0];
+    wire program_read=accepted && !wr && memory_space && address<15'h0800 && !program_collision;
+    wire [7:0] program_q;
+    reg program_response_q;
+    reg [7:0] response_data_q;
     wire [7:0] serial_byte=data_dl_wr && data_dl_addr==bit_address[14:3] ? dl_data : data_rom[bit_address[14:3]];
+
+    cvs_sync_rom #(.ADDR_WIDTH(11),.DEPTH(2048)) program_rom (
+        .clk(clk),.write_enable(program_dl_wr),.write_address(program_dl_addr),.write_data(dl_data),
+        .read_enable(program_read),.read_address(address[10:0]),.read_data(program_q));
+    assign dout=program_response_q ? program_q : response_data_q;
     assign ack=ready;
     assign bit_ready=!reset && !pointer_write;
     assign ctl={control_latches[1],control_latches[2],control_latches[1],1'b0};
     always @(posedge clk)begin
-        if(program_dl_wr)program_rom[program_dl_addr]<=dl_data;
         if(data_dl_wr)data_rom[data_dl_addr]<=dl_data;
         if(accepted && !wr)begin
-            if(!memory_space)dout<=8'hff;
-            else if(address<15'h0800)dout<=program_dl_wr && program_dl_addr==address[10:0] ? dl_data : program_rom[address[10:0]];
-            else if(address==15'h1d80)dout<={!ctl_status,command};
-            else dout<=8'hff;
+            if(!memory_space)begin program_response_q<=1'b0;response_data_q<=8'hff;end
+            else if(address<15'h0800)begin
+                if(program_collision)begin program_response_q<=1'b0;response_data_q<=dl_data;end
+                else program_response_q<=1'b1;
+            end else if(address==15'h1d80)begin program_response_q<=1'b0;response_data_q<={!ctl_status,command};end
+            else begin program_response_q<=1'b0;response_data_q<=8'hff;end
         end
         ctl_wr<=1'b0;pdc_wr<=1'b0;bit_valid<=1'b0;
         if(reset)begin

@@ -2,7 +2,7 @@
 // Numeric data copyright: Frank Palazzolo, Couriersud, Jonathan Gevaryahu.
 // Pinned provenance and transformations: rtl/vendor/tms5100/README.md.
 
-module cvs_tms5100_tables (
+(* ramstyle = "logic", romstyle = "logic" *) module cvs_tms5100_tables (
     input wire [3:0] energy_address,k_slot,
     input wire [4:0] pitch_address,k_index,
     input wire [5:0] chirp_address,
