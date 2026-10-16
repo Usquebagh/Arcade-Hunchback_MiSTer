@@ -366,3 +366,12 @@ pass. The `bcta_indirect_greater_uses_equality` mutation has a passing baseline
 and fails `bcta_indirect_greater_skips_fallthrough` at cycle 512 in both repeats
 (expected 40, observed 11). BCFA/BCTA other CC selectors, absolute-indirect
 page-boundary targets, and physical bus timing remain uncovered.
+
+BCTA `<` with negative CC now also resolves its pointer to 0200. The marker
+remains untouched on fall-through and the target stores 55. Together with the
+`=` and `>` cases above, all three concrete PSL condition selectors have a
+taken BCTA indirect example; wildcard and non-taken BCTA selectors remain
+open. This is synthetic CPU model/manual behavior. Bus and lint pass. The
+`bcta_indirect_less_uses_greater` mutant passes its baseline and fails
+`bcta_indirect_less_skips_fallthrough` at cycle 535 twice (expected 40,
+observed 11). Page-boundary targets and physical bus timing remain unqualified.
