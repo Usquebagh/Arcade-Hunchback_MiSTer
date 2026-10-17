@@ -45,6 +45,7 @@ module emu #(
         "J1,Jump,Start 2,Start 1,Coin;",
         "jn,A,X,Start,Select;",
         "R0,Reset;",
+        // MiSTer displays this permanent build identifier in the OSD version line.
         "V,v261017-02;"
     };
     hps_io #(.CONF_STR(CONF_STR)) hps_io (
