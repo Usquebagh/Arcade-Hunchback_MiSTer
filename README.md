@@ -44,8 +44,9 @@ CVS set.
 - **The candidate gate is incomplete.** Physical input and DIP behavior, PAL
   equivalence, full-game references, analog audio references, timing exceptions
   and complete MiSTer validation remain open.
+- **CRT output remains untested.** Only HDMI has been confirmed working so far.
 
-Please report issues with the exact RBF date and OSD build identifier.
+Other bugs or issues may be present. Please report issues.
 
 ## Installation
 
