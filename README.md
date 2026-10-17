@@ -62,12 +62,22 @@ candidate regression, mutation campaign or Quartus timing gates.
 
 ## Build and tests
 
-The project uses MiSTer-BDSM as a submodule and Quartus Prime Lite 17.0.2 for
-Cyclone V. Clone the submodule with the project:
+Quartus Prime Lite 17.0.2 for Cyclone V is used to build the core. A separate
+MiSTer-BDSM checkout is only needed to run the regression and mutation suite.
+The core builds without that framework:
 
 ```sh
-git clone --recurse-submodules https://github.com/Usquebagh/Arcade-Hunchback_MiSTer.git
+git clone https://github.com/Usquebagh/Arcade-Hunchback_MiSTer.git
 cd Arcade-Hunchback_MiSTer
+bash build.sh
+```
+
+To run tests, clone [MiSTer-BDSM](https://github.com/Usquebagh/MiSTer-BDSM)
+separately and point `MISTER_BDSM_PATH` at its checkout:
+
+```sh
+git clone https://github.com/Usquebagh/MiSTer-BDSM.git /path/to/MiSTer-BDSM
+export MISTER_BDSM_PATH=/path/to/MiSTer-BDSM
 bash tools/bdsm.sh test --suite smoke
 bash tools/bdsm.sh test --suite lint
 ```
