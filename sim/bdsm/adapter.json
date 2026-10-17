@@ -116,7 +116,9 @@
     "sim/cpu/cvs_av_machine_tb.sv",
     "rtl/machine/cvs_audio_samples.sv",
     "rtl/machine/cvs_discrete_audio.sv",
+    "rtl/machine/cvs_audio_dc_blocker.sv",
     "sim/cpu/cvs_discrete_audio_tb.sv",
+    "sim/cpu/cvs_audio_dc_blocker_tb.sv",
     "sim/bdsm/audio_samples.cpp",
     "rtl/machine/cvs_speech_bus.sv",
     "rtl/machine/cvs_speech_cpu.sv",
@@ -717,6 +719,16 @@
       "timeout": 180,
       "expectation": "NE555 nominal 304 Hz rate and 53.5% duty, ICL8038 model base/FM rates, 2.2 s and 1.0 s exponential RC envelopes, SP_LAT4 route selection and SP_LAT5 square gating are checked against independent numeric expectations.",
       "reference": "docs/audio-circuits.md; schematic-derived component products and resistor ratios plus explicitly assumed ICL8038 FM sweep/noise source, not calibrated circuit or event-to-effect reference."
+    },
+    {
+      "id": "hunchback.audio.dc_blocker",
+      "suite": "smoke",
+      "mode": "audio_dc_blocker",
+      "required": true,
+      "tools": ["iverilog", "vvp"],
+      "timeout": 180,
+      "expectation": "Removes a held full-scale DAC bias and preserves the trace-derived 4355-count SP_LAT2 transition as a near-zero-centered waveform after the modeled 22 Hz AC-coupling high-pass.",
+      "reference": "sim/cpu/cvs_audio_dc_blocker_tb.sv; synthetic filter contract and observed latch levels, not a measured board transfer function."
     },
     {
       "id": "hunchback.audio.attract",

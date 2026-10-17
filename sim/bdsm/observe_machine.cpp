@@ -39,6 +39,9 @@ int main(int argc,char** argv) {
     if(bytes.size()!=51232 || want.empty())return 2;
     uint64_t cycle=0,frames=0,irqs=0,writes=0,stores=0,pixels=0;
     bool initialized=false,last_ack=false;
+    bool prior_coin=false,prior_start=false,prior_right=false,prior_jump=false;
+    bool movement_proven=false,player_baseline_valid=false;
+    int player_baseline_y=-1,player_proof_y=-1,player_proof_field=-1;
     unsigned field_pixels=0,coin_samples=0,start_samples=0,input_reads=0,right_samples=0,jump_samples=0;
     std::array<unsigned char,244*248*3> field{};
     std::array<unsigned char,1024> system_ram{},ram_before_coin{};
@@ -66,8 +69,19 @@ int main(int argc,char** argv) {
     auto tick=[&]() {
         bool coin=controls && frames>=170 && frames<172;
         bool start=controls && !credit_test && frames>=178 && frames<180;
-        bool right=controls && !credit_test && frames>=300 && frames<330;
-        bool jump=controls && !credit_test && frames>=306 && frames<309;
+        // Leave the ten-second climb intro untouched. First test movement with
+        // Right, then enable Jump only after the emitted player coordinate
+        // changes from its field-699 baseline.
+        bool right=controls && !credit_test && frames>=700 && frames<1900;
+        bool jump=controls && !credit_test && movement_proven && frames>=800 &&
+                  ((frames-800)%160)<3;
+#ifdef AUDIO_OBSERVE
+        if(coin!=prior_coin) audio_events<<cycle<<" INPUT_COIN_"<<(coin?"ON":"OFF")<<" field="<<frames<<"\n";
+        if(start!=prior_start) audio_events<<cycle<<" INPUT_START_"<<(start?"ON":"OFF")<<" field="<<frames<<"\n";
+        if(right!=prior_right) audio_events<<cycle<<" INPUT_RIGHT_"<<(right?"ON":"OFF")<<" field="<<frames<<"\n";
+        if(jump!=prior_jump) audio_events<<cycle<<" INPUT_JUMP_"<<(jump?"ON":"OFF")<<" field="<<frames<<"\n";
+#endif
+        prior_coin=coin;prior_start=start;prior_right=right;prior_jump=jump;
 #ifdef AUDIO_OBSERVE
         // Audio-only observer retains its isolated audio wrapper.
         m.in0=255-(coin?8:0)-(start?1:0)-(jump?32:0);
@@ -206,7 +220,34 @@ int main(int argc,char** argv) {
             unsigned offset=field_pixels*3;
             field[offset]=m.red;field[offset+1]=m.green;field[offset+2]=m.blue;
             ++field_pixels;++pixels;
-            if(field_pixels==244*248 && frames>=128 && (frames%16==0 || frames==156 || frames==172 || frames==180 || frames==196)) {
+            bool movement_checkpoint = frames==680 || frames==689 || frames==699 || frames==709 ||
+                frames==719 || frames==729 || frames==739 || frames==749 || frames==759 ||
+                frames==769 || frames==799 || frames==800 || frames==960 || frames==1200 ||
+                frames==1600 || frames==1890 || frames==1990;
+            if(field_pixels==244*248 && frames>=680 && (frames%16==0 || movement_checkpoint)) {
+                int sum_y=0,count_y=0;
+                for(unsigned sy=0;sy<160;sy++) for(unsigned sx=72;sx<96;sx++) {
+                    unsigned p=(sy*244+sx)*3;
+                    unsigned char r=field[p],g=field[p+1],b=field[p+2];
+                    bool player_color=(r==0 && g==255 && b==0) ||
+                        (r==85 && g==146 && b==73) || (r==255 && g==0 && b==255) ||
+                        (r==170 && g==36 && b==73) || (r==255 && g==182 && b==146);
+                    if(player_color) {sum_y+=int(sy);++count_y;}
+                }
+                int player_y=count_y>=20 ? sum_y/count_y : -1;
+                if(frames==699 && player_y>=0) {player_baseline_y=player_y;player_baseline_valid=true;}
+                else if(frames>699 && !movement_proven && player_baseline_valid && player_y>=0 &&
+                        (player_y-player_baseline_y>=4 || player_y-player_baseline_y<=-4)) {
+                    movement_proven=true;player_proof_y=player_y;player_proof_field=int(frames);
+                    std::cout<<"CONTROL_PROOF {\"baseline_field\":699,\"baseline_y\":"<<player_baseline_y
+                             <<",\"proof_field\":"<<frames<<",\"player_y\":"<<player_y
+                             <<",\"delta\":"<<(player_y-player_baseline_y)<<"}"<<std::endl;
+                }
+                if(player_y>=0) std::cout<<"PLAYER_COORD {\"field\":"<<frames<<",\"source_y\":"<<player_y
+                    <<",\"pixels\":"<<count_y<<",\"movement_proven\":"<<(movement_proven?"true":"false")<<"}"<<std::endl;
+            }
+            if(field_pixels==244*248 && frames>=128 && (frames%16==0 || frames==156 || frames==172 ||
+               frames==180 || frames==196 || movement_checkpoint)) {
                 std::string name="frame-"+std::to_string(frames)+".ppm";
                 std::ofstream out(name,std::ios::binary);out<<"P6\n244 248\n255\n";
                 out.write(reinterpret_cast<const char*>(field.data()),field.size());

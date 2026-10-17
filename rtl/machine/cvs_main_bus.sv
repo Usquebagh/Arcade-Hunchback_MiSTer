@@ -42,7 +42,9 @@ module cvs_main_bus (
         else if (read_transfer) response_io <= !memory_space;
     end
     wire [7:0] cheat_memory_data;
-    cvs_cheat_engine cheat_engine(.clk(clk),.reset(cheat_reset),.code(cheat_code),
+    // The shipped Pugsy Hunchback byte codes have no data-compare condition;
+    // omit the optional comparator from this CPU read path for timing.
+    cvs_cheat_engine #(.SUPPORTS_COMPARE(0)) cheat_engine(.clk(clk),.reset(cheat_reset),.code(cheat_code),
         .capture(read_transfer && memory_space),.address(address),
         .data_in(memory_data),.data_out(cheat_memory_data));
     assign dout = response_io ? io_data : cheat_memory_data;

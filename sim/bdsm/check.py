@@ -14,7 +14,7 @@ def emit(status, **details):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('mode', choices=['reset', 'clock', 'memory', 'banked', 'display', 'scan', 'character', 'character_connected', 'cold_connected', 'assembly_connected', 'bootstrap_connected', 'bootstrap_oracle', 'startup_connected', 'startup_oracle', 'audio_bus', 'audio_samples', 'audio_discrete', 'audio_connected', 'speech_bus', 'tms5100_control', 'tms5100_frames', 'tms5100_frame_rom', 'tms5100_lattice', 'tms5100_sequence', 'tms5100_engine', 'tms5100_rate', 'tms5100_tables', 'tms5100_connected', 'speech_machine_connected', 'full_connected', 'mister_shell_connected', 'mister_shell_behavior_connected', 'speech_connected', 'av_connected', 'main_bus', 'main_connected', 'video_connected', 's2636_objects', 's2636_connected', 'vblank_irq', 'video_timing', 'video_timing_alt', 'decode', 'lint', 'rom', 'mra', 'cpu_alu', 'cpu_edges', 'cpu_bus', 'cpu_synth', 'cpu_diagnostics'])
+    parser.add_argument('mode', choices=['reset', 'clock', 'memory', 'banked', 'display', 'scan', 'character', 'character_connected', 'cold_connected', 'assembly_connected', 'bootstrap_connected', 'bootstrap_oracle', 'startup_connected', 'startup_oracle', 'audio_bus', 'audio_samples', 'audio_discrete', 'audio_dc_blocker', 'audio_connected', 'speech_bus', 'tms5100_control', 'tms5100_frames', 'tms5100_frame_rom', 'tms5100_lattice', 'tms5100_sequence', 'tms5100_engine', 'tms5100_rate', 'tms5100_tables', 'tms5100_connected', 'speech_machine_connected', 'full_connected', 'mister_shell_connected', 'mister_shell_behavior_connected', 'speech_connected', 'av_connected', 'main_bus', 'main_connected', 'video_connected', 's2636_objects', 's2636_connected', 'vblank_irq', 'video_timing', 'video_timing_alt', 'decode', 'lint', 'rom', 'mra', 'cpu_alu', 'cpu_edges', 'cpu_bus', 'cpu_synth', 'cpu_diagnostics'])
     parser.add_argument('--seed', type=int, default=1)
     args = parser.parse_args()
     adapter = Path(__file__).resolve().parent
@@ -45,6 +45,28 @@ def main():
             emit(**event,diagnostics=[str(work/'compile.log')])
             return 1
         emit(**event,reference='docs/audio-circuits.md; nominal schematic-derived RC values plus explicit digital model assumptions, not calibrated audio')
+        return 0
+    if args.mode=='audio_dc_blocker':
+        core = Path.cwd()
+        work = core / 'build' / 'bdsm-audio_dc_blocker'
+        work.mkdir(parents=True, exist_ok=True)
+        image = work / 'test.vvp'
+        sources = ['sim/cpu/cvs_audio_dc_blocker_tb.sv','rtl/machine/cvs_audio_dc_blocker.sv']
+        compile_run = subprocess.run(['iverilog','-g2012','-Wall','-s','cvs_audio_dc_blocker_tb','-o',str(image),*sources],capture_output=True,text=True)
+        (work/'compile.log').write_text(compile_run.stdout+compile_run.stderr)
+        if compile_run.returncode:
+            emit('ERROR',reason='Icarus AC-coupling compilation failed',diagnostics=[str(work/'compile.log')])
+            return 2
+        ran = subprocess.run(['vvp',str(image)],capture_output=True,text=True)
+        events = [json.loads(line[5:]) for line in ran.stdout.splitlines() if line.startswith('BDSM ')]
+        if not events or (events[-1]['status'],ran.returncode) not in [('PASS',0),('FAIL',1)]:
+            emit('ERROR',reason='AC-coupling simulation crashed or omitted assertion result',observed=ran.stdout+ran.stderr)
+            return 2
+        event=events[-1]
+        if event['status']=='FAIL':
+            emit(**event,diagnostics=[str(work/'compile.log')])
+            return 1
+        emit(**event,reference='sim/cpu/cvs_audio_dc_blocker_tb.sv; synthetic DC removal and trace-derived SP_LAT2 transition, 22 Hz corner is an explicit assumption')
         return 0
     if args.mode.startswith('cpu_'):
         return subprocess.run([sys.executable, str(adapter / 'check_ghdl.py'), args.mode, '--seed', str(args.seed)]).returncode

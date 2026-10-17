@@ -50,12 +50,20 @@ are idle FF. Optional synthetic windows use these pinned active-low bits:
 | --- | --- | --- |
 | 170 through 171 | IN0 coin 1 | 08 |
 | 178 through 179 | IN0 start 1 | 01 |
-| 300 through 329 | IN1 right | 10 |
-| 306 through 308 | IN0 jump | 20 |
+| 700 through 1899 | IN1 right | 10 |
+| Three fields every 160 fields starting at 800, after movement proof | IN0 jump | 20 |
+
+The control run leaves inputs idle for at least 520 fields after Start, allowing
+the roughly ten-second climbing intro to finish. It measures the player sprite's
+source-Y coordinate at field 699, then keeps Right held until at least a four
+pixel coordinate change is observed. Jump pulses are gated on that measured
+movement proof. This is event-stimulus coverage only; it does not assert that
+bell contact occurred.
 
 The bus log records accepted writes and actual registered extended-read responses.
-Input sample counts show reads during the windows; they do not independently
-prove movement/jump physics or the physical switch matrix. No left input is used.
+The pixel-derived coordinate check proves movement only when its baseline delta
+is reported; input sample counts alone do not. Jump and bell behavior, reaching
+the bell, and the physical switch matrix remain unqualified. No left input is used.
 The default profile retains main/video execution. Optional `--audio` connects
 the actual digital audio CPU/bus with nominal external SENSE; see
 [connection checks, observations and gaps](audio-assembly.md). It produces raw

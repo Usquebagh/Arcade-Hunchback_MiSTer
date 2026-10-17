@@ -64,18 +64,16 @@ snapshots. The configured full campaign is now 90; it was not rerun in full.
 Existing main connected bus, native CPU bus and memory checks passed; the broad
 native runtime diagnostic remains a required WARNING. Framework unit tests passed.
 
-## Reference conflicts and gaps
+## Reference gaps
 
-The drawing's UG5 74LS259 input is SP_D0; MAME takes bit 7 for addresses 1880..1883
-and bit 0 for 1884..1887. The four resistor weights also require a separate audit
-before interpreting raw latch order as calibrated analog amplitude. NE5008 pin
-bit significance and control/filter/mixer paths need their own references. Retain
-this discrepancy explicitly; no test PASS proves those physical mappings.
-
-Manufacturer application memo [MP54](https://frank.pocnet.net/other/sos/Philips_2650/Philips_%28Signetics%29_2650_MP54.pdf),
-page 14, identifies DBUS7 as the most significant/sign bit. It does not resolve
-the drawing's SP_D0 latch label; do not assume reversed CPU bit numbering to
-eliminate the discrepancy. Accessed 2026-10-11.
+The latch data-bit question is resolved: the drawing labels the 74LS259 input
+`SP_D0`, and MAME masks writes to the discrete trigger window (`0x1884..0x1887`)
+with `data &= 1`. The RTL samples `din[0]` for those addresses. MAME's bit-7
+sampling applies to the separate four-bit DAC window (`0x1880..0x1883`), not to
+the discrete latches ([MAME CVS driver](https://github.com/mamedev/mame/blob/master/src/mame/misc/cvs.cpp#L3274-L3292)).
+The four resistor weights still need a separate audit before raw latch order can
+be interpreted as calibrated analog amplitude. The physical control/filter/mixer
+response and board recordings also remain open.
 
 The audio board has a separate oscillator. Shared FPGA enables are implementation
 choices; relative phase/drift and CDC need integration checks. Neither DAC path
@@ -109,8 +107,8 @@ identifies two unknown indexed addresses behind the work-RAM observation. The
 synthetic wrapper does not resolve that power-up/reference gap.
 
 The [wiring audit](audio-wiring.md) supports keeping byte significance as drawn
-and shows that every executed four-bit game write was zero; the SP_D0 versus
-MAME bit-7 discrepancy and physical gain/weights remain gaps. Later work added
+and shows that every executed four-bit game write was zero; physical gain/weights
+remain gaps. Later work added
 the third CPU, speech controller and numeric TMS datapath and connected them in
 the three-CPU machine. Speech is audible on hardware. A schematic-derived
 discrete-audio approximation is now integrated; its effect triggers, FM law,

@@ -152,6 +152,7 @@ module emu #(
     wire [15:0] speech_bit_address;
     wire speech_sample_tick,speech_sample_valid,speech_protocol_error,speech_talk_status;
     wire signed [15:0] pcm8,pcm4,speech_pcm,discrete_pcm;
+    wire audio_sample_ce;
     cvs_full_machine machine (
         .clk(clk_sys),.reset(core_reset),.reset_na(!core_reset),.video_reset(core_reset),.scan_run(1'b1),
         .ready(1'b1),.audio_ready(1'b1),.audio_sense(sense_380),.speech_ready(1'b1),.speech_sense(sense_380),
@@ -165,7 +166,7 @@ module emu #(
         .collision_events(collision_events),.collision(collision),.video_fx(video_fx),
         .audio_command(audio_command),.audio_trigger(audio_trigger),.intack(intack),
         .audio_intack(audio_intack),.audio_irq(audio_irq),.dac8(dac8),.dac4(dac4),.discrete(discrete),
-        .dac8_wr(dac8_wr),.dac4_wr(dac4_wr),.discrete_wr(discrete_wr),.sample_ce(),.pcm8(pcm8),.pcm4(pcm4),
+        .dac8_wr(dac8_wr),.dac4_wr(dac4_wr),.discrete_wr(discrete_wr),.sample_ce(audio_sample_ce),.pcm8(pcm8),.pcm4(pcm4),
         .discrete_pcm(discrete_pcm),
         .speech_sample_tick(speech_sample_tick),.speech_sample_valid(speech_sample_valid),
         .speech_protocol_error(speech_protocol_error),.speech_pcm(speech_pcm),.speech_talk_status(speech_talk_status),
@@ -218,18 +219,22 @@ module emu #(
     assign VGA_VS=vsync_n;
     assign VGA_DE=display_enable;
 
-    // Keep the audible bring-up path centered. The raw four-bit latch remains
-    // exposed for diagnostics, but its observed attract value is code 0 and
-    // the provisional offset-binary sampler maps that to -32768. Adding it at
-    // full scale clips the byte-DAC waveform almost entirely to the negative
-    // rail. Its board weight/mix is not yet calibrated.
+    // pcm4 is a raw offset-binary diagnostic sample and is not added here.
+    // The resistor-weighted SP_LAT0..3 path is already included once inside
+    // discrete_pcm, with the byte DAC and modeled discrete sources.
     // The discrete-audio model owns the byte-DAC route because SP_LAT4 selects
-    // either MIX2 or the 8038 FM node. Add speech as an independent channel.
+    // either MIX2 or the 8038 FM node. Add speech as an independent channel,
+    // then model the board's AC coupling with a 20 Hz high-pass at the 48 kHz
+    // audio sample cadence. The corner is an engineering assumption because
+    // the output coupling network is not specified legibly in the source sheet.
     wire signed [17:0] sound_sum={{2{speech_pcm[15]}},speech_pcm}+{{2{discrete_pcm[15]}},discrete_pcm};
     wire signed [15:0] sound_out=sound_sum>18'sd32767 ? 16'sh7fff :
         sound_sum< -18'sd32768 ? 16'sh8000 : sound_sum[15:0];
-    assign AUDIO_L=sound_out;
-    assign AUDIO_R=sound_out;
+    wire signed [15:0] sound_ac;
+    cvs_audio_dc_blocker audio_coupling(.clk(clk_sys),.reset(core_reset),.sample_ce(audio_sample_ce),
+        .x(sound_out),.y(sound_ac));
+    assign AUDIO_L=sound_ac;
+    assign AUDIO_R=sound_ac;
     assign AUDIO_S=1'b1;
     assign AUDIO_MIX=2'b00;
     assign LED_USER=rom_download || speech_talk_status;

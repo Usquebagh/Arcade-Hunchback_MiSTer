@@ -16,7 +16,7 @@ module cvs_discrete_audio_tb;
         .icl8038_triangle(triangle),.icl8038_frequency_hz(icl_hz),.byte_dac_to_mix(byte_mix),
         .envelope_22_q16(env22),.envelope_10_q16(env10));
 
-    integer i, transitions, rises, highs, low_hash, high_hash, off_hash, low_sample, switched_sample;
+    integer i, transitions, rises, highs, low_hash, high_hash, off_hash, low_sample, switched_sample, lat2_swing;
     reg previous;
     integer fail_count = 0;
     task check(input bit pass, input [255:0] label_text, input integer expected, input integer observed);
@@ -68,23 +68,37 @@ module cvs_discrete_audio_tb;
         discrete[0]=0; #1;
         check(byte_mix==1,"lat4_routes_byte_dac_to_mix",1,byte_mix);
         restart(); dac8=8'hff;
-        @(posedge clk); #1; low_sample=pcm;
+        repeat(2) @(posedge clk); #1; low_sample=pcm;
         discrete[0]=1;
-        @(posedge clk); #1; switched_sample=pcm;
+        repeat(2) @(posedge clk); #1; switched_sample=pcm;
         check((low_sample-switched_sample)>10000,"lat4_switch_changes_actual_mix_route",10000,low_sample-switched_sample);
 
-        // The four-bit resistor ladder has the schematic bit order: 12k is
-        // strongest, then 22k, 47k and 100k. Check its resolved mix levels.
+        // The four-bit resistor ladder preserves the schematic ratios and is
+        // normalized so code 15 is near positive full-scale. Check both the
+        // ordering and the measured SP_LAT2-only swing (code 0 to code 4).
         restart(); dac8=8'h80;
-        @(posedge clk); #1; low_sample=pcm;
-        restart(); dac8=8'h80; dac4=4'b0001; @(posedge clk); #1; switched_sample=pcm;
-        check(switched_sample-low_sample>1800,"dac4_12k_input_adds_to_mix",2007,switched_sample-low_sample);
-        restart(); dac8=8'h80; dac4=4'b0010; @(posedge clk); #1; switched_sample=pcm;
-        check(switched_sample-low_sample>900 && switched_sample-low_sample<1300,"dac4_22k_weight_order",1095,switched_sample-low_sample);
-        restart(); dac8=8'h80; dac4=4'b0100; @(posedge clk); #1; switched_sample=pcm;
-        check(switched_sample-low_sample>400 && switched_sample-low_sample<620,"dac4_47k_weight_order",513,switched_sample-low_sample);
-        restart(); dac8=8'h80; dac4=4'b1000; @(posedge clk); #1; switched_sample=pcm;
-        check(switched_sample-low_sample>180 && switched_sample-low_sample<300,"dac4_100k_weight_order",241,switched_sample-low_sample);
+        repeat(2) @(posedge clk); #1; low_sample=pcm;
+        restart(); dac8=8'h80; dac4=4'b0001; repeat(2) @(posedge clk); #1; switched_sample=pcm;
+        check(switched_sample-low_sample>16000 && switched_sample-low_sample<18000,"dac4_12k_input_adds_to_mix",17057,switched_sample-low_sample);
+        restart(); dac8=8'h80; dac4=4'b0010; repeat(2) @(posedge clk); #1; switched_sample=pcm;
+        check(switched_sample-low_sample>9000 && switched_sample-low_sample<9700,"dac4_22k_weight_order",9303,switched_sample-low_sample);
+        restart(); dac8=8'h80; dac4=4'b0100; repeat(2) @(posedge clk); #1; switched_sample=pcm;
+        check(switched_sample-low_sample>4000 && switched_sample-low_sample<4700,"dac4_47k_weight_order",4355,switched_sample-low_sample);
+        restart(); dac8=8'h80; dac4=4'b1000; repeat(2) @(posedge clk); #1; switched_sample=pcm;
+        check(switched_sample-low_sample>1900 && switched_sample-low_sample<2200,"dac4_100k_weight_order",2046,switched_sample-low_sample);
+        check(switched_sample-low_sample < 17057,"dac4_resistor_weight_order",17057,switched_sample-low_sample);
+        restart(); dac8=8'h80; dac4=4'b0000; repeat(2) @(posedge clk); #1; low_sample=pcm;
+        restart(); dac8=8'h80; dac4=4'b0100; repeat(2) @(posedge clk); #1; switched_sample=pcm;
+        lat2_swing=switched_sample-low_sample;
+        check(lat2_swing>4000 && lat2_swing<4700,"sp_lat2_toggle_audible_mix_swing",4355,lat2_swing);
+        // The authenticated game trace leaves the byte DAC at code 0 while
+        // toggling SP_LAT2. Verify the final discrete-module output still
+        // changes by the ladder contribution instead of remaining railed.
+        restart(); dac8=8'h00; dac4=4'b0000; repeat(2) @(posedge clk); #1; low_sample=pcm;
+        restart(); dac8=8'h00; dac4=4'b0100; repeat(2) @(posedge clk); #1; switched_sample=pcm;
+        check(low_sample < -28000,"observed_byte_dac_zero_baseline_below_-28k",-32768,low_sample);
+        check(switched_sample>-32768 && switched_sample-low_sample>4000 && switched_sample-low_sample<4700,
+            "observed_byte_dac_zero_sp_lat2_mix",4355,switched_sample-low_sample);
 
         // The envelope registers follow only their corresponding physical latch.
         restart(); discrete[2]=1;
@@ -126,7 +140,7 @@ module cvs_discrete_audio_tb;
         high_hash=0;
         for(i=0;i<512;i=i+1) begin @(posedge clk); #1; high_hash=high_hash+pcm; end
         check(low_hash!=high_hash,"lat5_gates_icl_square_into_mix",low_hash,high_hash);
-        $display("BDSM {\"status\":\"PASS\",\"ne555_hz\":%0d,\"ne555_duty_samples\":%0d,\"icl_base_hz\":56,\"icl_full_code_hz\":2096,\"lat5_mix_delta\":%0d}",rises,highs,high_hash-low_hash);
+        $display("BDSM {\"status\":\"PASS\",\"ne555_hz\":%0d,\"ne555_duty_samples\":%0d,\"icl_base_hz\":56,\"icl_full_code_hz\":2096,\"sp_lat2_swing\":%0d,\"lat5_mix_delta\":%0d}",rises,highs,lat2_swing,high_hash-low_hash);
         $finish;
     end
 endmodule

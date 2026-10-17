@@ -42,22 +42,48 @@ net, so this page does not establish its source spectrum.
 
 ## Authenticated-ROM latch observation
 
-The retained 450,000,000-master-cycle connected run used the local authenticated
-Hunchback ROM, actual main/audio/speech CPUs, and the documented coin, start,
-right and jump input windows. It reached 396 video fields and observed three
-audio command/ack/read events. Its audio bus log contains 91,180 writes to the
+The retained 520,000,000-master-cycle connected run used the local authenticated
+Hunchback ROM, actual main/audio/speech CPUs, and scripted coin, start, right
+and jump inputs. Coin/start were pulsed at fields 170/178, Right was held for
+fields 180..439, and Jump was pulsed at 240..242. It reached 458 video fields,
+sampled all four inputs, recorded a coin-related RAM change, and observed five
+audio command/acknowledgement/read events. It does not independently prove the
+player reached the bell. Its audio bus log contains 91,185 writes to the
 discrete latch window:
 
 | Address | Count | Data values seen |
 | --- | ---: | --- |
-| `1884` (`SP_LAT4`) | 30,398 | `00` only |
+| `1884` (`SP_LAT4`) | 30,401 | `00` only |
 | `1885` (`SP_LAT5`) | 0 | no writes |
-| `1886` (`SP_LAT6`) | 30,391 | `00` only |
-| `1887` (`SP_LAT7`) | 30,391 | `00` only |
+| `1886` (`SP_LAT6`) | 30,392 | `00` only |
+| `1887` (`SP_LAT7`) | 30,392 | `00` only |
 
-The observed latch value remained zero. This run does not identify which latch
-transitions Hunchback uses for bell, walking or jump effects. It is execution
-observation, not an expected sound transcript or board measurement.
+All observed latch data values remained zero, including during the scripted
+control windows. A follow-up run moved five three-field Jump pulses into active
+gameplay (fields 300, 330, 360, 390 and 420). It sampled Jump 30 times, recorded
+five main-to-audio commands, five audio acknowledgements and five reads at
+`0x1800` (command bytes `E6`, `FF`, `CB`, `D0`, `DC`), but again observed only
+zero-valued writes at `1884`, `1886` and `1887`, and no writes at `1885`. The
+captured game scene progresses and the player changes position, but this run has
+no independent marker proving the jump physics or bell-contact event occurred.
+
+A focused 380,000,000-cycle run then pulsed Jump only at fields 300..302, after
+gameplay had begun at field 256, and retained every frame from 296 through 305.
+The input was sampled six times and three command/acknowledgement/read events
+occurred. It still recorded no nonzero discrete-latch writes. The adjacent-frame
+captures are retained, but the observer has no independent game-state signal
+that certifies a jump arc or bell collision.
+
+This rules out a generally dead main-to-audio command path: the audio CPU
+receives commands, acknowledges their interrupts and reads the command byte.
+The data-bit theory is also unsupported: both the schematic's `SP_D0` and MAME's
+`data &= 1` for `1884..1887` agree with the RTL's `din[0]`; bit 7 belongs to the
+separate `1880..1883` DAC window. The remaining supported explanation is that
+the trace has not yet demonstrated the actual sound-effect events (especially a
+jump or bell contact), even though it now reaches active gameplay and samples
+Jump there. It is not evidence that those events certainly failed to occur.
+This is execution observation, not an expected sound transcript or board
+measurement.
 
 ## Implemented digital approximation and remaining gaps
 
@@ -69,7 +95,28 @@ SP_LAT6 and SP_LAT7 gate the 555 and pseudo-random noise paths through one-pole
 exponential envelopes using the nominal 2.2 s and 1.0 s RC constants. R33,
 R35, R65/R62 and the SP_LAT0..3 resistances supply relative digital mix
 weights. SP_LAT4's other state sends the byte DAC directly to MIX2. Speech is
-summed as a separate channel.
+summed as a separate channel. The weighted SP_LAT0..3 ladder is included once
+in `discrete_pcm`; top-level `pcm4` is a separate raw diagnostic sampler and is
+not added, avoiding a duplicate signal path.
+
+The four-bit ladder keeps the schematic's 12k:22k:47k:100k conductance ratios
+but is normalized so all bits set produce approximately +32761 digital counts.
+That full-scale normalization is an explicit engineering gain choice because
+the reverse-engineered sheet does not establish calibrated LM3900/mixer gain.
+For the observed SP_LAT2-only toggling (code 0 to code 4), the expected ladder
+swing is approximately 4355 counts, about 13.3% of full scale. This replaces
+the earlier raw conductance scaling (about 512 counts for that bit). Byte-DAC
+output remains signed full scale and speech is an independent signed channel;
+their relative analog levels and final headroom are not measured. The sum can
+therefore still clip when channels coincide.
+
+The MiSTer output now passes the combined signed mix through a one-pole digital
+AC-coupling filter at the 48 kHz sample cadence. Its coefficient is 4084/4096,
+corresponding to a nominal 22.4 Hz corner, and prevents an idle offset-binary
+byte-DAC code from pinning the output. The schematic's final output coupling
+values are not legible enough to derive a board-specific cutoff, so this is an
+engineering approximation. The retained DC-blocker regression verifies that
+the observed SP_LAT2 transition remains a centered non-silent waveform.
 
 The 555 frequency/duty and RC products are calculated from schematic values.
 The 8 Hz/code FM law, LFSR noise spectrum, envelope loading, analog-switch and

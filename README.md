@@ -8,8 +8,9 @@ fortress obstacles and rescue Esmeralda.
 <p align="center"><img src="docs/images/cabinet.png" alt="Hunchback upright cabinet"> <img src="docs/images/gameplay.png" alt="Hunchback on MiSTer"></p>
 
 > **Beta / work in progress.** The core boots and plays on real MiSTer hardware.
-> Video geometry, fonts, sprite alignment, controls, reset and cheats have been
-> confirmed working. DAC audio and speech work; schematic-derived digital
+> Video geometry, fonts, sprite alignment and controls are confirmed working
+> on real MiSTer hardware. OSD reset and the MRA cheats are also confirmed
+> working on hardware. DAC audio and speech work; schematic-derived digital
 > approximations now cover the 555, 8038, noise and envelope paths. The sound
 > mix and effect triggers still need hardware listening and validation.
 
@@ -33,8 +34,9 @@ collection; no separate `.cht` file is needed. Open **Cheats** in the MiSTer
 OSD to enable them.
 
 Available cheats are Infinite Credits, Infinite Time, Next Bell = Super Bonus
-Now!, Invincibility, P1 Infinite Lives and P2 Infinite Lives. There is no
-no-enemies cheat in the included set.
+Now!, Invincibility, P1 Infinite Lives and P2 Infinite Lives. The no-enemies
+cheat is absent from Pugsy's set and was deliberately not added rather than
+guessed.
 
 ## Installation
 

@@ -141,10 +141,11 @@ with DAC4 omitted. The discrete model is now part of `cvs_full_machine`; it
 handles the SP_LAT4 byte-DAC route, resistor-weighted DAC4, oscillator/noise
 branches and envelopes, then the top level adds speech. The updated synthetic
 latch/frequency/RC check and authenticated-ROM capture are recorded in
-[audio-circuits.md](audio-circuits.md). The connected ROM scenario still writes
-only zero to SP_LAT4/6/7 and nothing to SP_LAT5, so it cannot verify bell,
-walking or jump triggers or their distinct audible outputs. The approximation
-is not calibrated against a board recording.
+[audio-circuits.md](audio-circuits.md). The scripted connected-ROM run holds
+Right after Start and pulses Jump, but observes only zero-valued writes to
+SP_LAT4/6/7 and no SP_LAT5 writes. It still cannot verify bell, walking or jump
+triggers or their distinct audible outputs. The approximation is not calibrated
+against a board recording.
 
 OSD reset is declared as `R[0],Reset;`. The MiSTer documentation specifies
 `R{Index}` and the current template uses `R[0]`; other official cores still use
@@ -153,7 +154,7 @@ failure. `status[0]` enters the asynchronous reset assertion and `cvs_reset`
 stretches it for 1,140,000 system clocks (20 ms), then synchronizes release.
 The shell regression asserts a momentary status pulse resets all three CPUs
 and restarts the main CPU at its reset vector while leaving ROM-load state
-separate. The deployed `v261017-03-RESET-PROBE` diagnostic image held a white
-video marker for 100,000,000 system clocks after status bit 0 was observed.
-Subsequent hardware testing confirmed reset after the conf_str actions were
-moved ahead of the joystick declarations.
+separate. Hardware testing later confirmed OSD reset: selecting Reset produced
+the white status-probe hold and the reset path asserted. Reset is closed as a
+hardware integration issue. The generated OSD build identifier is
+timestamp-based and no longer uses the old `RESET-PROBE` suffix.

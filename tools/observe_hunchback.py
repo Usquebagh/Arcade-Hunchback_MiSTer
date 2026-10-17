@@ -32,8 +32,8 @@ def main():
     parser.add_argument('--require-audio-activity',action='store_true',help='In an input-free authenticated-ROM run, require full-machine byte-DAC plus speech output samples to vary and be nonzero')
     args=parser.parse_args()
     if sys.platform!='linux':parser.error('Run in WSL/Linux with GHDL and Verilator')
-    if not 2_000_000<=args.cycles<=1_000_000_000 or not 1<=args.seed<=2147483647:
-        parser.error('Cycles must be 2 million..1 billion; seed must be 1..2147483647')
+    if not 2_000_000<=args.cycles<=4_000_000_000 or not 1<=args.seed<=2147483647:
+        parser.error('Cycles must be 2 million..4 billion; seed must be 1..2147483647')
     if args.require_audio_activity and (not args.audio or args.controls or args.credit_test):
         parser.error('--require-audio-activity requires --audio and an input-free run')
     root=Path(__file__).resolve().parents[1]

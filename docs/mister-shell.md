@@ -60,14 +60,14 @@ schematic bit significance/resistor weights, discrete oscillator path, analog
 filtering and speech channel gain remain unverified; this is not calibrated
 audio coverage.
 
-The current hardware diagnostic image identifies itself as
-`v261017-03-RESET-PROBE`. It turns the video white for 100,000,000 system-clock
-cycles (about 1.75 s) when `status[0]` is observed. This visible hold is only a
-probe; the game reset itself is stretched for 1,140,000 cycles (20 ms). A white
-flash after selecting OSD Reset proves the status bit reached the FPGA. No
-flash means the fault remains on the OSD/HPS-to-status path. RTL simulation
-already verifies a momentary status pulse resets all three CPUs and restarts
-the main CPU from its reset vector.
+Hardware testing confirmed that selecting OSD Reset produces the visible white
+hold, so `status[0]` reaches the FPGA and the reset path asserts. The core reset
+stretcher holds reset for 1,140,000 system-clock cycles (20 ms), with a
+synchronized release. OSD reset is confirmed working on hardware; this is no
+longer an open integration issue. RTL simulation also verifies that a momentary
+status pulse resets all three CPUs and restarts the main CPU from its reset
+vector. The generated OSD build identifier is timestamp-based and no longer
+carries a `RESET-PROBE` suffix.
 
 Joystick mapping follows the MRA button list's consecutive HPS bits starting
 at bit 4: Jump, Start 2, Start 1, Coin occupy bits 4 through 7. The `jn`
