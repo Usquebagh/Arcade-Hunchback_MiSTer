@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Private MiSTer shell integration; board clocks, input wiring and analog mix remain provisional.
 module emu #(
-    parameter DIAGNOSTIC_PROBES = 1'b0,
+    // Temporary hardware diagnostic: show a white screen for 1.75 s whenever
+    // the OSD soft-reset status bit reaches the FPGA.
+    parameter DIAGNOSTIC_PROBES = 1'b1,
     parameter integer RESET_HOLD_CYCLES = 1_140_000
 ) (
     `include "sys/emu_ports.vh"
@@ -38,15 +40,17 @@ module emu #(
         "O[9:8],Bonus life,10k,20k,40k,80k;",
         "O[10],Registration,On,Off;",
         "O[11],Registration length,3,10;",
-        "O[13:12],Orientation,Rotate CW,Rotate CCW,Native;",
+        "O[12],Orientation,Rotate CW,Rotate CCW;",
+        "O[13],Meter pulses,2,5;",
         "O[122:121],Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
         "-;",
         // MRA names map consecutively to HPS joystick bits [4..7].
         "J1,Jump,Start 2,Start 1,Coin;",
         "jn,A,X,Start,Select;",
-        "R0,Reset;",
+        "R[0],Reset;",
+        "C,Cheats;",
         // MiSTer displays this permanent build identifier in the OSD version line.
-        "V,v261017-02;"
+        "V,v261017-05-DIP-CHEATS-RESET-PROBE;"
     };
     hps_io #(.CONF_STR(CONF_STR)) hps_io (
         .clk_sys(clk_sys),.HPS_BUS(HPS_BUS),.EXT_BUS(),.gamma_bus(unused_gamma_bus),
@@ -59,6 +63,20 @@ module emu #(
 
     pll pll(.refclk(CLK_50M),.rst(1'b0),.outclk_0(clk_sys),.locked(pll_locked));
     wire rom_download=ioctl_download && ioctl_index==16'd0;
+    wire cheat_download=ioctl_download && ioctl_index==16'd255;
+    reg [127:0] cheat_bits=128'd0;
+    reg [128:0] cheat_code=129'd0;
+    always @(posedge clk_sys) begin
+        cheat_code[128] <= 1'b0;
+        if (cheat_download && ioctl_wr) begin
+            cheat_bits <= {cheat_bits[119:0],ioctl_dout};
+            if (&ioctl_addr[3:0]) begin
+                cheat_code[127:0] <= {cheat_bits[119:0],ioctl_dout};
+                cheat_code[128] <= 1'b1;
+            end
+        end
+    end
+    wire cheat_reset=core_reset || (cheat_download && ioctl_wr && ioctl_addr==0);
     reg rom_download_d=1'b0,rom_loaded=1'b0;
     always @(posedge clk_sys) begin
         rom_download_d<=rom_download;
@@ -76,7 +94,7 @@ module emu #(
                       status[4:3]==2'd2 ? 2'b10 : 2'b00;
     wire [1:0] bonus=status[9:8]==2'd0 ? 2'b11 : status[9:8]==2'd1 ? 2'b01 :
                      status[9:8]==2'd2 ? 2'b10 : 2'b00;
-    wire [7:0] mame_dsw2={2'b11,1'b0,status[5],coin_b,status[2:1]};
+    wire [7:0] mame_dsw2={2'b11,status[13],status[5],coin_b,status[2:1]};
     wire [7:0] mame_dsw3={3'b111,status[7],bonus,~status[11],~status[10]};
 
     reg [16:0] sense_divider=0;
@@ -136,7 +154,8 @@ module emu #(
     cvs_full_machine machine (
         .clk(clk_sys),.reset(core_reset),.reset_na(!core_reset),.video_reset(core_reset),.scan_run(1'b1),
         .ready(1'b1),.audio_ready(1'b1),.audio_sense(sense_380),.speech_ready(1'b1),.speech_sense(sense_380),
-        .dl_wr(ioctl_wr && rom_download),.dl_addr(ioctl_addr[15:0]),.dl_data(ioctl_dout),
+        .dl_wr(ioctl_wr && rom_download),.cheat_reset(cheat_reset),.cheat_code(cheat_code),
+        .dl_addr(ioctl_addr[15:0]),.dl_data(ioctl_dout),
         .in0(in0),.in1(in1),.in2(8'hff),.in3(8'hff),.dsw1(mame_dsw2),.dsw2(mame_dsw3),
         .pixel_valid(pixel_valid),.pixel_ce_all(pixel_ce_all),.display_enable(display_enable),
         .out_x(out_x),.out_y(out_y),.red(red),.green(green),.blue(blue),.raw_pixel(raw_pixel),
@@ -157,8 +176,10 @@ module emu #(
     assign CLK_VIDEO=clk_sys;
     assign CE_PIXEL=mister_pixel_ce;
     wire [1:0] ar=status[122:121];
-    wire no_rotate=(status[13:12]>=2'd2);
-    wire rotate_ccw=(status[13:12]==2'd1);
+    // Native output is not usable with the current CVS raw timing, so expose
+    // only the two verified framebuffer-rotation directions.
+    wire no_rotate=1'b0;
+    wire rotate_ccw=status[12];
     wire fb_en;
     wire [4:0] fb_format;
     wire [11:0] fb_width,fb_height;

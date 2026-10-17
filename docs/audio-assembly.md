@@ -138,10 +138,13 @@ the DAC4 latch remains available for diagnostics until its physical weighting
 and analog path are established. The shell regression forces a non-clipped
 byte-DAC sample alongside DAC4=-32768 and checks both MiSTer audio channels.
 
-OSD reset is declared as `R0,Reset;`; `status[0]` is included in the top-level
-asynchronous reset assertion and `cvs_reset` synchronizes its release over two
-system clocks after PLL and ROM-load qualification. The shell regression asserts
-that this resets the main, audio and speech CPUs while leaving ROM-load state
-separate. Its status stimulus is forced at the `hps_io` output boundary, so the
-actual OSD/HPS transaction and physical MiSTer reset response remain a
-hardware-validation item.
+OSD reset is declared as `R[0],Reset;`. The MiSTer documentation specifies
+`R{Index}` and the current template uses `R[0]`; other official cores still use
+`R0`, so the legacy spelling is not a sufficient explanation for the hardware
+failure. `status[0]` enters the asynchronous reset assertion and `cvs_reset`
+stretches it for 1,140,000 system clocks (20 ms), then synchronizes release.
+The shell regression asserts a momentary status pulse resets all three CPUs
+and restarts the main CPU at its reset vector while leaving ROM-load state
+separate. The deployed `v261017-03-RESET-PROBE` image holds a white video marker
+for 100,000,000 system clocks after status bit 0 is observed, to distinguish
+HPS status delivery from reset-chain behavior on hardware.

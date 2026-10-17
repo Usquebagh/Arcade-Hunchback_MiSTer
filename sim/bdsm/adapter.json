@@ -74,6 +74,7 @@
     "rtl/machine/cvs_main_memory.sv",
     "rtl/machine/cvs_main_io.sv",
     "rtl/machine/cvs_main_bus.sv",
+    "rtl/machine/cvs_cheat_engine.sv",
     "rtl/machine/cvs_main.sv",
     "sim/cpu/cvs_main_tb.sv",
     "sim/bdsm/check_connected.py",
@@ -2459,10 +2460,10 @@
       "id": "mister_duplicate_reset_entry",
       "check": "hunchback.mister.shell_behavior",
       "file": "Arcade-Hunchback.sv",
-      "old": "\"R0,Reset;\",",
-      "new": "\"R0,Reset;\",\n        \"T0,Reset;\",",
+      "old": "\"R[0],Reset;\",",
+      "new": "\"R[0],Reset;\",\n        \"T[0],Reset;\",",
       "failure_label": "mister_single_reset_binding",
-      "reason": "Only R[0] is the reset action; a duplicate T[0] entry creates a second, incorrectly indexed Reset item."
+      "reason": "The reset binding must be unique; a duplicate Reset item would collide on the same status bit."
     },
     {
       "id": "mister_button_order_misaligned",

@@ -5,6 +5,8 @@ module cvs_main_bus (
     input wire req, wr, memory_space, extended, data_port, flag,
     input wire [14:0] address,
     input wire [7:0] din,
+    input wire cheat_reset,
+    input wire [128:0] cheat_code,
     output wire ack,
     output wire [7:0] dout,
     input wire dl_wr,
@@ -39,7 +41,11 @@ module cvs_main_bus (
         if (reset) response_io <= 1'b0;
         else if (read_transfer) response_io <= !memory_space;
     end
-    assign dout = response_io ? io_data : memory_data;
+    wire [7:0] cheat_memory_data;
+    cvs_cheat_engine cheat_engine(.clk(clk),.reset(cheat_reset),.code(cheat_code),
+        .capture(read_transfer && memory_space),.address(address),
+        .data_in(memory_data),.data_out(cheat_memory_data));
+    assign dout = response_io ? io_data : cheat_memory_data;
     cvs_main_memory memory_boundary(.clk(clk),.cpu_addr(address),.cpu_flag(flag),
         .char_page(char_page),.cpu_rd(read_transfer && memory_space),
         .cpu_wr(write_transfer && memory_space),.cpu_din(din),.cpu_dout(memory_data),

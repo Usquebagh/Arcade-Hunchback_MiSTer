@@ -4,6 +4,8 @@ module cvs_main (
     input wire clk, reset, reset_na, ce, ready,
     input wire irq, sense,
     input wire [7:0] ivec,
+    input wire cheat_reset,
+    input wire [128:0] cheat_code,
     output wire intack,
     input wire dl_wr,
     input wire [14:0] dl_addr,
@@ -37,6 +39,7 @@ module cvs_main (
         .ad(address),.dw(write_data),.dr(read_data),.ph(phase),.flag(flag),
         .\int (irq),.intack(intack),.ivec(ivec),.sense(sense));
     cvs_main_bus bus_boundary(.clk(clk),.reset(reset),.ready(ready),.ack(ack),
+        .cheat_reset(cheat_reset),.cheat_code(cheat_code),
         .req(req),.wr(wr),.memory_space(memory_space),.extended(extended),
         .data_port(data_port),.flag(flag),.address(address),.din(write_data),.dout(read_data),
         .dl_wr(dl_wr),.dl_addr(dl_addr),.dl_data(dl_data),

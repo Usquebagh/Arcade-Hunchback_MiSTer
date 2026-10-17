@@ -3,6 +3,8 @@
 module cvs_machine (
     input wire clk, reset, reset_na, video_reset, scan_run, ready,
     input wire dl_wr,
+    input wire cheat_reset,
+    input wire [128:0] cheat_code,
     input wire [15:0] dl_addr,
     input wire [7:0] dl_data,
     input wire [7:0] in0, in1, in2, in3, dsw1, dsw2,
@@ -43,6 +45,7 @@ module cvs_machine (
         .hrst(unused_hrst),.cbf(unused_cbf),.h_count(h_count),.v_count(v_count));
     cvs_vblank_irq interrupt_latch(.clk(clk),.reset(reset),.vblank(vrst),.intack(intack),.irq(irq));
     cvs_main main(.clk(clk),.reset(reset),.reset_na(reset_na),.ce(ce),.ready(ready),
+        .cheat_reset(cheat_reset),.cheat_code(cheat_code),
         .irq(irq),.sense(vrst),.ivec(8'h03),.intack(intack),
         .dl_wr(dl_wr && dl_addr<16'h8000),.dl_addr(dl_addr[14:0]),.dl_data(dl_data),
         .in0(in0),.in1(in1),.in2(in2),.in3(in3),.dsw1(dsw1),.dsw2(dsw2),

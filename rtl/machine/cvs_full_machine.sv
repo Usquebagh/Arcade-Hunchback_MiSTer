@@ -4,6 +4,8 @@ module cvs_full_machine (
     input wire clk, reset, reset_na, video_reset, scan_run, ready,
     input wire audio_ready,audio_sense,speech_ready,speech_sense,
     input wire dl_wr,
+    input wire cheat_reset,
+    input wire [128:0] cheat_code,
     input wire [15:0] dl_addr,
     input wire [7:0] dl_data,
     input wire [7:0] in0, in1, in2, in3, dsw1, dsw2,

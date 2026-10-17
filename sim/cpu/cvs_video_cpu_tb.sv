@@ -16,6 +16,7 @@ module cvs_video_cpu_tb;
     cvs_vblank_irq interrupt_latch(.clk(clk),.reset(cpu_reset),.vblank(vrst),
         .intack(intack),.irq(irq));
     cvs_main dut(.clk(clk),.reset(cpu_reset),.reset_na(reset_na),.ce(cpu_ce),.ready(1'b1),
+        .cheat_reset(1'b0),.cheat_code(129'd0),
         .irq(irq),.sense(vrst),.ivec(8'h03),.intack(intack),
         .dl_wr(dl_wr),.dl_addr(dl_addr),.dl_data(dl_data),
         .in0(8'hff),.in1(8'hff),.in2(8'hff),.in3(8'hff),.dsw1(8'hff),.dsw2(8'hff),

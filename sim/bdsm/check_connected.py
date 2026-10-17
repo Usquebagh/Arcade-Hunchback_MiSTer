@@ -20,7 +20,7 @@ def main():
         shell=Path('Arcade-Hunchback.sv').read_text()
         ranges=[(int(first),int(second) if second else int(first))
                 for first,second in re.findall(r'"O\[(\d+)(?::(\d+))?\]',shell)]
-        if any(min(first,second)==0 for first,second in ranges) or '"R0,Reset;"' not in shell:
+        if any(min(first,second)==0 for first,second in ranges) or not re.search(r'"R(?:\[)?0(?:\])?,Reset;"', shell):
             emit('FAIL',label='mister_status_reserved',cycle=0,expected=1,observed=0)
             return 1
         conf=shell.split('localparam CONF_STR=',1)[1].split('};',1)[0]
@@ -32,7 +32,11 @@ def main():
         if len(status_bits)!=len(set(status_bits)) or status_bits!=sorted(status_bits):
             emit('FAIL',label='mister_status_index_order',cycle=0,expected=1,observed=0)
             return 1
-        reset_items=re.findall(r'"([RT])(\d+),Reset;"',conf)
+        if '"O[13:12],Orientation,Rotate CW,Rotate CCW,Native;"' in conf:
+            emit('FAIL',label='mister_native_orientation_removed',cycle=0,expected=1,observed=0)
+            return 1
+        reset_items=re.findall(r'"([RT])(?:\[(\d+)\]|(\d+)),Reset;"',conf)
+        reset_items=[(kind,bracketed or legacy) for kind,bracketed,legacy in reset_items]
         if reset_items!=[('R','0')] or 'status[0]' not in shell.split('wire reset_async=',1)[1].split(';',1)[0]:
             emit('FAIL',label='mister_single_reset_binding',cycle=0,expected=1,observed=len(reset_items))
             return 1
@@ -94,7 +98,7 @@ def main():
     cpu_file=work/'sgs2650.v'
     cpu_file.write_text(generated)
     sync_ram_sources=['rtl/machine/cvs_sync_ram_1p.sv','rtl/machine/cvs_sync_ram_2p.sv','rtl/machine/cvs_sync_rom.sv']
-    sources=['rtl/machine/cvs_main.sv','rtl/machine/cvs_main_bus.sv','rtl/machine/cvs_main_io.sv',
+    sources=['rtl/machine/cvs_main.sv','rtl/machine/cvs_main_bus.sv','rtl/machine/cvs_cheat_engine.sv','rtl/machine/cvs_main_io.sv',
              'rtl/machine/cvs_main_memory.sv','rtl/machine/cvs_banked.sv',
              'rtl/machine/cvs_memory.sv',*sync_ram_sources,'rtl/machine/cvs_clock.sv']
     top = {'video_connected':'cvs_video_cpu_tb','s2636_connected':'cvs_s2636_cpu_tb','character_connected':'cvs_character_cpu_tb','cold_connected':'cvs_cold_cpu_tb','assembly_connected':'cvs_machine_tb','bootstrap_connected':'cvs_machine_tb','startup_connected':'cvs_startup_tb'}.get(args.mode,'cvs_main_tb')
@@ -157,10 +161,13 @@ def main():
     # a variable-index combinational read must react to every entry. Keep their
     # exact text in the result/log; every other diagnostic remains unreviewed.
     array_note=re.compile(r"rtl/machine/cvs_s2636_objects\.sv:\d+: warning: @\* is sensitive to all (256 words in array 'registers'|4 words in array '(active_duplicate|duplicate_hc|render_row|scale|active_line|in_object|next_row)')\.")
+    cheat_array_note=re.compile(r"rtl/machine/cvs_cheat_engine\.sv:(57|58|59|60|61): warning: @\* is sensitive to all 16 words in array '(code_valid|code_address|code_compare_enable|code_compare|code_value)'\.")
     screen_init_note=re.compile(r"sys/arcade_video\.v:(268|300): warning: Static variable initialization requires explicit lifetime in this context\.")
     for line in (compile_run.stdout+compile_run.stderr).splitlines():
         if args.mode in ('s2636_connected','assembly_connected','bootstrap_connected','startup_connected','av_connected','full_connected','mister_shell_connected','mister_shell_behavior_connected') and array_note.fullmatch(line):
             reviewed_messages.append({'message':line,'review':'Full-array sensitivity is required for the declared combinational indexed register/engine read; Verilator -Wall finds no latch or sensitivity fault.'})
+        elif args.mode in ('main_connected','video_connected','s2636_connected','character_connected','cold_connected','assembly_connected','bootstrap_connected','startup_connected','av_connected','full_connected','mister_shell_connected','mister_shell_behavior_connected') and cheat_array_note.fullmatch(line):
+            reviewed_messages.append({'message':line,'review':'The cheat output intentionally checks all 16 loaded byte-code slots in parallel; each valid/address/compare/value array is included in the combinational sensitivity set.'})
         elif args.mode in ('mister_shell_connected','mister_shell_behavior_connected') and screen_init_note.fullmatch(line):
             reviewed_messages.append({'message':line,'review':'The pinned MiSTer framebuffer rotation module initializes static local raster counters inside clocked processes; this is supported by Quartus and does not change modeled rotation/control behavior.'})
         else:

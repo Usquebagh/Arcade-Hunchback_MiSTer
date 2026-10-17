@@ -120,13 +120,12 @@ module mister_shell_tb;
             fail("default_rotation_clockwise",1,{dut.video_rotated,dut.rotate_ccw,dut.no_rotate});
         if(dut.hps_io.video_rotated!==dut.video_rotated)
             fail("osd_rotation_feedback",dut.video_rotated,dut.hps_io.video_rotated);
-        menu_status[13:12]=2'd1;#1;
+        menu_status[12]=1'b1;#1;
         if(dut.rotate_ccw!==1'b1 || dut.video_rotated!==1'b1)
             fail("menu_rotation_ccw",3,{dut.rotate_ccw,dut.video_rotated});
-        menu_status[13:12]=2'd2;#1;
-        if(dut.no_rotate!==1'b1 || dut.video_rotated!==1'b0)
-            fail("menu_rotation_native",2,{dut.no_rotate,dut.video_rotated});
-        menu_status[13:12]=0;
+        menu_status[12]=1'b0;#1;
+        if(dut.no_rotate!==1'b0 || dut.video_rotated!==1'b1)
+            fail("menu_rotation_cw",1,{dut.no_rotate,dut.video_rotated});
         // MRA defaults: Jump=A, Start 1=Start, Coin=Select, Start 2=X.
         joy0=(32'b1<<7)|(32'b1<<6)|(32'b1<<5)|(32'b1<<4)|(32'b1<<2);
         joy1=(32'b1<<7)|(32'b1<<4)|(32'b1<<3);
@@ -140,6 +139,9 @@ module mister_shell_tb;
         #1;
         if(dut.machine.dsw1!==8'hd9)fail("mame_dsw2_machine_port",8'hd9,dut.machine.dsw1);
         if(dut.machine.dsw2!==8'hf9)fail("mame_dsw3_machine_port",8'hf9,dut.machine.dsw2);
+        menu_status[13]=1;#1;
+        if(dut.machine.dsw1!==8'hf9)fail("mame_meter_pulses_dsw2_bit5",8'hf9,dut.machine.dsw1);
+        menu_status[13]=0;
 
         menu_status[0]=1;clocks(1);
         if(dut.core_reset!==1'b1)fail("menu_reset_assertion",1,dut.core_reset);
@@ -150,7 +152,7 @@ module mister_shell_tb;
            dut.machine.main_audio_video.audio.reset!==1'b1 ||
            dut.machine.speech.reset!==1'b1 || dut.machine.speech.reset_na!==1'b0)
             fail("menu_reset_reaches_all_game_cpus",1,0);
-        // R0 is a momentary OSD status bit. The shortened test parameter
+        // R[0] is a momentary OSD status bit. The shortened test parameter
         // exercises the hold/release sequence; production is configured for 20 ms.
         menu_status[0]=0;clocks(1);
         if(dut.core_reset!==1'b1)fail("menu_reset_minimum_hold",1,dut.core_reset);

@@ -41,7 +41,7 @@ def main():
     sync_ram_sources = ['rtl/machine/cvs_sync_ram_1p.sv','rtl/machine/cvs_sync_ram_2p.sv','rtl/machine/cvs_sync_rom.sv']
     sources['tms5100_tables']='rtl/vendor/tms5100/cvs_tms5100_tables.sv'
     banked_sources = [*sync_ram_sources,'rtl/machine/cvs_main_memory.sv','rtl/machine/cvs_banked.sv','rtl/machine/cvs_memory.sv']
-    bus_sources = ['rtl/machine/cvs_main_bus.sv','rtl/machine/cvs_main_io.sv',*banked_sources]
+    bus_sources = ['rtl/machine/cvs_main_bus.sv','rtl/machine/cvs_cheat_engine.sv','rtl/machine/cvs_main_io.sv',*banked_sources]
     audio_bus_sources = [*sync_ram_sources,sources['audio_bus']]
     speech_bus_sources = [*sync_ram_sources,sources['speech_bus']]
     character_sources = ['sim/cpu/cvs_character_tb.sv','rtl/machine/cvs_character_video.sv',*banked_sources]

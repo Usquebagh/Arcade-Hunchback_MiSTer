@@ -13,6 +13,7 @@ set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_machine.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_mister_pixel_enable.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_main.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_main_bus.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_cheat_engine.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_main_io.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_main_memory.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_mister_input.sv

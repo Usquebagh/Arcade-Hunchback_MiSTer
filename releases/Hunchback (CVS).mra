@@ -11,6 +11,21 @@
     <num_buttons>1</num_buttons>
     <about author="Usquebagh">Private development; ENGINEERING_UNQUALIFIED build. Hardware retest pending.</about>
     <buttons names="Jump,Start 2,Start 1,Coin" default="A,X,Start,Select" />
+    <!-- Converted byte-read codes from Pugsy's MAME cheat collection. -->
+    <cheats size="16" max="16">
+        <cheat name="Infinite Credits">000000 10 00001E86 00000000 00000099</cheat>
+        <cheat name="Infinite Time (F6)">000000 10 00001F6D 00000000 00000000</cheat>
+        <cheat name="Next Bell = Super Bonus Now!">000000 10 00001EEB 00000000 00000004</cheat>
+        <cheat name="Invincibility">
+            000000 10 000008D0 00000000 0000001B
+            000000 10 000009AE 00000000 0000001B
+            000000 10 00002806 00000000 00000000
+            000000 10 00002965 00000000 00000000
+            000000 10 00002E56 00000000 00000017
+        </cheat>
+        <cheat name="P1 Infinite Lives">000000 10 00001C84 00000000 00000005</cheat>
+        <cheat name="P2 Infinite Lives">000000 10 00001C85 00000000 00000005</cheat>
+    </cheats>
     <rom index="0" zip="hunchbak.zip" md5="none">
         <part name="hb-gp1.bin" crc="af801d54" offset="0x0000" length="0x0400" />
         <part name="hb-gp2.bin" crc="b448cc8e" offset="0x0000" length="0x0400" />
