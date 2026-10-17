@@ -14,6 +14,9 @@ def main():
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--mode', choices=['main_connected','video_connected','s2636_connected','character_connected','assembly_connected','bootstrap_connected','startup_connected','audio_connected','speech_connected','tms5100_connected','speech_machine_connected','full_connected','mister_shell_connected','mister_shell_behavior_connected','av_connected','cold_connected'], default='main_connected')
     args = parser.parse_args()
+    build_id = Path('build_id.v')
+    if not build_id.exists() or '`define BUILD_ID ' not in build_id.read_text():
+        build_id.write_text('`define BUILD_ID "vdev"\n')
     work = Path('build/bdsm-' + args.mode).resolve()
     work.mkdir(parents=True, exist_ok=True)
     if args.mode=='mister_shell_behavior_connected':
@@ -50,7 +53,7 @@ def main():
         if (reset_pos < 0 or cheat_pos < 0 or j_pos < 0 or jn_pos < j_pos or
             version_pos < jn_pos or reset_pos > j_pos or cheat_pos > j_pos or
             conf.find('"C,Cheats;"',cheat_pos+1) >= 0 or
-            not re.search(r'"V,[^\"]*;"\s*$',conf)):
+            not re.search(r'"V,.*;"\s*$',conf)):
             emit('FAIL',label='mister_menu_action_order',cycle=0,expected=1,observed=0)
             return 1
         expected_slots=['Jump','Start 2','Start 1','Coin']
@@ -161,7 +164,7 @@ def main():
     if args.mode not in ('mister_shell_connected','mister_shell_behavior_connected'):
         sources += ['sim/cpu/'+top+'.sv']
     defines=['-DMISTER_FB=1'] if args.mode in ('mister_shell_connected','mister_shell_behavior_connected') else []
-    compile_run=subprocess.run(['iverilog','-g2012','-Wall',*defines,'-s',top,'-o',str(work/'test.vvp'),
+    compile_run=subprocess.run(['iverilog','-g2012','-Wall','-I',str(Path.cwd()),*defines,'-s',top,'-o',str(work/'test.vvp'),
                                 str(cpu_file),*sources],capture_output=True,text=True)
     (work/'compile.log').write_text(compile_run.stdout+compile_run.stderr)
     if compile_run.returncode:

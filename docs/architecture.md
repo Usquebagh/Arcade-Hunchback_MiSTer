@@ -1,5 +1,14 @@
 # CVS implementation boundary
 
+## Current hardware status
+
+The core boots and plays on a MiSTer. Hardware testing has confirmed video
+geometry, uniform fonts, sprite alignment, control directions, OSD reset and
+the MRA-loaded cheat menu. DAC audio and speech are audible. The bell, walking
+and jumping effects are still absent; discrete analog effects and a calibrated
+final mix remain under investigation. These results are hardware observations,
+not proof of full board equivalence or timing qualification.
+
 The reference is MAME `misc/cvs.cpp` at
 `c806573e925ce00fe3e8d8fe417eba63f83275ce`. MAME is a compatibility reference,
 not independent proof of physical board timing or analog audio fidelity.
@@ -11,17 +20,19 @@ sound-CPU boundary: actual 4 KiB ROM/128-byte RAM, command IRQ/read, byte DAC an
 four DAC/discrete latches. Exhaustive bus and actual CPU/clock/IRQ checks pass.
 `cvs_av_machine` connects actual main/video and audio CPUs with checked command
 IRQ/read delivery. `cvs_audio_samples` exposes separate raw signed channels at
-nominal 48k cadence with independent numeric checks. Physical DAC coding/weights,
-calibrated gain/filter/mixer/discrete output, speech and physical clock/CDC
-integration remain pending; the schematic latch-bit discrepancy is retained.
+nominal 48k cadence with independent numeric checks. DAC and speech are audible
+on hardware. Physical DAC coding/weights, calibrated gain/filter/mixer/discrete
+effects and physical clock/CDC integration remain open; the schematic latch-bit
+discrepancy is retained.
 See [audio boundary](audio-digital.md), [connection](audio-assembly.md) and
 [raw sampling](audio-samples.md).
 
 `cvs_speech_bus` and `cvs_speech_cpu` add a standalone actual S2650 with 2 KiB
 program, 4 KiB serial data, normalized CTL/PDC and external CTL-status/bit-consumer
 interfaces. Independent exhaustive bus/serial checks and 17 actual-CPU signatures
-pass. The speech engine and connection to the main machine remain pending;
-fixtures do not provide LPC/voice or physical control/ROM clock qualification.
+pass. The speech datapath is connected in the three-CPU machine and speech is
+audible on hardware; exact voice fidelity and physical control/ROM clock
+qualification remain open.
 See [speech boundary](speech-digital.md).
 
 `cvs_reset`: asynchronous reset assertion and two rising edges for synchronous
@@ -109,7 +120,7 @@ effects. Vblank drives main sense and interrupt; sound CPUs use an approximate
 380 Hz sense oscillator. A synthetic main CPU connection now checks the declared
 one-edge memory/I/O protocol and /96 machine-step transfers; provisional vblank
 connection also has synthetic CPU checks. Physical bus/video timing and
-sound-board timing remain pending. See [main bus](main-bus.md).
+sound-board timing remains open. See [main bus](main-bus.md).
 
 ## Draft ioctl index-0 layout
 

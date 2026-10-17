@@ -8,6 +8,7 @@ module emu #(
 ) (
     `include "sys/emu_ports.vh"
 );
+    `include "build_id.v"
     assign ADC_BUS='Z;
     assign USER_OUT='1;
     assign {UART_RTS,UART_TXD,UART_DTR}=0;
@@ -50,7 +51,7 @@ module emu #(
         "-;",
         "J1,Jump,Start 2,Start 1,Coin;",
         "jn,A,X,Start,Select;",
-        "V,v261017-05-DIP-CHEATS-RESET-PROBE;"
+        "V,", `BUILD_ID, ";"
     };
     hps_io #(.CONF_STR(CONF_STR)) hps_io (
         .clk_sys(clk_sys),.HPS_BUS(HPS_BUS),.EXT_BUS(),.gamma_bus(unused_gamma_bus),

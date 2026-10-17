@@ -15,4 +15,7 @@ MISTER_BDSM_PATH to that checkout, or place it at:
 EOF
     exit 2
 fi
+if ! grep -q '^`define BUILD_ID ' "$core_root/build_id.v" 2>/dev/null; then
+    printf '`define BUILD_ID "vdev"\n' > "$core_root/build_id.v"
+fi
 exec python3 "$runner" "$command" "$core_root" --adapter "$core_root/sim/bdsm/adapter.json" --output "$core_root/results" "$@"

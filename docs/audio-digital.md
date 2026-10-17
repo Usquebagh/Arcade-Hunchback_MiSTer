@@ -111,7 +111,7 @@ gap or supply analog, PCM or speech output.
 
 The [wiring audit](audio-wiring.md) supports keeping byte significance as drawn
 and shows that every executed four-bit game write was zero; the SP_D0 versus
-MAME bit-7 discrepancy and physical gain/weights remain gaps. The following
-[speech digital stage](speech-digital.md) adds the actual third CPU and tested
-control/serial interface as a standalone subsystem. TMS/LPC, voice, physical
-protocol and three-CPU machine integration remain incomplete.
+MAME bit-7 discrepancy and physical gain/weights remain gaps. Later work added
+the third CPU, speech controller and numeric TMS datapath and connected them in
+the three-CPU machine. Speech is audible on hardware; physical protocol, exact
+voice fidelity and analog/discrete mixing remain incomplete.

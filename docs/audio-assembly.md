@@ -5,15 +5,15 @@
 The provisional assembly must use both actual S2650 CPUs, actual main FLAG RAM,
 video assembly and audio bus. Main program bytes remain at image 0000..7FFF;
 audio program bytes at 8000..8FFF must reach audio ROM addresses 000..FFF.
-Other auxiliary image windows must not overwrite the audio program. Speech is
-not implemented. The command byte and single-edge event connect directly from
-main I/O to the audio bus. No FLAG predicate, extra command queue or fake CPU
-may replace this path.
+Other auxiliary image windows must not overwrite the audio program. The speech
+CPU and datapath were added in a later milestone. The command byte and
+single-edge event connect directly from main I/O to the audio bus. No FLAG
+predicate, extra command queue or fake CPU may replace this path.
 
 These are synchronous FPGA/MAME compatibility contracts, not board clock/CDC
 measurements. Main and audio enables are /96 and /192 of the shared master.
 External audio SENSE remains a fixture. Separate physical oscillators, analog
-sound, speech, physical decode and calibrated channel references remain gaps.
+sound, physical decode and calibrated channel references remain gaps.
 
 The independent synthetic sequence is 40,9B,DA,40,C6 through actual main WRTC
 instructions: five latch updates, only two rising-bit-7 interrupts. The first
@@ -108,10 +108,12 @@ not establish independence from power-up state. RAM/CPU initialization was not
 changed. These remain limitations requiring concrete-state/path and board
 reference audits, not a reason to reset all work RAM or discard diagnostics.
 
-Analog/discrete synthesis, calibrated PCM, resistor/DAC bit significance,
-speech CPU/TMS5100, physical oscillators/CDC, complete CPU/game/video references,
-MiSTer integration and Quartus constraint/timing gates remain incomplete. No
-RBF candidate or audible output is produced by this milestone.
+At this historical assembly milestone, analog/discrete synthesis, calibrated
+PCM, resistor/DAC bit significance, speech CPU/TMS5100, physical oscillators/CDC,
+complete CPU/game/video references, MiSTer integration and Quartus constraints
+remained incomplete. Later work connected speech and produced audible DAC and
+speech output on hardware; discrete effects and calibrated analog behavior are
+still open.
 
 The following [raw-sampling milestone](audio-samples.md) adds separate PCM ports
 and a private preview without qualifying physical channel gain/mixing or removing
@@ -127,8 +129,9 @@ completed 450,000,000 master cycles and 396 video fields. The audio CPU made
 and 119,157 discrete-control writes. The input-free trace had no audio command
 IRQ/read events. At 48 kHz, the top-level engineering sum produced 377,099
 nonzero samples, 123 distinct levels, and a range of -32768..-1. This is a
-digital activity regression on the authenticated game ROM, not proof of an
-audible hardware output or calibrated sound.
+digital activity regression on the authenticated game ROM. Later hardware
+testing confirmed audible DAC and speech output; these sample counts do not
+establish calibrated sound.
 
 The first top-level mix included the raw four-bit latch at equal gain. In the
 observed attract state, DAC4 code zero was mapped by the provisional
@@ -145,6 +148,7 @@ failure. `status[0]` enters the asynchronous reset assertion and `cvs_reset`
 stretches it for 1,140,000 system clocks (20 ms), then synchronizes release.
 The shell regression asserts a momentary status pulse resets all three CPUs
 and restarts the main CPU at its reset vector while leaving ROM-load state
-separate. The deployed `v261017-03-RESET-PROBE` image holds a white video marker
-for 100,000,000 system clocks after status bit 0 is observed, to distinguish
-HPS status delivery from reset-chain behavior on hardware.
+separate. The deployed `v261017-03-RESET-PROBE` diagnostic image held a white
+video marker for 100,000,000 system clocks after status bit 0 was observed.
+Subsequent hardware testing confirmed reset after the conf_str actions were
+moved ahead of the joystick declarations.

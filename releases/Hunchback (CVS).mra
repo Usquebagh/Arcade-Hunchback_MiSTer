@@ -9,7 +9,7 @@
     <players>2 (alternating)</players>
     <joystick>2-way</joystick>
     <num_buttons>1</num_buttons>
-    <about author="Usquebagh">Private development; ENGINEERING_UNQUALIFIED build. Hardware retest pending.</about>
+    <about author="Usquebagh">Beta / work in progress; tested on MiSTer. Discrete sound effects incomplete.</about>
     <buttons names="Jump,Start 2,Start 1,Coin" default="A,X,Start,Select" />
     <!-- Converted byte-read codes from Pugsy's MAME cheat collection. -->
     <cheats size="16" max="16">
