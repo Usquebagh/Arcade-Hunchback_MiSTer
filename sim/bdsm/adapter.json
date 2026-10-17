@@ -115,6 +115,8 @@
     "rtl/machine/cvs_av_machine.sv",
     "sim/cpu/cvs_av_machine_tb.sv",
     "rtl/machine/cvs_audio_samples.sv",
+    "rtl/machine/cvs_discrete_audio.sv",
+    "sim/cpu/cvs_discrete_audio_tb.sv",
     "sim/bdsm/audio_samples.cpp",
     "rtl/machine/cvs_speech_bus.sv",
     "rtl/machine/cvs_speech_cpu.sv",
@@ -707,6 +709,16 @@
       "reference": "docs/audio-samples.md; explicit numeric raw-channel contract recorded before implementation, not physical gain/bit order/analog calibration."
     },
     {
+      "id": "hunchback.audio.discrete",
+      "suite": "smoke",
+      "mode": "audio_discrete",
+      "required": true,
+      "tools": ["iverilog", "vvp"],
+      "timeout": 180,
+      "expectation": "NE555 nominal 304 Hz rate and 53.5% duty, ICL8038 model base/FM rates, 2.2 s and 1.0 s exponential RC envelopes, SP_LAT4 route selection and SP_LAT5 square gating are checked against independent numeric expectations.",
+      "reference": "docs/audio-circuits.md; schematic-derived component products and resistor ratios plus explicitly assumed ICL8038 FM sweep/noise source, not calibrated circuit or event-to-effect reference."
+    },
+    {
       "id": "hunchback.audio.attract",
       "suite": "game",
       "script": "tools/check_attract_audio.sh",
@@ -716,9 +728,9 @@
       "rom": "hunchbak.zip",
       "game": "hunchback",
       "prepare": "prepare_hunchback.py",
-      "markers": ["PASS: authenticated attract ROM produced varying nonzero byte-DAC output"],
-      "expectation": "The authenticated input-free Hunchback ROM runs through the actual main and audio CPUs and produces varying nonzero engineering output samples in attract mode.",
-      "reference": "docs/audio-assembly.md and docs/audio-samples.md; actual local ROM execution and signed byte-DAC sampler. No calibrated analog mix or board audio claim."
+      "markers": ["PASS: authenticated input-free ROM run produced varying nonzero full-machine audio output samples"],
+      "expectation": "The authenticated input-free Hunchback ROM runs through the actual main, audio and speech CPUs and produces varying nonzero samples through the routed byte-DAC/discrete/speech engineering mix.",
+      "reference": "docs/audio-assembly.md, docs/audio-samples.md and docs/audio-circuits.md; actual local ROM execution and explicit digital circuit assumptions. No calibrated analog mix or board audio claim."
     },
     {
       "id": "hunchback.speech.bus",

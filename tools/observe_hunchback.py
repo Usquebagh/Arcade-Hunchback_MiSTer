@@ -90,11 +90,11 @@ def main():
         # Lexical keyword escape only; no substitutions to CPU logic or reset.
         cpu=work/'sgs2650.v';cpu.write_text(re.sub(r'\bint\b',lambda _: '\\int ',ran.stdout))
         metadata['synthesized_cpu_sha256']=hashlib.sha256(cpu.read_bytes()).hexdigest()
-        names=['cvs_mister_input','cvs_machine','cvs_main','cvs_main_bus','cvs_main_io','cvs_main_memory','cvs_banked','cvs_memory',
+        names=['cvs_mister_input','cvs_machine','cvs_main','cvs_main_bus','cvs_cheat_engine','cvs_main_io','cvs_main_memory','cvs_banked','cvs_memory',
                'cvs_sync_ram_1p','cvs_sync_ram_2p','cvs_sync_rom','cvs_clock',
                'cvs_scan','cvs_video_timing','cvs_vblank_irq','cvs_video_join','cvs_s2636_bank','cvs_s2636_objects','cvs_character_video']
         top='cvs_full_machine' if args.audio else 'cvs_hps_coin_machine'
-        if args.audio:names += ['cvs_av_machine','cvs_audio_cpu','cvs_audio_bus','cvs_audio_samples',
+        if args.audio:names += ['cvs_av_machine','cvs_audio_cpu','cvs_audio_bus','cvs_audio_samples','cvs_discrete_audio',
             'cvs_full_machine','cvs_speech_machine','cvs_speech_cpu','cvs_speech_bus',
             'cvs_tms5100_control','cvs_tms5100_engine','cvs_tms5100_frames',
             'cvs_tms5100_lattice','cvs_tms5100_pcm','cvs_tms5100_rate','cvs_tms5100_sequence']

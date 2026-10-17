@@ -183,15 +183,14 @@ module mister_shell_tb;
         if(dut.core_reset!==1'b1)fail("user_button_reset_assertion",1,dut.core_reset);
         menu_buttons=0;
 
-        // The raw four-bit latch is retained for observation, but must not
-        // inject its uncalibrated offset-binary zero as a full-scale DC mix.
-        force dut.pcm8=16'sd20000;
-        force dut.pcm4=-16'sd32768;
+        // The integrated discrete model owns byte-DAC routing and weighted
+        // four-bit/discrete mixing; verify that its signed output reaches HPS.
+        force dut.discrete_pcm=16'sd20000;
         force dut.speech_pcm=16'sd0;
         #1;
         if(dut.AUDIO_L!==16'd20000 || dut.AUDIO_R!==16'd20000)
             fail("audible_byte_dac_not_clipped_by_raw_four_bit",20000,dut.AUDIO_L);
-        release dut.pcm8;release dut.pcm4;release dut.speech_pcm;
+        release dut.discrete_pcm;release dut.speech_pcm;
 
         $display("BDSM {\"status\":\"PASS\",\"observed\":\"MiSTer shell ROM-load/reset sequencing and MAME-compatible joystick mapping with actual CPU hierarchy\"}");
         $finish(0);

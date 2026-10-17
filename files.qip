@@ -3,6 +3,7 @@ set_global_assignment -name SYSTEMVERILOG_FILE Arcade-Hunchback.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_audio_bus.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_audio_cpu.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_audio_samples.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_discrete_audio.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_av_machine.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_banked.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_character_video.sv

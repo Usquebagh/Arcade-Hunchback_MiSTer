@@ -136,10 +136,15 @@ establish calibrated sound.
 The first top-level mix included the raw four-bit latch at equal gain. In the
 observed attract state, DAC4 code zero was mapped by the provisional
 offset-binary sampler to -32768, clipping the mixed output to the negative rail
-for most samples. The engineering mix now uses the byte DAC plus speech PCM;
-the DAC4 latch remains available for diagnostics until its physical weighting
-and analog path are established. The shell regression forces a non-clipped
-byte-DAC sample alongside DAC4=-32768 and checks both MiSTer audio channels.
+for most samples. That historical mix initially used byte DAC plus speech PCM,
+with DAC4 omitted. The discrete model is now part of `cvs_full_machine`; it
+handles the SP_LAT4 byte-DAC route, resistor-weighted DAC4, oscillator/noise
+branches and envelopes, then the top level adds speech. The updated synthetic
+latch/frequency/RC check and authenticated-ROM capture are recorded in
+[audio-circuits.md](audio-circuits.md). The connected ROM scenario still writes
+only zero to SP_LAT4/6/7 and nothing to SP_LAT5, so it cannot verify bell,
+walking or jump triggers or their distinct audible outputs. The approximation
+is not calibrated against a board recording.
 
 OSD reset is declared as `R[0],Reset;`. The MiSTer documentation specifies
 `R{Index}` and the current template uses `R[0]`; other official cores still use

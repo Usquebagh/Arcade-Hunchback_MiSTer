@@ -4,9 +4,9 @@
 
 This is a derived circuit map from page 2 of the private, reverse-engineered CVS
 v1.4 schematic. The source is retained under `docs/private/` and is not
-redistributed. Schematic-derived values below are nominal calculations, not
-measurements from a board or calibrated audio reference. The sheet warns that
-some net names and traces may be wrong.
+redistributed. Schematic values are nominal calculations, not measurements
+from a board or calibrated audio recording. The sheet warns that some net names
+and traces may be wrong.
 
 ## Schematic signal map
 
@@ -17,34 +17,28 @@ discrete controls:
 | --- | --- | --- |
 | `SP_LAT0..3` | 12 kΩ, 22 kΩ, 47 kΩ and 100 kΩ summing resistors, with a 100 kΩ shunt | Four-bit weighted analog input to the LM3900 mixer. This is separate from the byte DAC. |
 | `SP_LAT4` and `/SP_LAT4` | CD4016 switches UD1B and UD1A | Selects the byte-DAC signal between the ICL8038 FM-sweep node and the MIX2 path. |
-| `SP_LAT5` | CD4016 switch UD1D | Gates the ICL8038 square output into MIX2 through a 4.7 kΩ resistor. |
-| `SP_LAT6` | 10 kΩ base resistor R71, BC337 TR2 and 10 µF C17 | Controls the upper LM3900 branch. That branch receives the NE555 output through D4 and 22 kΩ R65. The C17/R73 values are 10 µF and 220 kΩ, a nominal 2.2 s RC constant before transistor and amplifier loading. |
-| `SP_LAT7` | 10 kΩ base resistor R72, BC337 TR3 and 10 µF C18 | Controls the lower LM3900 branch. That branch receives the `NOISE` net through inverter U1C, D3 and 22 kΩ R62. C18/R63 are 10 µF and 100 kΩ, a nominal 1.0 s RC constant before circuit loading. |
+| `SP_LAT5` | CD4016 switch UD1D and R35=150 kΩ | Gates the ICL8038 square output into MIX2. R34=4.7 kΩ is on the separate byte-DAC-to-MIX2 route. |
+| `SP_LAT6` | 10 kΩ base resistor R71, BC337 TR2 and 10 µF C17 | Controls the upper LM3900 branch. It receives NE555 output through D4 and 22 kΩ R65. C17/R73=10 µF/220 kΩ gives a nominal 2.2 s RC constant before loading. |
+| `SP_LAT7` | 10 kΩ base resistor R72, BC337 TR3 and 10 µF C18 | Controls the lower LM3900 branch. It receives `NOISE` through inverter U1C, D3 and 22 kΩ R62. C18/R63=10 µF/100 kΩ gives a nominal 1.0 s RC constant before loading. |
 
-The NE555 uses R79=33 kΩ, R80=220 kΩ and C26=10 nF. Using the TI 555
-astable equation, `f ~= 1.44 / ((RA + 2*RB) * C)`, gives approximately
-304.4 Hz. C31=1 nF is connected to the control-voltage pin; it is not part of
-that nominal frequency calculation. This is the oscillator frequency, not a
-claim about the final pitch or envelope heard after the diode, LM3900, filters
-and mixer.
+The NE555 uses R79=33 kΩ, R80=220 kΩ and C26=10 nF. The TI astable
+equations give `f ~= 1.44 / ((RA + 2*RB) * C) = 304.44 Hz` and high duty
+`(RA + RB)/(RA + 2*RB) = 53.49%`. This confirms the requested 304 Hz / 53.5%
+sanity check. C31=1 nF is connected to the control-voltage pin and is not part
+of the nominal frequency calculation. These values describe the oscillator,
+not its final sound after the diode, LM3900, filters and mixer.
 
 The ICL8038 timing capacitor is C7=22 nF. Its surrounding network includes
-R26=270 kΩ, R27=15 kΩ, R28=82 kΩ, R32=4.7 kΩ and D1. SP_LAT4 switches the byte
-DAC output between the ICL8038 FM-sweep node and the MIX2 path; SP_LAT5 gates
-the square-wave path. The triangle output is routed directly to MIX2, while the
-sine output is not connected on this sheet. Because the frequency sweep input
-is driven by the DAC in one switch state, there is no single fixed oscillator
-frequency to calculate from C7 and R26 alone. It depends on the DAC transfer,
-code, switch state and the ICL8038 FM response. R27 is the square-output pull-up
-and R28 is the sine-adjust resistor; neither is a timing resistor. The `NOISE`
-signal enters this page as a named net, so this sheet does not establish its
-source spectrum.
-
-The LM3900 paths also contain multi-pole RC networks and feed the shared mixer.
-The listed 2.2 s and 1.0 s values are first-order component products, not
-complete fitted envelope responses. Resistor loading, transistor state,
-amplifier feedback, filters, pot settings and analog-switch resistance affect
-the actual sound.
+R26=270 kΩ, R27=15 kΩ, R28=82 kΩ, R32=4.7 kΩ and D1. The Renesas
+`0.33/(R*C)` nominal equation with R26 and C7 gives about 55.6 Hz when the FM
+node is at baseline. SP_LAT4 switches the byte DAC between the ICL8038 FM node
+and MIX2; SP_LAT5 gates the square path through UD1D/R35. The triangle output
+reaches MIX2 through R33=27 kΩ. The sine output is not connected on this
+sheet. Since the DAC drives the FM node, the full frequency law depends on the
+DAC transfer, switch state, D1/R32 network and ICL8038 response; the schematic
+does not give a calibrated code-to-frequency curve. R27 is the square-output
+pull-up and R28 the sine adjust, not timing resistors. `NOISE` enters as a named
+net, so this page does not establish its source spectrum.
 
 ## Authenticated-ROM latch observation
 
@@ -61,20 +55,31 @@ discrete latch window:
 | `1886` (`SP_LAT6`) | 30,391 | `00` only |
 | `1887` (`SP_LAT7`) | 30,391 | `00` only |
 
-The aggregate discrete latch value remained zero in this run. This trace does
-not identify which latch transitions Hunchback uses for bell, walking or jump
-effects: those transitions did not occur under this stimulus. It also does not
-prove that active-low behavior is absent. The capture is an execution
-observation, not an expected sound transcript or board measurement. No
-MAME-derived effect names are assigned to these outputs here.
+The observed latch value remained zero. This run does not identify which latch
+transitions Hunchback uses for bell, walking or jump effects. It is execution
+observation, not an expected sound transcript or board measurement.
 
-## Implementation boundary
+## Implemented digital approximation and remaining gaps
 
-The latch decode and circuit paths are grounded in the schematic. Effect-to-bit
-names, active polarity and the complete ICL8038 frequency remain unresolved.
-The ICL8038, NE555/noise, envelopes, LM3900 filters, resistor-summing mixer and
-analog gain are not yet modeled by the FPGA. Any later RTL approximation must
-identify its assumptions and must not be described as calibrated board audio.
+`rtl/machine/cvs_discrete_audio.sv` supplies an explicitly approximate digital
+counterpart. It models the 555 at 304.44 Hz / 53.49%, the ICL8038 as triangle
+and square waves at a 55.6 Hz nominal baseline, and a linear 8 Hz/code FM sweep
+from the byte DAC while SP_LAT4 selects that route. SP_LAT5 gates the square;
+SP_LAT6 and SP_LAT7 gate the 555 and pseudo-random noise paths through one-pole
+exponential envelopes using the nominal 2.2 s and 1.0 s RC constants. R33,
+R35, R65/R62 and the SP_LAT0..3 resistances supply relative digital mix
+weights. SP_LAT4's other state sends the byte DAC directly to MIX2. Speech is
+summed as a separate channel.
+
+The 555 frequency/duty and RC products are calculated from schematic values.
+The 8 Hz/code FM law, LFSR noise spectrum, envelope loading, analog-switch and
+transistor transfer, LM3900 filters, mix polarity/gain and final board response
+are assumptions or remain unmodeled. The authenticated Hunchback run observed
+only zero discrete latch values, so it has not established which writes trigger
+bell, walking or jumping. Synthetic tests verify oscillator cadence, envelope
+response and latch routing; they are not an effect transcript or calibrated
+sound reference. Treat this as a schematic-topology engineering approximation,
+not board emulation.
 
 The NE555 equation is from the [Texas Instruments NE555 data sheet](https://www.ti.com/lit/ds/symlink/ne555.pdf).
-The ICL8038 timing equations are in the [Renesas ICL8038 data sheet](https://www.renesas.com/en/document/dst/icl8038-datasheet).
+The ICL8038 timing equation is in the [Renesas ICL8038 data sheet](https://www.renesas.com/en/document/dst/icl8038-datasheet).

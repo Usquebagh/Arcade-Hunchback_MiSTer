@@ -149,6 +149,7 @@ def main():
         top='cvs_full_machine_tb'
         sources += ['rtl/machine/cvs_full_machine.sv','rtl/machine/cvs_av_machine.sv',
                     'rtl/machine/cvs_audio_cpu.sv','rtl/machine/cvs_audio_bus.sv','rtl/machine/cvs_audio_samples.sv',
+                    'rtl/machine/cvs_discrete_audio.sv',
                     'rtl/machine/cvs_speech_machine.sv','rtl/machine/cvs_speech_cpu.sv','rtl/machine/cvs_speech_bus.sv',
                     'rtl/machine/cvs_tms5100_engine.sv','rtl/machine/cvs_tms5100_rate.sv','rtl/machine/cvs_tms5100_control.sv',
                     'rtl/machine/cvs_tms5100_frames.sv','rtl/machine/cvs_tms5100_sequence.sv',

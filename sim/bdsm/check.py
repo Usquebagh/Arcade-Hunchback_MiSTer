@@ -14,7 +14,7 @@ def emit(status, **details):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('mode', choices=['reset', 'clock', 'memory', 'banked', 'display', 'scan', 'character', 'character_connected', 'cold_connected', 'assembly_connected', 'bootstrap_connected', 'bootstrap_oracle', 'startup_connected', 'startup_oracle', 'audio_bus', 'audio_samples', 'audio_connected', 'speech_bus', 'tms5100_control', 'tms5100_frames', 'tms5100_frame_rom', 'tms5100_lattice', 'tms5100_sequence', 'tms5100_engine', 'tms5100_rate', 'tms5100_tables', 'tms5100_connected', 'speech_machine_connected', 'full_connected', 'mister_shell_connected', 'mister_shell_behavior_connected', 'speech_connected', 'av_connected', 'main_bus', 'main_connected', 'video_connected', 's2636_objects', 's2636_connected', 'vblank_irq', 'video_timing', 'video_timing_alt', 'decode', 'lint', 'rom', 'mra', 'cpu_alu', 'cpu_edges', 'cpu_bus', 'cpu_synth', 'cpu_diagnostics'])
+    parser.add_argument('mode', choices=['reset', 'clock', 'memory', 'banked', 'display', 'scan', 'character', 'character_connected', 'cold_connected', 'assembly_connected', 'bootstrap_connected', 'bootstrap_oracle', 'startup_connected', 'startup_oracle', 'audio_bus', 'audio_samples', 'audio_discrete', 'audio_connected', 'speech_bus', 'tms5100_control', 'tms5100_frames', 'tms5100_frame_rom', 'tms5100_lattice', 'tms5100_sequence', 'tms5100_engine', 'tms5100_rate', 'tms5100_tables', 'tms5100_connected', 'speech_machine_connected', 'full_connected', 'mister_shell_connected', 'mister_shell_behavior_connected', 'speech_connected', 'av_connected', 'main_bus', 'main_connected', 'video_connected', 's2636_objects', 's2636_connected', 'vblank_irq', 'video_timing', 'video_timing_alt', 'decode', 'lint', 'rom', 'mra', 'cpu_alu', 'cpu_edges', 'cpu_bus', 'cpu_synth', 'cpu_diagnostics'])
     parser.add_argument('--seed', type=int, default=1)
     args = parser.parse_args()
     adapter = Path(__file__).resolve().parent
@@ -24,6 +24,28 @@ def main():
         return subprocess.run([sys.executable,str(adapter/'bootstrap_oracle_check.py')]).returncode
     if args.mode=='startup_oracle':
         return subprocess.run([sys.executable,str(adapter/'startup_oracle_check.py')]).returncode
+    if args.mode=='audio_discrete':
+        core = Path.cwd()
+        work = core / 'build' / 'bdsm-audio_discrete'
+        work.mkdir(parents=True, exist_ok=True)
+        image = work / 'test.vvp'
+        sources = ['sim/cpu/cvs_discrete_audio_tb.sv','rtl/machine/cvs_discrete_audio.sv']
+        compile_run = subprocess.run(['iverilog','-g2012','-Wall','-s','cvs_discrete_audio_tb','-o',str(image),*sources],capture_output=True,text=True)
+        (work/'compile.log').write_text(compile_run.stdout+compile_run.stderr)
+        if compile_run.returncode:
+            emit('ERROR',reason='Icarus discrete audio compilation failed',diagnostics=[str(work/'compile.log')])
+            return 2
+        ran = subprocess.run(['vvp',str(image)],capture_output=True,text=True)
+        events = [json.loads(line[5:]) for line in ran.stdout.splitlines() if line.startswith('BDSM ')]
+        if not events or (events[-1]['status'],ran.returncode) not in [('PASS',0),('FAIL',1)]:
+            emit('ERROR',reason='Discrete audio simulation crashed or omitted assertion result',observed=ran.stdout+ran.stderr)
+            return 2
+        event=events[-1]
+        if event['status']=='FAIL':
+            emit(**event,diagnostics=[str(work/'compile.log')])
+            return 1
+        emit(**event,reference='docs/audio-circuits.md; nominal schematic-derived RC values plus explicit digital model assumptions, not calibrated audio')
+        return 0
     if args.mode.startswith('cpu_'):
         return subprocess.run([sys.executable, str(adapter / 'check_ghdl.py'), args.mode, '--seed', str(args.seed)]).returncode
     core = Path.cwd()
@@ -37,7 +59,7 @@ def main():
         ran = subprocess.run(command, capture_output=True, text=True)
         print(ran.stdout, end=''); print(ran.stderr, end='', file=sys.stderr)
         return ran.returncode
-    sources = {name: 'rtl/machine/cvs_' + name + '.sv' for name in ['reset', 'clock', 'memory', 'decode', 'video_timing', 'vblank_irq', 's2636_objects','audio_bus','audio_samples','speech_bus','tms5100_control','tms5100_frames','tms5100_pcm','tms5100_rate']}
+    sources = {name: 'rtl/machine/cvs_' + name + '.sv' for name in ['reset', 'clock', 'memory', 'decode', 'video_timing', 'vblank_irq', 's2636_objects','audio_bus','audio_samples','discrete_audio','speech_bus','tms5100_control','tms5100_frames','tms5100_pcm','tms5100_rate']}
     sync_ram_sources = ['rtl/machine/cvs_sync_ram_1p.sv','rtl/machine/cvs_sync_ram_2p.sv','rtl/machine/cvs_sync_rom.sv']
     sources['tms5100_tables']='rtl/vendor/tms5100/cvs_tms5100_tables.sv'
     banked_sources = [*sync_ram_sources,'rtl/machine/cvs_main_memory.sv','rtl/machine/cvs_banked.sv','rtl/machine/cvs_memory.sv']
@@ -57,6 +79,7 @@ def main():
         warnings = []
         lint_sources = {**{('cvs_'+k):[v] for k,v in sources.items()}, 'cvs_memory':[*sync_ram_sources,sources['memory']], 'cvs_audio_bus':audio_bus_sources, 'cvs_speech_bus':speech_bus_sources, 'cvs_main_memory':banked_sources,
                         'cvs_main_bus':bus_sources,
+                        'cvs_discrete_audio':[sources['discrete_audio']],
                         'cvs_s2636_bank':['rtl/machine/cvs_s2636_bank.sv',sources['s2636_objects']],
                         'cvs_character_tb':character_sources,'cvs_scan':scan_sources,'cvs_video_join':join_sources,
                         'cvs_character_video':['rtl/machine/cvs_character_video.sv'],

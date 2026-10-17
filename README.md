@@ -9,18 +9,21 @@ fortress obstacles and rescue Esmeralda.
 
 > **Beta / work in progress.** The core boots and plays on real MiSTer hardware.
 > Video geometry, fonts, sprite alignment, controls, reset and cheats have been
-> confirmed working. Sound is partly implemented: DAC audio and speech work,
-> while the bell, walking and jumping effects are still missing. The core
-> remains under test.
+> confirmed working. DAC audio and speech work; schematic-derived digital
+> approximations now cover the 555, 8038, noise and envelope paths. The sound
+> mix and effect triggers still need hardware listening and validation.
 
 This core targets CVS hardware. Hunchback conversions for Galaxian, Scramble
 and Donkey Kong hardware use different game ROMs.
 
 ## Sound
 
-The digital DAC and speech paths produce sound. The original board's discrete
-sound effects and the final analog mix are still being studied, so bell,
-walking and jumping audio are incomplete.
+The core combines byte-DAC and speech audio with a schematic-derived digital
+approximation of the original discrete sound paths. The 555 timing follows its
+component values, but the 8038 FM curve, noise source, filter response, mix gain
+and bell/walking/jumping trigger mapping are not calibrated against recordings.
+See [the circuit analysis](docs/audio-circuits.md) for the assumptions and the
+remaining gaps.
 
 ## Cheats
 

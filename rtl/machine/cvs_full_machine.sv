@@ -32,6 +32,7 @@ module cvs_full_machine (
     output wire [1:0] audio_phase,
     output wire sample_ce,
     output wire signed [15:0] pcm8,pcm4,
+    output wire signed [15:0] discrete_pcm,
     output wire speech_ce,speech_sample_tick,speech_sample_valid,speech_protocol_error,
     output wire signed [15:0] speech_pcm,
     output wire speech_ctl_output,speech_talk_status,
@@ -63,4 +64,8 @@ module cvs_full_machine (
         .address(speech_address),.write_data(speech_write_data),.read_data(speech_read_data),.phase(speech_phase),
         .decoded_frame(speech_decoded_frame),.energy_index(speech_energy_index),.pitch_index(speech_pitch_index),
         .coefficient_indices(speech_coefficient_indices));
+    cvs_discrete_audio discrete_audio(.clk(clk),.reset(reset),.sample_ce(sample_ce),
+        .dac8(dac8),.dac4(dac4),.discrete(discrete),.pcm(discrete_pcm),
+        .ne555_square(),.icl8038_square(),.icl8038_triangle(),
+        .icl8038_frequency_hz(),.byte_dac_to_mix(),.envelope_22_q16(),.envelope_10_q16());
 endmodule

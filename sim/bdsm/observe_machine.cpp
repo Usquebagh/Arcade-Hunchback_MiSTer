@@ -143,17 +143,16 @@ int main(int argc,char** argv) {
             if(m.dac4_wr) {++dac4_writes;audio_events<<cycle<<" DAC4 "<<unsigned(m.dac4)<<"\n";}
             if(m.discrete_wr) {++discrete_writes;audio_events<<cycle<<" DISCRETE "<<unsigned(m.discrete)<<"\n";}
             if(m.sample_ce) {
-                // Match the engineering top-level audio path: byte DAC plus
-                // speech. The uncalibrated four-bit latch is excluded because
-                // its attract-mode code 0 maps to -32768 and clips the mix.
-                int mixed=int(int16_t(m.pcm8))+int(int16_t(m.speech_pcm));
+                // Match the engineering top-level audio path: routed byte DAC,
+                // schematic-weighted discrete network and independent speech.
+                int mixed=int(int16_t(m.speech_pcm))+int(int16_t(m.discrete_pcm));
                 if(mixed>32767)mixed=32767;
                 if(mixed< -32768)mixed=-32768;
                 mixed_audio_levels.insert(mixed);
                 if(mixed<mixed_audio_min)mixed_audio_min=mixed;
                 if(mixed>mixed_audio_max)mixed_audio_max=mixed;
                 if(mixed!=0)++nonzero_audio_samples;
-                audio_samples<<cycle<<" "<<int(int16_t(m.pcm8))<<" "<<int(int16_t(m.pcm4))<<"\n";
+                audio_samples<<cycle<<" "<<int(int16_t(m.pcm8))<<" "<<int(int16_t(m.pcm4))<<" "<<int(int16_t(m.discrete_pcm))<<"\n";
                 audio_output_samples<<cycle<<" "<<mixed<<"\n";
             }
         }

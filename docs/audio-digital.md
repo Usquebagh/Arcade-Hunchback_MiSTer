@@ -103,15 +103,16 @@ writes were unknown; their raw records remain a diagnostic limitation. A prior
 single-pair CB probe had eight unknown RAM writes. Different stimuli are not
 replacement expected streams; neither run has an independent audio-ROM oracle.
 
-The subsequent [connected assembly milestone](audio-assembly.md) executes both
-actual CPUs and unchanged main/audio ROMs together. Its native read trace also
+The subsequent [connected assembly milestone](audio-assembly.md) executes the
+actual main/audio CPUs and unchanged ROMs together. Its native read trace also
 identifies two unknown indexed addresses behind the work-RAM observation. The
-new wrapper and synthetic connection test do not resolve that power-up/reference
-gap or supply analog, PCM or speech output.
+synthetic wrapper does not resolve that power-up/reference gap.
 
 The [wiring audit](audio-wiring.md) supports keeping byte significance as drawn
 and shows that every executed four-bit game write was zero; the SP_D0 versus
 MAME bit-7 discrepancy and physical gain/weights remain gaps. Later work added
 the third CPU, speech controller and numeric TMS datapath and connected them in
-the three-CPU machine. Speech is audible on hardware; physical protocol, exact
-voice fidelity and analog/discrete mixing remain incomplete.
+the three-CPU machine. Speech is audible on hardware. A schematic-derived
+discrete-audio approximation is now integrated; its effect triggers, FM law,
+noise source, physical protocol, exact voice fidelity and calibrated analog
+mix remain incomplete. See [the circuit model](audio-circuits.md).
