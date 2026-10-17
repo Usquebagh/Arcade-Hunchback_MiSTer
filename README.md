@@ -6,6 +6,11 @@ the original Century Video System (CVS) hardware. Playing as Hunch Back, a
 deformed bell-ringer, you must avoid various obstacles and rescue the young
 gypsy woman Esmeralda from the tower of a well-guarded fortress.
 
+<p align="center">
+  <img src="docs/images/cabinet.png" alt="Hunchback upright arcade cabinet" height="320">
+  <img src="docs/images/gameplay.png" alt="Hunchback gameplay on MiSTer" height="320">
+</p>
+
 > **Beta / work in progress.** The core has booted on MiSTer and reached
 > attract mode and gameplay on earlier engineering images. The current dated
 > image is still under hardware test. Sound is incomplete: DAC audio and speech
