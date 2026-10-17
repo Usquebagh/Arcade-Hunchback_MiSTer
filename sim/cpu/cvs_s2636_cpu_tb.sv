@@ -71,7 +71,8 @@ module cvs_s2636_cpu_tb;
                 for(integer row=0;row<10;row=row+1)
                     poke(13'h1500+chip*256+(obj==3?64:obj*16)+row,
                          obj==0?(chip==0?8'h81:chip==1?8'h42:8'h24):0);
-                poke(13'h1500+chip*256+(obj==3?64:obj*16)+10,obj==0?20:255);
+                // HC=46 plus MAME CVS X=-26 gives the expected pixel origin X=20.
+                poke(13'h1500+chip*256+(obj==3?64:obj*16)+10,obj==0?46:255);
                 poke(13'h1500+chip*256+(obj==3?64:obj*16)+11,255);
                 poke(13'h1500+chip*256+(obj==3?64:obj*16)+12,obj==0?4:255);
                 poke(13'h1500+chip*256+(obj==3?64:obj*16)+13,255);

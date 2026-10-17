@@ -61,8 +61,10 @@ The renderer accepts already aligned sprite nibbles; physical PVI/raster alignme
 CVS PAL equivalence, arbitration, stars/effects and composed game frames remain
 unqualified. See [character video contract](character-video.md).
 
-`cvs_scan` maps the tested 312 waveform into a provisional 227x256 identity
-viewport, preparing PVI rows two enabled edges after line entry. `cvs_video_join`
+`cvs_scan` keeps the tested 312-line, 227-slot sync waveform and separately
+emits the schematic-derived 244 active pixels per line (rows y=8..255), preparing
+PVI rows two enabled edges after line entry. MAME's 240-column range is a software
+crop, not the physical pixel count. `cvs_video_join`
 delays metadata one edge to match registered PVI pixels before the character
 pipeline; output/sync alignment is six edges. `cvs_machine` connects actual CPU/
 FLAG RAM, clock enables, VRST SENSE/IRQ, scan, three PVIs and character/collisions.

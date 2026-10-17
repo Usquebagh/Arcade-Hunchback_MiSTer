@@ -20,7 +20,7 @@ def main():
         shell=Path('Arcade-Hunchback.sv').read_text()
         ranges=[(int(first),int(second) if second else int(first))
                 for first,second in re.findall(r'"O\[(\d+)(?::(\d+))?\]',shell)]
-        if any(min(first,second)==0 for first,second in ranges) or '"R[0],Reset;"' not in shell:
+        if any(min(first,second)==0 for first,second in ranges) or '"R0,Reset;"' not in shell:
             emit('FAIL',label='mister_status_reserved',cycle=0,expected=1,observed=0)
             return 1
         conf=shell.split('localparam CONF_STR=',1)[1].split('};',1)[0]
@@ -32,13 +32,13 @@ def main():
         if len(status_bits)!=len(set(status_bits)) or status_bits!=sorted(status_bits):
             emit('FAIL',label='mister_status_index_order',cycle=0,expected=1,observed=0)
             return 1
-        reset_items=re.findall(r'"([RT])\[(\d+)\],Reset;"',conf)
+        reset_items=re.findall(r'"([RT])(\d+),Reset;"',conf)
         if reset_items!=[('R','0')] or 'status[0]' not in shell.split('wire reset_async=',1)[1].split(';',1)[0]:
             emit('FAIL',label='mister_single_reset_binding',cycle=0,expected=1,observed=len(reset_items))
             return 1
         jline=re.search(r'"J1,([^\"]+)"',conf)
         jnline=re.search(r'"jn,([^\"]+)"',conf)
-        expected_slots=['Jump','-','Start 2','-','Start 1','Coin']
+        expected_slots=['Jump','Start 2','Start 1','Coin']
         mra=Path('releases/Hunchback (CVS).mra').read_text()
         mra_buttons=re.search(r'<buttons names="([^"]+)" default="([^"]+)"',mra)
         if (not jline or jline.group(1).split(';')[0].split(',')!=expected_slots or

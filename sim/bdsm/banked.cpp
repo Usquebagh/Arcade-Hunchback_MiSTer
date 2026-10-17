@@ -37,6 +37,26 @@ int main(int argc,char** argv){
                     }
                 }
             }
+        // The pre-BRAM implementation wrote RAM on the CPU edge, then exposed
+        // the stored byte on a later CPU read; simultaneous CPU read/write used
+        // the explicit CPU-din response bypass. Preserve both behaviors for all
+        // seven converted arrays, including an observable zero clear.
+        struct RamCase {unsigned address,flag,page;};
+        const RamCase cases[]={
+            {0x1807,1,0},{0x1807,0,0},{0x1407,0,0},{0x1407,1,0},
+            {0x1507,1,2},{0x1607,1,2},{0x1707,1,2}
+        };
+        for(const auto &ram:cases){
+            unsigned value=0xa0+(ram.address>>8);
+            unsigned got=access(ram.address,ram.flag,ram.page,value,true);
+            b.check(got==value,"same_cycle_write_read",value,got);
+            got=access(ram.address,ram.flag,ram.page,0,false);
+            b.check(got==value,"write_then_immediate_read",value,got);
+            got=access(ram.address,ram.flag,ram.page,0,true);
+            b.check(got==0,"same_cycle_zero_write",0,got);
+            got=access(ram.address,ram.flag,ram.page,0,false);
+            b.check(got==0,"zero_clear_readback",0,got);
+        }
         for(unsigned unit=0;unit<3;++unit){
             access(0x1500+(unit<<8)+0x53,0,0,0x9b,true);
             b.check(b.rtl.sprite_select==(4u>>unit),"sprite_write_select",4u>>unit,b.rtl.sprite_select);

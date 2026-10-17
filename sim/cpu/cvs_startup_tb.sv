@@ -26,6 +26,24 @@ module cvs_startup_tb;
             $finish(1);
         end
     endtask
+    // Dump the actual PVI register arrays at the authenticated first-return
+    // checkpoint.  The ordering follows the three RTL bank instances.
+    task dump_s2636_checkpoint;
+        integer chip_index,address_index;
+        reg [7:0] value;
+        begin
+            for(chip_index=0;chip_index<3;chip_index=chip_index+1) begin
+                for(address_index=0;address_index<256;address_index=address_index+1) begin
+                    case(chip_index)
+                        0: value=dut.video.pvis.pvi[0].chip.registers[address_index];
+                        1: value=dut.video.pvis.pvi[1].chip.registers[address_index];
+                        default: value=dut.video.pvis.pvi[2].chip.registers[address_index];
+                    endcase
+                    $display("RTL_S2636_REG chip=%0d address=%02X value=%02X",chip_index,address_index,value);
+                end
+            end
+        end
+    endtask
     task tick;
         reg completed;
         begin
@@ -39,6 +57,7 @@ module cvs_startup_tb;
             end
             clk=1;#5;cycle=cycle+1;
             if(completed)begin
+                dump_s2636_checkpoint;
                 $display("BDSM {\"status\":\"PASS\",\"cycle\":%0d,\"observed\":\"Unchanged authenticated ROM completed first initialization call: %0d modeled memory/I/O writes and return fetch\"}",cycle,stores);
                 $finish(0);
             end

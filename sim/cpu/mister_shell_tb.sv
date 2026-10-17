@@ -8,7 +8,8 @@ module mister_shell_tb;
     wire uart_cts=0,uart_rxd=0,uart_dsr=0,osd_status=0;
     wire [6:0] user_in=0;
     wire fb_vbl=0,fb_ll=0;
-    emu #(.DIAGNOSTIC_PROBES(1'b1)) dut(.CLK_50M(clk_50m),.RESET(reset),.HPS_BUS(hps_bus),
+    localparam integer TEST_RESET_HOLD_CYCLES=32;
+    emu #(.DIAGNOSTIC_PROBES(1'b1),.RESET_HOLD_CYCLES(TEST_RESET_HOLD_CYCLES)) dut(.CLK_50M(clk_50m),.RESET(reset),.HPS_BUS(hps_bus),
         .HDMI_WIDTH(hdmi_width),.HDMI_HEIGHT(hdmi_height),.CLK_AUDIO(clk_audio),
         .SD_MISO(sd_miso),.SD_CD(sd_cd),.DDRAM_BUSY(ddram_busy),
         .DDRAM_DOUT(ddram_dout),.DDRAM_DOUT_READY(ddram_dout_ready),
@@ -61,8 +62,8 @@ module mister_shell_tb;
         reset=1;
         #1;
         if(dut.core_reset!==1'b1)fail("reset_waits_for_rom",1,dut.core_reset);
-        reset=0;clocks(2);
-        if(dut.core_reset!==1'b1)fail("reset_waits_for_rom",1,dut.core_reset);
+        reset=0;clocks(TEST_RESET_HOLD_CYCLES);
+        if(dut.core_reset!==1'b1)fail("reset_waits_for_rom_after_minimum_hold",1,dut.core_reset);
 
         download=1;download_wr=1;download_index=0;download_addr=0;download_data=8'h5a;
         clocks(2);
@@ -76,9 +77,9 @@ module mister_shell_tb;
         reset=1;#1;
         if(dut.core_reset!==1'b1)fail("external_reset_assertion",1,dut.core_reset);
         reset=0;clocks(1);
-        if(dut.core_reset!==1'b1)fail("reset_release_stage_one",1,dut.core_reset);
-        clocks(1);
-        if(dut.core_reset!==1'b0)fail("reset_two_clock_release",0,dut.core_reset);
+        if(dut.core_reset!==1'b1)fail("external_reset_minimum_hold",1,dut.core_reset);
+        clocks(TEST_RESET_HOLD_CYCLES);
+        if(dut.core_reset!==1'b0)fail("external_reset_releases_after_minimum_hold",0,dut.core_reset);
 
         menu_status=0;menu_buttons=0;joy0=0;joy1=0;#1;
         if(dut.in0!==8'hff)fail("joystick_idle_in0",8'hff,dut.in0);
@@ -93,23 +94,26 @@ module mister_shell_tb;
                  {dut.diagnostic_video_probes.diag_credit1,dut.diagnostic_video_probes.diag_credit2});
         check_input(32'b1<<4,0,8'hdf,8'hff,"joystick_jump_active_low");
         check_input(0,32'b1<<4,8'hef,8'hff,"joystick_jump2_active_low");
-        check_input(32'b1<<9,0,8'hf7,8'hff,"joystick_coin1_active_low");
-        check_input(0,32'b1<<9,8'hfb,8'hff,"joystick_coin2_active_low");
-        check_input(32'b1<<6,0,8'hfd,8'hff,"joystick_start1_active_low");
-        check_input(32'b1<<8,0,8'hfe,8'hff,"joystick_start2_active_low");
-        check_input(32'b1<<2,0,8'hff,8'hdf,"joystick_p1_left_active_low");
-        check_input(32'b1<<3,0,8'hff,8'hef,"joystick_p1_right_active_low");
-        check_input(0,32'b1<<2,8'hff,8'hf7,"joystick_p2_left_active_low");
-        check_input(0,32'b1<<3,8'hff,8'hfb,"joystick_p2_right_active_low");
+        check_input(32'b1<<7,0,8'hf7,8'hff,"joystick_coin1_active_low");
+        check_input(0,32'b1<<7,8'hfb,8'hff,"joystick_coin2_active_low");
+        check_input(32'b1<<6,0,8'hfe,8'hff,"joystick_start1_active_low");
+        check_input(32'b1<<5,0,8'hfd,8'hff,"joystick_start2_active_low");
+        check_input(32'b1<<0,0,8'hff,8'hef,"joystick_p1_right_active_low");
+        check_input(32'b1<<1,0,8'hff,8'hdf,"joystick_p1_left_active_low");
+        check_input(0,32'b1<<0,8'hff,8'hfb,"joystick_p2_right_active_low");
+        check_input(0,32'b1<<1,8'hff,8'hf7,"joystick_p2_left_active_low");
+        check_input(32'b1<<3,0,8'hff,8'hff,"joystick_p1_up_not_in_cvs_horizontal_port");
+        check_input(32'b1<<2,0,8'hff,8'hff,"joystick_p1_down_not_in_cvs_horizontal_port");
+        menu_status=0;#1;
         // Reset the fixture between controls, then prove status remains visible
         // even if a coin bit is held; the diagnostic priority is intentional.
-        joy0=(32'b1<<9);joy1=0;menu_status=0;#1;
+        joy0=(32'b1<<7);joy1=0;menu_status=0;#1;
         if(dut.diagnostic_green!==8'hff)fail("diagnostic_coin1_pressed",8'hff,dut.diagnostic_green);
         menu_status[14]=1;#1;
         if({dut.diagnostic_red,dut.diagnostic_green,dut.diagnostic_blue}!==24'hff0000)
             fail("diagnostic_status_priority",24'hff0000,
                  {dut.diagnostic_red,dut.diagnostic_green,dut.diagnostic_blue});
-        menu_status=0;joy0=0;joy1=(32'b1<<9);#1;
+        menu_status=0;joy0=0;joy1=(32'b1<<7);#1;
         if(dut.diagnostic_blue!==8'hff)fail("diagnostic_coin2_pressed",8'hff,dut.diagnostic_blue);
         joy1=0;
         if(dut.video_rotated!==1'b1 || dut.rotate_ccw!==1'b0 || dut.no_rotate!==1'b0)
@@ -124,11 +128,11 @@ module mister_shell_tb;
             fail("menu_rotation_native",2,{dut.no_rotate,dut.video_rotated});
         menu_status[13:12]=0;
         // MRA defaults: Jump=A, Start 1=Start, Coin=Select, Start 2=X.
-        joy0=(32'b1<<9)|(32'b1<<8)|(32'b1<<6)|(32'b1<<4)|(32'b1<<2);
-        joy1=(32'b1<<9)|(32'b1<<4)|(32'b1<<3);
+        joy0=(32'b1<<7)|(32'b1<<6)|(32'b1<<5)|(32'b1<<4)|(32'b1<<2);
+        joy1=(32'b1<<7)|(32'b1<<4)|(32'b1<<3);
         #1;
         if(dut.in0!==8'b11000000)fail("joystick_player_coin_start_polarity",8'b11000000,dut.in0);
-        if(dut.in1!==8'b11011011)fail("joystick_directions_jump2_polarity",8'b11011011,dut.in1);
+        if(dut.in1!==8'b11111111)fail("joystick_directions_jump2_polarity",8'b11111111,dut.in1);
 
         menu_status=0;
         menu_status[2:1]=2'b01;menu_status[4:3]=2'b10;menu_status[5]=1;
@@ -137,11 +141,55 @@ module mister_shell_tb;
         if(dut.machine.dsw1!==8'hd9)fail("mame_dsw2_machine_port",8'hd9,dut.machine.dsw1);
         if(dut.machine.dsw2!==8'hf9)fail("mame_dsw3_machine_port",8'hf9,dut.machine.dsw2);
 
-        menu_status[0]=1;#1;
+        menu_status[0]=1;clocks(1);
         if(dut.core_reset!==1'b1)fail("menu_reset_assertion",1,dut.core_reset);
-        menu_status[0]=0;menu_buttons[1]=1;#1;
+        if(dut.rom_loaded!==1'b1 || dut.rom_download!==1'b0)
+            fail("menu_reset_is_not_download_hold",1,{dut.rom_loaded,dut.rom_download});
+        if(dut.machine.main_audio_video.main_video.main.reset!==1'b1 ||
+           dut.machine.main_audio_video.main_video.main.reset_na!==1'b0 ||
+           dut.machine.main_audio_video.audio.reset!==1'b1 ||
+           dut.machine.speech.reset!==1'b1 || dut.machine.speech.reset_na!==1'b0)
+            fail("menu_reset_reaches_all_game_cpus",1,0);
+        // R0 is a momentary OSD status bit. The shortened test parameter
+        // exercises the hold/release sequence; production is configured for 20 ms.
+        menu_status[0]=0;clocks(1);
+        if(dut.core_reset!==1'b1)fail("menu_reset_minimum_hold",1,dut.core_reset);
+        if(dut.machine.main_audio_video.main_video.main.reset!==1'b1 ||
+           dut.machine.main_audio_video.audio.reset!==1'b1 || dut.machine.speech.reset!==1'b1)
+            fail("menu_reset_minimum_hold_reaches_all_cpus",1,0);
+        clocks(TEST_RESET_HOLD_CYCLES-2);
+        if(dut.core_reset!==1'b1)fail("menu_reset_minimum_hold",1,dut.core_reset);
+        clocks(1);
+        if(dut.core_reset!==1'b0)fail("menu_reset_synchronized_release_after_hold",0,dut.core_reset);
+        if(dut.machine.main_audio_video.main_video.main.reset!==1'b0 ||
+           dut.machine.main_audio_video.main_video.main.reset_na!==1'b1 ||
+           dut.machine.main_audio_video.audio.reset!==1'b0 ||
+           dut.machine.speech.reset!==1'b0 || dut.machine.speech.reset_na!==1'b1)
+            fail("menu_reset_release_reaches_all_game_cpus",0,1);
+        begin : reset_vector_reexecution
+            integer fetch_wait;
+            fetch_wait=0;
+            while(fetch_wait<128 && !(dut.machine.main_audio_video.main_video.main.req &&
+                  dut.machine.main_audio_video.main_video.main.memory_space &&
+                  dut.machine.main_audio_video.main_video.main.address==15'h0000)) begin
+                clocks(1);fetch_wait=fetch_wait+1;
+            end
+            if(fetch_wait==128)fail("menu_reset_cpu_restarts_at_reset_vector",15'h0000,
+                dut.machine.main_audio_video.main_video.main.address);
+        end
+        menu_buttons[1]=1;#1;
         if(dut.core_reset!==1'b1)fail("user_button_reset_assertion",1,dut.core_reset);
         menu_buttons=0;
+
+        // The raw four-bit latch is retained for observation, but must not
+        // inject its uncalibrated offset-binary zero as a full-scale DC mix.
+        force dut.pcm8=16'sd20000;
+        force dut.pcm4=-16'sd32768;
+        force dut.speech_pcm=16'sd0;
+        #1;
+        if(dut.AUDIO_L!==16'd20000 || dut.AUDIO_R!==16'd20000)
+            fail("audible_byte_dac_not_clipped_by_raw_four_bit",20000,dut.AUDIO_L);
+        release dut.pcm8;release dut.pcm4;release dut.speech_pcm;
 
         $display("BDSM {\"status\":\"PASS\",\"observed\":\"MiSTer shell ROM-load/reset sequencing and MAME-compatible joystick mapping with actual CPU hierarchy\"}");
         $finish(0);

@@ -34,28 +34,38 @@ board's two DIP switch banks remain unaudited.
 ## Video and audio boundaries
 
 The MiSTer pixel enable follows the scan position tick through horizontal and
-vertical blanking. It is delayed to match the existing five-master-edge RGB,
-display-enable and sync pipeline. For rotation, `cvs_rotation_raster` uses the
-full 227-pixel raster and inserts a blank pixel-enable event after x=226; this
-gives `screen_rotate` a DE falling edge between rows and preserves its 256-row
-active field. Its configured rotated buffer is 256 by 227. The normalized 227 by 256 viewport is
-provisional, and the actual board PCK/PIXCLK phases and origins remain open.
-The 227:256 original aspect option represents this provisional viewport.
+vertical blanking. For rotation, `cvs_rotation_raster` expands each 227-sample
+source row to 240 output samples with 13 held-pixel duplicates and inserts a
+blank pixel-enable event between rows. `cvs_scan` selects source rows 8..255
+from the 312-line field. `screen_rotate` measures a 248 by 240 buffer, matching
+MAME's 240 by 248 visible area after ROT90. This is software-reference
+geometry; physical PCK/PIXCLK phases and origins remain open.
 
-The top-level currently sums the independently scaled raw DAC8, raw DAC4 and
-normalized speech PCM channels with signed saturation. This is only a digital
-bring-up mix. The DAC4 schematic bit significance/resistor weights, discrete
-oscillator path, analog filtering and speech channel gain remain unverified;
-this connection does not constitute calibrated audio coverage.
+The top-level currently sums the provisionally scaled raw DAC8 and normalized
+speech PCM channels with signed saturation. The raw DAC4 latch remains exposed
+for diagnostics but is excluded from the audible mix: its observed attract
+value is code 0, mapped to -32768 by the provisional offset-binary sampler,
+which clipped the previous equal-gain sum to the negative rail. The DAC4
+schematic bit significance/resistor weights, discrete oscillator path, analog
+filtering and speech channel gain remain unverified; this is not calibrated
+audio coverage.
 
-Joystick mapping follows MAME's active-low Hunchback input-port bits: P1
-Start/Coin are IN0 bits 0/3, P2 Start/Coin bits 1/2, and the P2/P1 jump inputs
-bits 4/5. `J1` action slots are explicitly aligned with MiSTer's virtual
-A/B/X/Y/Start/Select indices: Jump at A, Start 2 at X, Start 1 at Start, and
-Coin at Select. The `jn` defaults (`A,X,Start,Select`) and MRA button
-names/defaults use that same consumed order.
-Direction inputs remain on IN1. The local-ROM coin regression drives mapped
-`joystick_0[9]` through the shared HPS-to-CVS mapper, requires the actual CPU to
+Joystick mapping follows the MRA button list's consecutive HPS bits starting
+at bit 4: Jump, Start 2, Start 1, Coin occupy bits 4 through 7. The `jn`
+defaults (`A,X,Start,Select`) and MRA defaults assign those logical slots to
+the corresponding gamepad buttons. CVS reads all four controls from IN0:
+Start 1/2 are bits 0/1, Coin 2/1 are bits 2/3, and P2/P1 jump are bits 4/5.
+The MRA slots map Start 1 (HPS bit 6) to IN0 bit 0 and Start 2 (HPS bit 5) to
+IN0 bit 1. A connected-ROM bus trace exposed that the HDL had those two
+destinations reversed; the shell test now checks each individually. The
+working red button is Jump at bit 4. The prior decoder also read Start 2 from
+bit 8 and Coin from bit 9, despite the MRA emitting them at bits 5 and 7.
+Direction inputs remain on IN1. MAME selects IN0/IN1/IN2/IN3 at
+extended offsets 0/2/3/4 and DSW3/DSW2 at 6/7. The core decodes those offsets;
+HPS controls feed IN0/IN1, IN2 (including MAME's uncertain SERVICE1 bit 0) and
+IN3 are held high, and DSW2/DSW3 are wired to their matching MAME offsets.
+Hunchback disables IN1 green buttons and IN3 vertical directions. The local-ROM coin regression drives
+mapped `joystick_0[7]` through the shared HPS-to-CVS mapper, requires the actual CPU to
 sample IN0, and checks system RAM byte 0x1c70 changes from 0 to 1; an identical
 no-input run retains 0. This is frozen-ROM behavior coverage, not a physical
 input wiring reference. Physical decode, cocktail

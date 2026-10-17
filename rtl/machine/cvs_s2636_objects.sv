@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Four-object PVI subset and status; docs/s2636.md records excluded functions.
-module cvs_s2636_objects (
+module cvs_s2636_objects #(
+    parameter integer Y_OFFSET = 0,
+    parameter integer X_OFFSET = -26
+) (
     input wire clk, reset,
     input wire cpu_rd, cpu_wr,
     input wire [7:0] cpu_addr, cpu_din,
@@ -12,6 +15,7 @@ module cvs_s2636_objects (
     output wire pixel_present,
     output reg irq
 );
+    localparam signed [9:0] Y_OFFSET_SIGNED = 10'(Y_OFFSET);
     reg [7:0] registers [0:255];
     wire [7:0] bus_addr = cpu_addr[7:6] == 2'b11 ? {4'hc,cpu_addr[3:0]} : cpu_addr;
     function automatic stored(input [7:0] address);
@@ -37,6 +41,12 @@ module cvs_s2636_objects (
     end
     reg previous_vrst, field_valid;
     reg [8:0] wait_lines [0:3];
+    function automatic [8:0] adjusted_wait(input [7:0] vc);
+        begin
+            // Fixed CVS/MAME-compatible Y origin; no runtime trim.
+            adjusted_wait={1'b0,vc}+Y_OFFSET_SIGNED[8:0];
+        end
+    endfunction
     reg [6:0] next_row [0:3], render_row [0:3];
     reg [1:0] scale [0:3];
     reg in_object [0:3], duplicate_mode [0:3];
@@ -52,7 +62,7 @@ module cvs_s2636_objects (
     // line_start; each accepted pixel sees the state prepared on an earlier edge.
     always @* begin : pixels
         reg [7:0] base, hc, shape, shape_addr;
-        reg [8:0] distance;
+        reg signed [9:0] object_x, distance;
         reg [2:0] colour, column;
         reg [3:0] row_number;
         hits=4'd0;
@@ -60,14 +70,15 @@ module cvs_s2636_objects (
         for (integer i=0;i<4;i=i+1) begin
             base=base_address(i);
             hc=active_duplicate[i] ? duplicate_hc[i] : registers[base+8'ha];
-            distance={1'b0,pixel_x}-{1'b0,hc};
+            object_x=$signed({2'b00,hc})+10'(X_OFFSET);
+            distance=$signed({2'b00,pixel_x})-object_x;
             row_number=4'(render_row[i] >> scale[i]);
             shape_addr=base+{4'd0,row_number};
             shape=registers[shape_addr];
             column=3'(distance >> scale[i]);
             colour=3'(registers[i<2 ? 8'hc1 : 8'hc2] >> ((i%2==0) ? 3 : 0));
-            if (field_valid && !vrst && active_line[i] && pixel_x<8'd227 &&
-                pixel_x>=hc && distance<(9'd8 << scale[i]) && shape[3'd7-column]) begin
+            if (field_valid && !vrst && active_line[i] && pixel_x<8'd244 &&
+                distance>=10'sd0 && distance<(10'(8 << scale[i])) && shape[3'd7-column]) begin
                 hits[i]=1'b1;
                 mixed_colour=mixed_colour | colour;
             end
@@ -136,7 +147,8 @@ module cvs_s2636_objects (
             end else if (previous_vrst) begin
                 field_valid<=1'b1;
                 for (integer i=0;i<4;i=i+1) begin
-                    wait_lines[i]<={1'b0,registers[base_address(i)+8'hc]};
+                    // Latch VC plus the fixed S2636/device Y offset.
+                    wait_lines[i]<=adjusted_wait(registers[base_address(i)+8'hc]);
                     scale[i]<=registers[8'hc0][i*2 +: 2];
                     in_object[i]<=1'b0;
                     next_row[i]<=7'd0;

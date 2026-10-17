@@ -21,7 +21,7 @@ modification described by the readme was performed.
 | U15J | Palette and character-plane read/write controls | Pending |
 | U15K | Program/background reads and three object requests | Pending |
 | U14K | Attribute/video RAM controls and reset arbitration | Pending |
-| U11D | Eight collision outputs | Pending |
+| U11D | Eight active-low collision outputs | Equation audit complete; pin-level HDL model and board-equivalence test pending |
 | U5F | Colour selection and feedback | Pending |
 | U9K | Shift-register modes and feedback | Pending |
 
@@ -69,3 +69,23 @@ visually reviewed; this supports the nominal sound-board sense oscillator value
 previously recorded in MAME. Text comparison is not proof of identical wire
 geometry on every page. Sound-board designator photograph is available for
 component tracing; detailed component audit remains pending.
+
+## U11D collision equation audit
+
+The supplied `cvs_11d.pld` was read directly on 2026-10-17. Its eight outputs
+are active-low equations. In positive-logic terms, `COLL7` is high when
+`RAM2_CTERM` is high or neither shifter pixel (`SR2_PIX`, `SR3_PIX`) is set.
+`COLL6..4` are high unless the corresponding active-low `OBJ_SCR0..2`,
+`CBLNK`, and either shifter pixel all coincide. `COLL2..0` are high unless the
+respective pair of active-low `OBJ_SCR` inputs and `CBLNK` coincide. `COLL3` is
+high unless active-low `RAM2_CTERM` and `TSTPOINT` coincide. The exact source
+expressions remain the pin-level reference; this prose does not establish pin
+polarities at the board boundary.
+
+The current RTL does not implement U11D as a pin-equation model. It separately
+accumulates pairwise S2636 object hits in `cvs_s2636_objects` and normalized
+object/background/bullet events in `cvs_character_video`. Those focused checks
+do not prove that board signals `OBJ_SCR`, `RAM2_CTERM`, shifter pixels and
+`CBLNK` are equivalent to the RTL terms, nor reproduce U11D's active-low
+outputs and timing. PAL equivalence and the physical collision path remain
+open. This audit made no RTL changes.

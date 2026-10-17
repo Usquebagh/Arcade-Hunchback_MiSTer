@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Private MiSTer shell integration; board clocks, input wiring and analog mix remain provisional.
 module emu #(
-    parameter DIAGNOSTIC_PROBES = 1'b0
+    parameter DIAGNOSTIC_PROBES = 1'b0,
+    parameter integer RESET_HOLD_CYCLES = 1_140_000
 ) (
     `include "sys/emu_ports.vh"
 );
@@ -38,15 +39,13 @@ module emu #(
         "O[10],Registration,On,Off;",
         "O[11],Registration length,3,10;",
         "O[13:12],Orientation,Rotate CW,Rotate CCW,Native;",
-        DIAGNOSTIC_PROBES ? "O[14],HPS Status Probe,Normal,Red;" : "",
         "O[122:121],Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
         "-;",
-        // J1 positions are MiSTer virtual buttons [4..9]: A,B,X,Y,Start,Select.
-        // Keep their labels at the indices consumed by cvs_mister_input.
-        "J1,Jump,-,Start 2,-,Start 1,Coin;",
+        // MRA names map consecutively to HPS joystick bits [4..7].
+        "J1,Jump,Start 2,Start 1,Coin;",
         "jn,A,X,Start,Select;",
-        "R[0],Reset;",
-        "V,v"
+        "R0,Reset;",
+        "V,v261017-02;"
     };
     hps_io #(.CONF_STR(CONF_STR)) hps_io (
         .clk_sys(clk_sys),.HPS_BUS(HPS_BUS),.EXT_BUS(),.gamma_bus(unused_gamma_bus),
@@ -67,7 +66,7 @@ module emu #(
     end
     wire reset_async=RESET || status[0] || buttons[1] || !pll_locked;
     wire core_reset;
-    cvs_reset reset_boundary(.clk(clk_sys),.reset_async(reset_async),.pll_locked(pll_locked),
+    cvs_reset #(.HOLD_CYCLES(RESET_HOLD_CYCLES)) reset_boundary(.clk(clk_sys),.reset_async(reset_async),.pll_locked(pll_locked),
         .load_active(rom_download),.rom_loaded(rom_loaded),.reset(core_reset));
 
     wire [7:0] in0,in1;
@@ -111,8 +110,8 @@ module emu #(
         end
         wire diag_reset = status[0] || (reset_probe_hold != 0);
         wire diag_status = status[14];
-        wire diag_credit1 = joy0[9];
-        wire diag_credit2 = joy1[9];
+        wire diag_credit1 = joy0[7];
+        wire diag_credit2 = joy1[7];
         assign diagnostic_red = diag_reset ? 8'hff :
                                 diag_status ? 8'hff :
                                 diag_credit1 ? 8'h00 :
@@ -165,7 +164,7 @@ module emu #(
     wire [31:0] fb_base;
     wire [13:0] fb_stride;
     wire rotate_pixel_ce,rotate_de;
-    cvs_rotation_raster rotation_raster(.clk(clk_sys),.reset(core_reset),
+    cvs_rotation_raster #(.LAST_X(8'd243)) rotation_raster(.clk(clk_sys),.reset(core_reset),
         .pixel_ce(mister_pixel_ce),.pixel_valid(pixel_valid),.x(out_x),
         .rotate_pixel_ce(rotate_pixel_ce),.rotate_de(rotate_de));
     screen_rotate video_rotation (
@@ -186,8 +185,8 @@ module emu #(
     assign FB_BASE=fb_base;
     assign FB_STRIDE=fb_stride;
     assign FB_FORCE_BLANK=1'b0;
-    assign VIDEO_ARX=!ar ? (video_rotated ? 13'd256 : 13'd227) : ar==2'd1 ? 13'd0 : ar==2'd2 ? 13'd1 : 13'd2;
-    assign VIDEO_ARY=!ar ? (video_rotated ? 13'd227 : 13'd256) : ar==2'd1 ? 13'd0 : 13'd0;
+    assign VIDEO_ARX=!ar ? (video_rotated ? 13'd248 : 13'd244) : ar==2'd1 ? 13'd0 : ar==2'd2 ? 13'd1 : 13'd2;
+    assign VIDEO_ARY=!ar ? (video_rotated ? 13'd244 : 13'd248) : ar==2'd1 ? 13'd0 : 13'd0;
     assign VGA_R=diagnostic_red;
     assign VGA_G=diagnostic_green;
     assign VGA_B=diagnostic_blue;
@@ -195,7 +194,12 @@ module emu #(
     assign VGA_VS=vsync_n;
     assign VGA_DE=display_enable;
 
-    wire signed [17:0] sound_sum={{2{pcm8[15]}},pcm8}+{{2{pcm4[15]}},pcm4}+{{2{speech_pcm[15]}},speech_pcm};
+    // Keep the audible bring-up path centered. The raw four-bit latch remains
+    // exposed for diagnostics, but its observed attract value is code 0 and
+    // the provisional offset-binary sampler maps that to -32768. Adding it at
+    // full scale clips the byte-DAC waveform almost entirely to the negative
+    // rail. Its board weight/mix is not yet calibrated.
+    wire signed [17:0] sound_sum={{2{pcm8[15]}},pcm8}+{{2{speech_pcm[15]}},speech_pcm};
     wire signed [15:0] sound_out=sound_sum>18'sd32767 ? 16'sh7fff :
         sound_sum< -18'sd32768 ? 16'sh8000 : sound_sum[15:0];
     assign AUDIO_L=sound_out;

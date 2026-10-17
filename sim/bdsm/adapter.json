@@ -8,7 +8,11 @@
     "tools",
     "releases",
     "LICENSES",
-    "sys"
+    "sys",
+    "MiSTer-BDSM/runner",
+    "MiSTer-BDSM/adapters",
+    "MiSTer-BDSM/tools",
+    "MiSTer-BDSM/docs"
   ],
   "source_files": [
     "README.md",
@@ -167,7 +171,7 @@
         "g++"
       ],
       "timeout": 180,
-      "expectation": "Async assertion, exactly two-edge release and PLL/loader/image qualification.",
+      "expectation": "Async assertion, 1,140,000-edge minimum hold at the 57 MHz system rate, two-edge synchronized release, and PLL/loader/image qualification.",
       "reference": "docs/architecture.md; pinned MAME CVS map/clocks and explicit implementation contract."
     },
     {
@@ -223,7 +227,7 @@
         "g++"
       ],
       "timeout": 180,
-      "expectation": "Actual FLAG RAM display ports read every tile/glyph/bullet/palette byte independent of CPU page; one-edge reads, hold and simultaneous write forwarding pass.",
+      "expectation": "Actual FLAG RAM display ports read every tile/glyph/bullet/palette byte independent of CPU page; one-edge reads, hold and simultaneous write forwarding pass. CPU writes to all seven arrays read back immediately, same-cycle CPU read/write returns write data, and zero clears read as zero.",
       "reference": "docs/character-video.md; independent synthetic address/byte oracle and declared FPGA memory contract."
     },
     {
@@ -237,7 +241,7 @@
         "g++"
       ],
       "timeout": 180,
-      "expectation": "Independent normalized geometry, bitplanes, mode thresholds, scrolling, PROM/palette, bullet clipping, sprite mixing, collisions, pipeline stalls/valid and reset match actual shared FLAG memory.",
+      "expectation": "Independent normalized geometry, bitplanes, mode thresholds, scrolling, PROM/palette, bullet clipping, sprite mixing, normal object/tile/bullet layer priority, collisions, pipeline stalls/valid and reset match actual shared FLAG memory.",
       "reference": "docs/character-video.md; pinned MAME compatibility, independent analytic oracle and explicit FPGA pipeline contract; physical board timing excluded."
     },
     {
@@ -293,7 +297,7 @@
         "g++"
       ],
       "timeout": 180,
-      "expectation": "Independent expanded-bit geometry matches every object pixel/colour/presence at all scales and analytic duplicate rows; six collision pairs, status/read-clear/aliases/IRQ and VC/HCB/VCB latch cadence are correct.",
+      "expectation": "Independent expanded-bit geometry matches every object pixel/colour/presence at all scales and analytic duplicate rows; the fixed MAME CVS -5 HC/HCB origin is applied; a single descriptor yields exactly one horizontal run; moved-object scans across fields leave no stale pixels; six collision pairs, status/read-clear/aliases/IRQ and VC/HCB/VCB latch cadence are correct.",
       "reference": "docs/s2636.md; visually inspected manufacturer object/status rules, normalized FPGA contracts and pinned MAME cross-check; full PVI and physical phases excluded."
     },
     {
@@ -562,8 +566,8 @@
         "g++"
       ],
       "timeout": 180,
-      "expectation": "Independent enabled-time oracle checks provisional rotated coordinates, 227x256 requests, two-edge PVI line preparation, blanking, frame boundaries, pause and reset.",
-      "reference": "docs/video-assembly.md; declared integration viewport over separately checked 312 waveform; physical PCK/PIXCLK/origins unqualified."
+      "expectation": "Independent enabled-time oracle checks 227 sync slots, HRST-rephased /12 pixel cadence, exactly 244 active pixels per line, MAME-compatible rows y=8..255, two-edge PVI line preparation, frame boundaries, pause and reset.",
+      "reference": "docs/video-timing.md and private CVS v1.4 schematic page 5; clock ratio and active width are schematic-derived, while physical phase/origins remain unmeasured."
     },
     {
       "id": "hunchback.video.assembly",
@@ -576,8 +580,8 @@
         "vvp"
       ],
       "timeout": 240,
-      "expectation": "Actual CPU initializes shared memory and three PVIs; independent 58112-pixel field, all-position MiSTer CE through blanking, delayed DE/RGB, sync/latency, collisions and five actual CPU status readbacks pass.",
-      "reference": "docs/video-assembly.md; synthetic program and independently specified scene over provisional raster; physical origins unqualified."
+      "expectation": "Actual CPU initializes shared memory and three PVIs; independent 60512-pixel 244x248 field, all-position MiSTer CE through blanking, delayed DE/RGB, sync/latency, fixed PVI Y origin aligns rendered pixels and collision onset, and five actual CPU status readbacks pass.",
+      "reference": "docs/video-assembly.md and private CVS v1.4 schematic page 5; synthetic scene and schematic-derived native dimensions; physical phases/origins remain unmeasured."
     },
     {
       "id": "hunchback.rom.bootstrap",
@@ -700,6 +704,20 @@
       "timeout": 180,
       "expectation": "Independent linear-time rational 48k cadence, all 256 by 16 raw signed scaling combinations, output hold, changing inputs and arbitrary-phase resets.",
       "reference": "docs/audio-samples.md; explicit numeric raw-channel contract recorded before implementation, not physical gain/bit order/analog calibration."
+    },
+    {
+      "id": "hunchback.audio.attract",
+      "suite": "game",
+      "script": "tools/check_attract_audio.sh",
+      "required": true,
+      "tools": ["bash", "python3", "ghdl", "verilator", "make", "g++"],
+      "timeout": 900,
+      "rom": "hunchbak.zip",
+      "game": "hunchback",
+      "prepare": "prepare_hunchback.py",
+      "markers": ["PASS: authenticated attract ROM produced varying nonzero byte-DAC output"],
+      "expectation": "The authenticated input-free Hunchback ROM runs through the actual main and audio CPUs and produces varying nonzero engineering output samples in attract mode.",
+      "reference": "docs/audio-assembly.md and docs/audio-samples.md; actual local ROM execution and signed byte-DAC sampler. No calibrated analog mix or board audio claim."
     },
     {
       "id": "hunchback.speech.bus",
@@ -848,7 +866,7 @@
       "required": true,
       "tools": ["ghdl", "iverilog", "vvp"],
       "timeout": 300,
-      "expectation": "With HPS output pins driven by a fixture, verify actual wrapper ROM-download reset hold/release, external/menu/user reset, two-clock reset release, active-low joystick mapping and representative MAME DSW2/DSW3 byte mappings through the actual synthesized-CPU machine hierarchy.",
+      "expectation": "With HPS output pins driven by a fixture, verify actual wrapper ROM-download hold, external/menu/user reset including a one-cycle OSD R0 pulse stretched for the configured minimum, synchronized CPU release and reset-vector refetch, active-low joystick mapping and representative MAME DSW2/DSW3 mappings through the actual synthesized-CPU hierarchy.",
       "reference": "docs/mister-shell.md; independent shell contracts and MAME-compatible logical input assignments. HPS protocol, physical controls, PLL behavior, DIPs and hardware remain unqualified."
     }
   ],
@@ -1520,6 +1538,15 @@
       "reason": "Expanded columns use the wrong scale."
     },
     {
+      "id": "pvi_horizontal_compare_low_five_bits",
+      "check": "hunchback.s2636.objects",
+      "file": "rtl/machine/cvs_s2636_objects.sv",
+      "old": "distance={1'b0,pixel_x}-{1'b0,hc};",
+      "new": "distance={4'b0,pixel_x[4:0]}-{4'b0,hc[4:0]};",
+      "failure_label": "single_object_horizontal_run",
+      "reason": "Dropping the upper horizontal coordinate bits aliases an object every 32 pixels."
+    },
+    {
       "id": "pvi_xor_colour",
       "check": "hunchback.s2636.objects",
       "file": "rtl/machine/cvs_s2636_objects.sv",
@@ -1817,13 +1844,22 @@
       "reason": "Glyph-stage metadata follows the next request instead of the accepted pixel."
     },
     {
-      "id": "scan_rotated_origin",
+      "id": "scan_pixel_clock_phase",
       "file": "rtl/machine/cvs_scan.sv",
       "check": "hunchback.video.scan",
-      "old": "h_count+8'd221",
-      "new": "h_count+8'd220",
-      "failure_label": "scan_coordinates",
-      "reason": "Horizontal wrap maps to the wrong normalized coordinate."
+      "old": "wire active_pixel_ce=run && !reset && !hrst && pixel_phase==4'd11;",
+      "new": "wire active_pixel_ce=run && !reset && !hrst && pixel_phase==4'd10;",
+      "failure_label": "scan_pck_enable",
+      "reason": "The PCK divider emits at the wrong master-clock phase."
+    },
+    {
+      "id": "scan_pixel_counter_rate",
+      "file": "rtl/machine/cvs_scan.sv",
+      "check": "hunchback.video.scan",
+      "old": "else if(!hrst && pixel_phase==4'd11) begin\n                pixel_phase<=4'd0;",
+      "new": "else if(!hrst && pixel_phase==4'd10) begin\n                pixel_phase<=4'd0;",
+      "failure_label": "scan_pck_enable",
+      "reason": "The pixel counter advances at a cadence that does not yield 244 samples per active line."
     },
     {
       "id": "scan_line_too_early",
@@ -1840,7 +1876,7 @@
       "check": "hunchback.video.scan",
       "old": "v_count<9'd299",
       "new": "v_count<9'd298",
-      "failure_label": "scan_request",
+      "failure_label": "scan_viewport_enable",
       "reason": "Last normalized row is omitted."
     },
     {
@@ -1896,6 +1932,15 @@
       "new": "hs_delay[4]",
       "failure_label": "assembly_sync",
       "reason": "Sync travels one fewer clock than pixel data."
+    },
+    {
+      "id": "assembly_pvi_old_v_origin",
+      "file": "rtl/machine/cvs_video_join.sv",
+      "check": "hunchback.video.assembly",
+      "old": "cvs_s2636_bank #(.Y_OFFSET(3)) pvis",
+      "new": "cvs_s2636_bank #(.Y_OFFSET(-5)) pvis",
+      "failure_label": "assembly_fixed_y_offset_collision",
+      "reason": "Reintroduces counting the eight viewport-hidden lines as object rows; the joined render/collision scanline assertion must catch it."
     },
     {
       "id": "assembly_graphics_offset",
@@ -2375,11 +2420,20 @@
       "reason": "Core reset must remain asserted until the index-zero ROM download has completed."
     },
     {
+      "id": "mister_osd_reset_pulse_not_stretched",
+      "check": "hunchback.mister.shell_behavior",
+      "file": "rtl/machine/cvs_reset.sv",
+      "old": "assign reset = (hold_count != 0) || release_pipe[1] || !pll_locked || load_active || !rom_loaded;",
+      "new": "assign reset = release_pipe[1] || !pll_locked || load_active || !rom_loaded;",
+      "failure_label": "menu_reset_minimum_hold",
+      "reason": "A momentary OSD R0 assertion must stretch into the configured minimum game reset interval."
+    },
+    {
       "id": "mister_shell_joystick_polarity",
       "check": "hunchback.mister.shell_behavior",
       "file": "rtl/machine/cvs_mister_input.sv",
-      "old": "~joystick_0[9]",
-      "new": "joystick_0[9]",
+      "old": "~joystick_0[7]",
+      "new": "joystick_0[7]",
       "failure_label": "joystick_idle_in0",
       "reason": "MiSTer idle-high CVS matrix lines require inversion of the active-high HPS coin bit."
     },
@@ -2405,8 +2459,8 @@
       "id": "mister_duplicate_reset_entry",
       "check": "hunchback.mister.shell_behavior",
       "file": "Arcade-Hunchback.sv",
-      "old": "\"R[0],Reset;\",",
-      "new": "\"R[0],Reset;\",\n        \"T[0],Reset;\",",
+      "old": "\"R0,Reset;\",",
+      "new": "\"R0,Reset;\",\n        \"T0,Reset;\",",
       "failure_label": "mister_single_reset_binding",
       "reason": "Only R[0] is the reset action; a duplicate T[0] entry creates a second, incorrectly indexed Reset item."
     },
@@ -2414,10 +2468,10 @@
       "id": "mister_button_order_misaligned",
       "check": "hunchback.mister.shell_behavior",
       "file": "Arcade-Hunchback.sv",
-      "old": "J1,Jump,-,Start 2,-,Start 1,Coin;",
+      "old": "J1,Jump,Start 2,Start 1,Coin;",
       "new": "J1,Jump,Start 1,Coin,Jump 2,Start 2,Coin 2;",
       "failure_label": "mister_conf_button_order",
-      "reason": "J1 button names must occupy the virtual A/B/X/Y/Start/Select indices read by the actual input mapper."
+      "reason": "J1 labels must match the consecutive HPS bits assigned by the MRA button list."
     }
   ],
   "build": {

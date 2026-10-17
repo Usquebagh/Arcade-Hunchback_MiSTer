@@ -1,25 +1,42 @@
-# Provisional raster and composed video assembly
+# CVS raster and composed video assembly
 
-Expectations before implementation, 2026-10-11. Existing 2621 timing, normalized
-PVI and character contracts remain the references; this document defines their
-FPGA connection. This is a provisional coordinate hypothesis, not a board trace.
-Kevtris v1.4 timing/counter sheet was inspected at higher resolution. Separate
-U12AA/U12AB/U12CA PCK/PIXCLK circuitry has asynchronous preset/clear feedback;
-counters reset by /HRST and /VRST. Propagation and PVI/display origins remain
-unaudited. No simple divider substitutes for that circuit. MAME offsets (-26
-horizontal, -5 vertical) are not silently added to the chip-coordinate engine.
+Existing 2621 timing, normalized PVI and character contracts remain the
+references; this document defines their FPGA connection. The output uses the
+schematic-derived active pixel count, while exact board propagation phases remain
+unmeasured.
+Kevtris v1.4 timing/counter sheet was inspected at higher resolution. U12AA/U12AB
+are clocked from 14.318 MHz and form PCK/PCK2 by divide-by-three; U12CA
+rephases PIXCLK using /HRST. Display counters clear on /HRST and count PIXCLK.
+The VRST field anchor
+is line 43; the output viewport starts at line 51, an eight-line delta. MAME's
+S2636 API uses `set_offsets(y, x)`, and the CVS driver calls `set_offsets(-5,
+-26)`. Thus Y=-5 and X=-26. MAME anchors PVI rendering at visible y=8; the joined
+core anchors its PVI counter at VRST y=0, eight lines earlier, so its effective
+Y offset remains +3. The
+actual PVI line counter advances through the eight cropped lines; adding eight
+prevents object rows from being consumed before the first composed pixel. This
+translation is checked in the joined PVI/character/collision scene; physical
+counter propagation and phases remain unmeasured.
 
 ## Scan contract
 
-Reuse tested 312-line /16 timing. A labelled line begins on entering h=6.
-Rotate h into x=0..226: h>=6 gives h-6, otherwise h+221. Lines 43..298 produce
-y=0..255, one request per ce_position; other lines produce none. Visible is
-provisional !blank (thus x<44 is blank). This 227x256 viewport is an integration
-fixture, not the 240-pixel MAME viewport or verified CVS placement.
+Reuse tested 312-line /16 sync timing. A labelled line begins on entering h=6.
+The 2621 emits 227 timing slots, and HRST covers h=6..49 (44 slots). The separate
+display clock is 14.318 MHz / 3; outside HRST, 183 slots × 16 master clocks / 12
+master clocks per pixel = 244 active pixels. The PVI and character pipeline both
+consume this same native `pixel_x` counter (0..243); only the S2636 object start
+applies MAME's X=-26 translation. Lines 51..298 select source rows
+y=8..255 from the 256-line field, matching MAME's vertical crop. MAME's x=0..239
+is retained as software presentation metadata only; no resampling maps it onto
+the board raster. `cvs_rotation_raster` inserts only the low-DE separator required
+by `screen_rotate`, so the source remains 244 pixels wide and the rotated buffer
+is 248x244. The precise edge phase and analog blanking against U12/U9 remain
+physical measurement gaps.
 
 Delay raw line-start by two enabled master edges. The first edge after entering
-line 43 lets PVI observe VRST falling and latch field state; the next prepares
-row zero before the first pixel strobe at h=6. run=0 freezes timing/line-delay
+line 43 lets PVI observe VRST falling and latch field state; subsequent edges
+prepare row state before active PIXCLK samples begin at HRST release. Output crop begins at row 8 and
+does not change the PVI field origin. run=0 freezes timing/line-delay
 state and masks consuming strobes. Downstream in-flight pixels may drain during
 a pause. Reset clears delay state. A linear enabled-time oracle checks every
 request/coordinate/line/visible level, frame boundaries, pauses and reset.
@@ -35,25 +52,28 @@ payload holds between valid outputs. CPU PVI status side effects are preserved.
 CPU SENSE/IRQ uses VRST, not composite horizontal/vertical blank. PVI IRQ remains
 diagnostic; physical routing is unqualified.
 
-The full-machine wrapper exposes the scan's unblanked position-enable separately
-from its viewport-limited character request. The MiSTer shell delays the
-unblanked CE by six register stages to align with the N+5 RGB/DE/sync output.
-An independent field oracle checks CE on every scan position, including both
-blanking axes, and checks DE against the delayed visible coordinate. This
-qualifies the normalized digital interface only; PCK/PIXCLK and display origins
-remain unaudited.
+The full-machine wrapper exposes the scan's active-pixel enable separately from
+its viewport-limited character request. The MiSTer shell delays the pixel CE by
+six register stages to align with the N+5 RGB/DE/sync output. An independent field
+oracle checks the /12 cadence and 244-pixel line width. This checks the synchronous
+FPGA model; board-level setup/hold phase and analog display origins remain open.
 
 ## Actual-CPU composed fixture
 
 A downloaded synthetic program initializes every used memory via actual CPU
 instructions: all codes/attributes/bullets, palette, used RAM glyph, and PVI
 descriptors/controls. Scan stays stopped during initialization; CPU acceptance
-then stalls at a ready marker while one complete field executes. All 227x256
-pixels must match independent geometry, blanking, palette and real PVI presence.
-Three FF objects at (48,8), colours 0/2/4, overlap foreground and a four-pixel
+then stalls at a ready marker while one complete field executes. All 244x248
+native source pixels must match independent geometry, palette and real PVI presence.
+Three FF objects with programmed VC=8 render from screen line 11 with the fixed
+PVI Y origin, colours 0/2/4, overlap foreground and a four-pixel
 bullet at x=45..48. Black presence participates. Collision must accumulate FF;
 completion is 08 per chip. CPU resumes, reads FF, clears/reads 00 and reads all
 three completion bytes. The stall is a fixture, not display arbitration.
+
+The OSD no longer exposes experimental sprite trims or layer blanking switches.
+The CVS/MAME-compatible X=-26 and field-relative Y=+3 translations are fixed in
+the renderer and feed both displayed object pixels and collision detection.
 
 ## Local-ROM bootstrap
 

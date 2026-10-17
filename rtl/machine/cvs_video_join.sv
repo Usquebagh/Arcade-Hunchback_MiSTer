@@ -52,7 +52,12 @@ module cvs_video_join (
         end
     end
     assign hsync_n=hs_delay[5];assign vsync_n=vs_delay[5];
-    cvs_s2636_bank pvis(.clk(clk),.reset(reset),.chip_select(chip_select),.cpu_rd(cpu_rd),.cpu_wr(cpu_wr),
+    // MAME calls set_offsets(-5,-26); the S2636 API takes (Y,X), so its
+    // offsets are Y=-5 and X=-26. This raster's
+    // PVI counter starts at VRST fall (y=0), eight lines before that viewport,
+    // so translate the effective offset: -5 + 8 = +3. Do not consume object
+    // rows during the eight lines suppressed by the composed viewport.
+    cvs_s2636_bank #(.Y_OFFSET(3),.X_OFFSET(-26)) pvis(.clk(clk),.reset(reset),.chip_select(chip_select),.cpu_rd(cpu_rd),.cpu_wr(cpu_wr),
         .cpu_addr(cpu_addr),.cpu_din(cpu_din),.cpu_dout(cpu_dout),.vrst(vrst),.line_start(line_start),
         .ce_pixel(pixel_ce),.pixel_x(pixel_x),.intack(intack),.irq(irq),.pixels(sprites),.object_masks(object_masks));
     cvs_character_video characters(.clk(clk),.reset(reset),.pixel_ce(pending),.visible(visible_pending),

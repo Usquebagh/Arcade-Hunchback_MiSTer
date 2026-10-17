@@ -116,3 +116,32 @@ RBF candidate or audible output is produced by this milestone.
 The following [raw-sampling milestone](audio-samples.md) adds separate PCM ports
 and a private preview without qualifying physical channel gain/mixing or removing
 these blockers. Its changed power-up phase observation is retained separately.
+
+## Full-ROM audio output and current engineering mix
+
+The MRA loads `6c.sdp1` (CRC `f9ba2854`) at image offset `0x8000`; the audio
+CPU window is `0x8000..0x8fff`, matching the 4 KiB ROM image. The authenticated
+local archive run through the actual main, audio and speech machine hierarchy
+completed 450,000,000 master cycles and 396 video fields. The audio CPU made
+397,200 writes including 39,719 byte-DAC writes, 158,880 four-bit latch writes
+and 119,157 discrete-control writes. The input-free trace had no audio command
+IRQ/read events. At 48 kHz, the top-level engineering sum produced 377,099
+nonzero samples, 123 distinct levels, and a range of -32768..-1. This is a
+digital activity regression on the authenticated game ROM, not proof of an
+audible hardware output or calibrated sound.
+
+The first top-level mix included the raw four-bit latch at equal gain. In the
+observed attract state, DAC4 code zero was mapped by the provisional
+offset-binary sampler to -32768, clipping the mixed output to the negative rail
+for most samples. The engineering mix now uses the byte DAC plus speech PCM;
+the DAC4 latch remains available for diagnostics until its physical weighting
+and analog path are established. The shell regression forces a non-clipped
+byte-DAC sample alongside DAC4=-32768 and checks both MiSTer audio channels.
+
+OSD reset is declared as `R0,Reset;`; `status[0]` is included in the top-level
+asynchronous reset assertion and `cvs_reset` synchronizes its release over two
+system clocks after PLL and ROM-load qualification. The shell regression asserts
+that this resets the main, audio and speech CPUs while leaving ROM-load state
+separate. Its status stimulus is forced at the `hps_io` output boundary, so the
+actual OSD/HPS transaction and physical MiSTer reset response remain a
+hardware-validation item.

@@ -94,6 +94,22 @@ int main(int argc,char** argv){
         for(unsigned a=0;a<2048;++a){prom[a]=((a*37)^((a/256)*13)^(a/8))%8;b.rtl.dl_addr=6144+a;b.rtl.dl_data=prom[a];tick();}
         b.rtl.dl_wr=0;
         auto drain=[&](){b.rtl.pixel_ce=0;for(int n=0;n<5;++n)tick();b.check(queue.empty(),"character_fixture_drained",0,queue.size());};
+        // Distinct pen values make each independently selectable source visible:
+        // tile=1, bullet=7 and black-presence object=8, with blank tile=0.
+        for(unsigned a=0;a<2048;++a){prom[a]=4;b.rtl.dl_wr=1;b.rtl.dl_addr=6144+a;b.rtl.dl_data=4;tick();}
+        b.rtl.dl_wr=0;
+        codes[32]=1;poke(0x1820,1,0,1);
+        for(unsigned p=0;p<3;++p){rom[p][8]=128;b.rtl.dl_wr=1;b.rtl.dl_addr=p*2048+8;b.rtl.dl_data=128;tick();}
+        b.rtl.dl_wr=0;
+        bullets[8]=168;poke(0x1408,0,0,168);
+        auto layer_pen=[&](unsigned x,unsigned sprites){
+            b.rtl.pixel_x=x;b.rtl.pixel_y=8;b.rtl.char_mode=0;b.rtl.scroll=0;b.rtl.visible=1;
+            b.rtl.sprites=sprites;
+            b.rtl.pixel_ce=1;tick();drain();return unsigned(b.rtl.palette_index);
+        };
+        unsigned got=layer_pen(0,0);b.check(got==1,"layer_tile_visible",1,got);
+        got=layer_pen(0,8);b.check(got==8,"layer_object_visible",8,got);
+        got=layer_pen(80,0);b.check(got==7,"layer_bullet_visible",7,got);
         // Every byte/mode boundary appears in complete fields. Vary metadata
         // on back-to-back clocks, with independent holes and visible blanking.
         for(unsigned frame=0;frame<5;++frame){

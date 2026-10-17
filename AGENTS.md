@@ -98,7 +98,8 @@ Preserve independent enabled-time scan expectations, six-edge pixel/sync metadat
 actual PVI presence, complete synthetic field and actual CPU status readbacks.
 Keep the directed pause with a delayed line strobe pending; periodic pauses can
 alias with clock phase and do not replace that regression.
-The 227x256 viewport is provisional; it does not resolve physical PCK/PIXCLK/origins.
+The MAME-visible 240x248 output crop is normalized software-reference geometry;
+it does not resolve physical PCK/PIXCLK/origins.
 For cold CPU changes run `hunchback.cpu.cold_self_xor` and native CPU checks;
 never reinstate simulation-only register initialization in the synthesized CPU.
 Keep the runtime-ROM bootstrap oracle independent and its own contract checks
@@ -241,7 +242,8 @@ mapper and actual CPU/game RAM path; an internal CVS port pulse is downstream
 coverage only.
 
 For `screen_rotate` integration, preserve a blank CE/DE boundary between CVS
-rows while retaining every pixel in the full 227 by 256 active raster. Run
+rows while retaining the MAME-visible y=8..255 crop and mapping 227 timing
+strobes to logical x=0..239 with held-sample output fill. Run
 the rotation dimension check inside `hunchback.mister.shell_behavior` against
 the actual MiSTer rotation module and require its measured rotated buffer
-dimensions to be 256 by 227.
+dimensions to be 248 by 240.

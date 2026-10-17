@@ -25,7 +25,8 @@ module cvs_hps_coin_machine (
     cvs_mister_input controls(.joystick_0(joystick_0),.joystick_1(joystick_1),.in0(in0),.in1(in1));
     cvs_machine machine (
         .clk(clk),.reset(reset),.reset_na(reset_na),.video_reset(video_reset),
-        .scan_run(scan_run),.ready(ready),.dl_wr(dl_wr),.dl_addr(dl_addr),.dl_data(dl_data),
+        .scan_run(scan_run),.ready(ready),
+        .dl_wr(dl_wr),.dl_addr(dl_addr),.dl_data(dl_data),
         .in0(in0),.in1(in1),.in2(in2),.in3(in3),.dsw1(dsw1),.dsw2(dsw2),
         .pixel_valid(pixel_valid),.pixel_ce_all(pixel_ce_all),.display_enable(display_enable),
         .out_x(out_x),.out_y(out_y),.red(red),.green(green),.blue(blue),

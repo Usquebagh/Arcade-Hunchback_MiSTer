@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Long actual-machine diagnostic. No post-initialization game/video oracle.
 #ifdef AUDIO_OBSERVE
-#include "Vcvs_av_machine.h"
-using Machine=Vcvs_av_machine;
+#include "Vcvs_full_machine.h"
+using Machine=Vcvs_full_machine;
 #else
 #include "Vcvs_hps_coin_machine.h"
 using Machine=Vcvs_hps_coin_machine;
@@ -13,14 +13,23 @@ using Machine=Vcvs_hps_coin_machine;
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <set>
 #include <string>
 #include <vector>
 
 int main(int argc,char** argv) {
-    if(argc!=6)return 2;
+    if(argc!=7)return 2;
     uint64_t limit=std::stoull(argv[1]);
     unsigned seed=std::stoul(argv[2]),resume_pc=std::stoul(argv[3]);
     bool controls=std::stoul(argv[4])!=0,credit_test=std::stoul(argv[5])!=0;
+#ifdef AUDIO_OBSERVE
+    bool require_audio_activity=std::stoul(argv[6])!=0;
+    std::set<int> mixed_audio_levels;
+    int mixed_audio_min=32767,mixed_audio_max=-32768;
+    uint64_t nonzero_audio_samples=0;
+#else
+    (void)argv[6];
+#endif
     VerilatedContext context;context.randReset(2);context.randSeed(seed);
     Machine m(&context);
     std::ifstream image("image.bin",std::ios::binary),expected("startup.expect");
@@ -31,18 +40,18 @@ int main(int argc,char** argv) {
     uint64_t cycle=0,frames=0,irqs=0,writes=0,stores=0,pixels=0;
     bool initialized=false,last_ack=false;
     unsigned field_pixels=0,coin_samples=0,start_samples=0,input_reads=0,right_samples=0,jump_samples=0;
-    std::array<unsigned char,227*256*3> field{};
+    std::array<unsigned char,244*248*3> field{};
     std::array<unsigned char,1024> system_ram{},ram_before_coin{};
     std::array<bool,1024> system_ram_valid{},ram_before_coin_valid{};
     bool ram_coin_snapshot=false,ram_coin_delta_reported=false;
     std::ofstream bus("bus.log"),captures("captures.log");
 #ifdef AUDIO_OBSERVE
     std::ofstream audio_bus("audio-bus.log"),audio_events("audio-events.log");
-    std::ofstream audio_samples("audio-samples.log");
+    std::ofstream audio_samples("audio-samples.log"),audio_output_samples("audio-output-samples.log");
     uint64_t audio_acks=0,audio_reads=0,audio_writes=0,dac8_writes=0,dac4_writes=0,discrete_writes=0,command_events=0;
     uint64_t audio_sample_origin=0;
     bool last_audio_ack=false;
-    m.audio_ready=1;m.audio_sense=0;
+    m.audio_ready=1;m.audio_sense=0;m.speech_ready=1;m.speech_sense=0;
 #endif
     auto fail=[&](const char* label,uint64_t expected_value,uint64_t observed_value) {
         std::cout<<"BDSM {\"status\":\"FAIL\",\"label\":\""<<label<<"\",\"cycle\":"<<cycle
@@ -64,9 +73,10 @@ int main(int argc,char** argv) {
         m.in0=255-(coin?8:0)-(start?1:0)-(jump?32:0);
         m.in1=255-(right?16:0);
 #else
-        // MRA defaults: Coin=Select(bit 9), Start=bit 8, Jump=A(bit 4).
+        // MRA button list slots map consecutively: Jump=4, Start2=5,
+        // Start1=6, Coin=7. The defaults choose physical gamepad buttons.
         // This drives the same HDL mapper used by emu; no CVS port is forced.
-        m.joystick_0=(coin?1u<<9:0)|(start?1u<<8:0)|(jump?1u<<4:0)|
+        m.joystick_0=(coin?1u<<7:0)|(start?1u<<6:0)|(jump?1u<<4:0)|
                      ((!credit_test && controls && frames>=178 && frames<180)?1u<<6:0)|
                      (right?1u<<3:0);
         m.joystick_1=0;
@@ -74,6 +84,7 @@ int main(int argc,char** argv) {
 #ifdef AUDIO_OBSERVE
         // Nominal external RC fixture only, not a physical audio clock model.
         m.audio_sense=((cycle*760ull/57272724ull)&1u);
+        m.speech_sense=m.audio_sense;
 #endif
         m.clk=0;m.eval();
 #ifdef AUDIO_OBSERVE
@@ -131,7 +142,20 @@ int main(int argc,char** argv) {
             if(m.dac8_wr) {++dac8_writes;audio_events<<cycle<<" DAC8 "<<unsigned(m.dac8)<<"\n";}
             if(m.dac4_wr) {++dac4_writes;audio_events<<cycle<<" DAC4 "<<unsigned(m.dac4)<<"\n";}
             if(m.discrete_wr) {++discrete_writes;audio_events<<cycle<<" DISCRETE "<<unsigned(m.discrete)<<"\n";}
-            if(m.sample_ce)audio_samples<<cycle<<" "<<int(int16_t(m.pcm8))<<" "<<int(int16_t(m.pcm4))<<"\n";
+            if(m.sample_ce) {
+                // Match the engineering top-level audio path: byte DAC plus
+                // speech. The uncalibrated four-bit latch is excluded because
+                // its attract-mode code 0 maps to -32768 and clips the mix.
+                int mixed=int(int16_t(m.pcm8))+int(int16_t(m.speech_pcm));
+                if(mixed>32767)mixed=32767;
+                if(mixed< -32768)mixed=-32768;
+                mixed_audio_levels.insert(mixed);
+                if(mixed<mixed_audio_min)mixed_audio_min=mixed;
+                if(mixed>mixed_audio_max)mixed_audio_max=mixed;
+                if(mixed!=0)++nonzero_audio_samples;
+                audio_samples<<cycle<<" "<<int(int16_t(m.pcm8))<<" "<<int(int16_t(m.pcm4))<<"\n";
+                audio_output_samples<<cycle<<" "<<mixed<<"\n";
+            }
         }
 #endif
         if(m.reset)last_ack=false;
@@ -149,8 +173,8 @@ int main(int argc,char** argv) {
         }
         if(initialized && m.pixel_valid) {
             unsigned x=m.out_x,y=m.out_y;
-            if(x==0 && y==0) {
-                if(frames && field_pixels!=227*256)fail("observe_field_count",227*256,field_pixels);
+            if(x==0 && y==8) {
+                if(frames && field_pixels!=244*248)fail("observe_field_count",244*248,field_pixels);
                 ++frames;field_pixels=0;
                 if(frames==170) {
                     ram_before_coin=system_ram;
@@ -164,7 +188,7 @@ int main(int argc,char** argv) {
                         if(!ram_before_coin_valid[0x70] || !system_ram_valid[0x70])
                             fail("credit_ram_write_observed",1,0);
                         if(before!=0 || after!=1)fail("coin_increments_credit_ram",1,after);
-                        std::cout<<"BDSM {\"status\":\"PASS\",\"label\":\"hps_coin_to_credit_ram\",\"input\":\"joystick_0[9]\",\"port\":\"IN0[3]\",\"address\":\"0x1c70\",\"before\":"<<before<<",\"after\":"<<after<<"}"<<std::endl;
+                        std::cout<<"BDSM {\"status\":\"PASS\",\"label\":\"hps_coin_to_credit_ram\",\"input\":\"joystick_0[7]\",\"port\":\"IN0[3]\",\"address\":\"0x1c70\",\"before\":"<<before<<",\"after\":"<<after<<"}"<<std::endl;
                     }
                     for(unsigned address=0;address<system_ram.size();++address) {
                         if(ram_before_coin_valid[address] && system_ram_valid[address] &&
@@ -178,13 +202,14 @@ int main(int argc,char** argv) {
                 }
                 if(frames%16==0)std::cout<<"Observed frame "<<frames<<", IRQ acknowledgements="<<irqs<<std::endl;
             }
-            if(x!=field_pixels%227 || y!=field_pixels/227)fail("observe_pixel_order",field_pixels,x+227*y);
+            unsigned expected_x=field_pixels%244;
+            if(x!=expected_x || y!=8+field_pixels/244)fail("observe_pixel_order",expected_x+256*(8+field_pixels/244),x+256*y);
             unsigned offset=field_pixels*3;
             field[offset]=m.red;field[offset+1]=m.green;field[offset+2]=m.blue;
             ++field_pixels;++pixels;
-            if(field_pixels==227*256 && frames>=128 && (frames%16==0 || frames==156 || frames==172 || frames==180 || frames==196)) {
+            if(field_pixels==244*248 && frames>=128 && (frames%16==0 || frames==156 || frames==172 || frames==180 || frames==196)) {
                 std::string name="frame-"+std::to_string(frames)+".ppm";
-                std::ofstream out(name,std::ios::binary);out<<"P6\n227 256\n255\n";
+                std::ofstream out(name,std::ios::binary);out<<"P6\n244 248\n255\n";
                 out.write(reinterpret_cast<const char*>(field.data()),field.size());
                 if(!out)std::exit(2);
                 captures<<frames<<" "<<cycle<<" "<<name<<"\n";
@@ -198,6 +223,10 @@ int main(int argc,char** argv) {
     audio_sample_origin=cycle;
 #endif
     while(cycle<limit)tick();
+#ifdef AUDIO_OBSERVE
+    if(require_audio_activity && (mixed_audio_levels.size()<2 || mixed_audio_min==mixed_audio_max || !nonzero_audio_samples))
+        fail("attract_audio_output_varies",2,mixed_audio_levels.size());
+#endif
     if(!initialized)fail("observe_startup_missing",want.size(),stores);
     std::cout<<"OBSERVED {\"cycles\":"<<cycle<<",\"frames_started\":"<<frames<<",\"irq_acknowledgements\":"<<irqs
              <<",\"pixels\":"<<pixels<<",\"writes\":"<<writes<<",\"initialization_writes\":"<<stores
@@ -208,7 +237,10 @@ int main(int argc,char** argv) {
     std::cout<<",\"audio_irq_acknowledgements\":"<<audio_acks<<",\"audio_command_events\":"<<command_events
              <<",\"audio_command_reads\":"<<audio_reads<<",\"audio_writes\":"<<audio_writes
              <<",\"dac8_writes\":"<<dac8_writes<<",\"dac4_writes\":"<<dac4_writes
-             <<",\"discrete_writes\":"<<discrete_writes<<",\"audio_sample_origin\":"<<audio_sample_origin;
+             <<",\"discrete_writes\":"<<discrete_writes<<",\"audio_sample_origin\":"<<audio_sample_origin
+             <<",\"mixed_audio_min\":"<<mixed_audio_min<<",\"mixed_audio_max\":"<<mixed_audio_max
+             <<",\"mixed_audio_unique_levels\":"<<mixed_audio_levels.size()
+             <<",\"nonzero_audio_samples\":"<<nonzero_audio_samples;
 #endif
     std::cout<<"}"<<std::endl;
     m.final();return 0;

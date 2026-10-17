@@ -17,16 +17,28 @@ The 317 configuration is retained solely as a synthetic parameter stress test,
 with its existing check ID; it is not an alternate CVS or 2621 timing hypothesis.
 
 Kevtris v1.4 schematic, main-board timing sheet (PDF page 5), shows X1=14.318 MHz,
-U13AA/U13AB producing 3.579 MHz into U13D/2621 CLK. RESET is tied to ground.
-VRST, HRST, CBLNK and CK2 are routed onward; 2621 PCK is unconnected. The board
-generates separate PCK/PIXCLK via U12AA/U12AB/U12CA and HRST. Those circuits,
-display-counter polarities/phases and their CPU relationship are not implemented
-by this boundary. Existing CPU frequency/phase tests are unchanged.
+U13AA/U13AB producing 3.579 MHz into U13D/2621 CLK. The separate U12AA/U12AB
+74S112s are clocked from the 14.318 MHz net (not the 3.579 MHz 2621 clock).
+Their JK/NAND feedback forms the PCK/PCK2 divide-by-three chain; U12CA samples
+that phase on /HRST to produce the line-aligned PIXCLK. The 2621 PCK pin is
+unconnected. The 74LS161 display counters clear on /HRST and count PIXCLK.
 
-The provisional model samples one position every 16 master edges, using the
+This gives 227 sync-generator slots per line but 244 active display pixel periods:
+HRST covers 44 slots, leaving 183; each slot spans 16 master clocks, while
+PIXCLK is one pulse per 12 master clocks, so 183*16/12=244. The count is an
+integer because the active interval is phase-aligned by HRST. MAME's 0..239
+visible X range is a software crop, not the board's raw pixel count. The FPGA
+now models the /12 pixel enable and native 244-wide active span; its exact edge
+phase relative to the board's flip-flop propagation and analog blanking still
+needs measurement. The model does not infer that the raster is a complete
+physical PCK/PIXCLK implementation.
+
+The sync-generator model samples one slot every 16 master edges, using the
 existing assumed master=4*14.318181 MHz. Horizontal labels are 0..226. A line
 counter labelled 1..V_LINES advances on entering horizontal position 6, matching
-the VRST edge annotations. Independently transcribed waveform intervals are:
+the VRST edge annotations. The display path separately emits one pixel enable
+every 12 master clocks outside HRST, yielding 244 active X positions per line.
+Independently transcribed waveform intervals are:
 
 | Signal | Asserted interval, inclusive start/exclusive end |
 | --- | --- |

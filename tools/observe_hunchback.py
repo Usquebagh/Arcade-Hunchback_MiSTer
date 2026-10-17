@@ -27,12 +27,15 @@ def main():
     parser.add_argument('--cycles',type=int,default=300_000_000)
     parser.add_argument('--seed',type=int,default=1)
     parser.add_argument('--controls',action='store_true',help='Synthetic coin/start/right/jump input windows; see docs/rom-observation.md')
-    parser.add_argument('--credit-test',action='store_true',help='Pulse mapped joystick_0[9] and assert the running game increments its system-RAM credit byte')
+    parser.add_argument('--credit-test',action='store_true',help='Pulse mapped joystick_0[7] and assert the running game increments its system-RAM credit byte')
     parser.add_argument('--audio',action='store_true',help='Actual audio CPU/bus and raw 48k samples; nominal external 380 Hz SENSE, no calibrated mixing/speech/analog reference')
+    parser.add_argument('--require-audio-activity',action='store_true',help='In an input-free authenticated-ROM run, require full-machine byte-DAC plus speech output samples to vary and be nonzero')
     args=parser.parse_args()
     if sys.platform!='linux':parser.error('Run in WSL/Linux with GHDL and Verilator')
     if not 2_000_000<=args.cycles<=1_000_000_000 or not 1<=args.seed<=2147483647:
         parser.error('Cycles must be 2 million..1 billion; seed must be 1..2147483647')
+    if args.require_audio_activity and (not args.audio or args.controls or args.credit_test):
+        parser.error('--require-audio-activity requires --audio and an input-free run')
     root=Path(__file__).resolve().parents[1]
     if args.archive is None and args.image is None:parser.error('Provide an authenticated ROM archive or --image')
     archive=args.archive.resolve() if args.archive else None
@@ -51,7 +54,7 @@ def main():
         tools=tools_metadata(['ghdl','verilator','make','g++']),
         provenance='Independent initialization write model; subsequent ROM execution and frames are observations only',
         limitations=['No independent post-initialization CPU/game/frame oracle','Randomized two-state initialization is not X/Z verification',
-            'Provisional 227x256 scan window/origins','Raw MAME compatibility switch/input fixtures; no physical wiring audit',
+            'MAME-visible crop/resampling is not physical PCK/PIXCLK/origin validation','Raw MAME compatibility switch/input fixtures; no physical wiring audit',
             'Full PVI/PAL/audio/MiSTer/PLL/Quartus gates remain open','Every compiler finding is retained; no warning suppression'])
     if args.audio:
         metadata['audio_fixture']=dict(master_hz=57272724,sense_hz=380,
@@ -90,9 +93,13 @@ def main():
         names=['cvs_mister_input','cvs_machine','cvs_main','cvs_main_bus','cvs_main_io','cvs_main_memory','cvs_banked','cvs_memory',
                'cvs_sync_ram_1p','cvs_sync_ram_2p','cvs_sync_rom','cvs_clock',
                'cvs_scan','cvs_video_timing','cvs_vblank_irq','cvs_video_join','cvs_s2636_bank','cvs_s2636_objects','cvs_character_video']
-        top='cvs_av_machine' if args.audio else 'cvs_hps_coin_machine'
-        if args.audio:names += ['cvs_av_machine','cvs_audio_cpu','cvs_audio_bus','cvs_audio_samples']
+        top='cvs_full_machine' if args.audio else 'cvs_hps_coin_machine'
+        if args.audio:names += ['cvs_av_machine','cvs_audio_cpu','cvs_audio_bus','cvs_audio_samples',
+            'cvs_full_machine','cvs_speech_machine','cvs_speech_cpu','cvs_speech_bus',
+            'cvs_tms5100_control','cvs_tms5100_engine','cvs_tms5100_frames',
+            'cvs_tms5100_lattice','cvs_tms5100_pcm','cvs_tms5100_rate','cvs_tms5100_sequence']
         machine_sources=[frozen/'rtl/machine'/f'{name}.sv' for name in names]
+        if args.audio:machine_sources.append(frozen/'rtl/vendor/tms5100/cvs_tms5100_tables.sv')
         if not args.audio:machine_sources.append(frozen/'sim/bdsm/hps_coin_machine.sv')
         command=['verilator','--cc','--exe','--build','-j','4','--top-module',top,'-Wall','-Wno-fatal',
             '--x-initial','unique','--x-assign','unique','--Mdir',str(work/'obj'),'-CFLAGS','-O3 -std=c++17'+(' -DAUDIO_OBSERVE' if args.audio else ''),str(cpu),
@@ -106,7 +113,7 @@ def main():
         print(f'Running private diagnostic; {len(metadata["unreviewed_compiler_findings"])} retained compiler findings.',flush=True)
         control_mode=args.controls or args.credit_test
         command=[str(work/'obj'/('V'+top)),str(args.cycles),str(args.seed),str(reference['resume']),
-                 str(int(control_mode)),str(int(args.credit_test))]
+                 str(int(control_mode)),str(int(args.credit_test)),str(int(args.require_audio_activity))]
         with (output/'run.log').open('w') as log:
             process=subprocess.Popen(command,cwd=output,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
             for line in process.stdout:
@@ -123,6 +130,16 @@ def main():
             return 1
         if returncode or not events:raise ValueError('Diagnostic failed or omitted its bounded observation; see run.log')
         metadata['observations']=events[-1]
+        if args.require_audio_activity:
+            event=events[-1]
+            if (event.get('mixed_audio_unique_levels',0)<2 or
+                    event.get('mixed_audio_min')==event.get('mixed_audio_max') or
+                    event.get('nonzero_audio_samples',0)==0):
+                raise ValueError('Attract-mode engineering audio output was silent or constant; see run.log')
+            metadata['audio_activity_assertion']=dict(status='PASS',controls=False,
+                min=event['mixed_audio_min'],max=event['mixed_audio_max'],
+                unique_levels=event['mixed_audio_unique_levels'],
+                expectation='Authenticated Hunchback ROM remains input-free and full-machine byte-DAC plus speech output produces multiple nonzero sample levels')
         if args.credit_test:
             passes=[json.loads(line[5:]) for line in lines if line.startswith('BDSM ')
                     and json.loads(line[5:]).get('status')=='PASS']

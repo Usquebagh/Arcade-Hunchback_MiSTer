@@ -13,7 +13,8 @@ module cvs_av_machine_tb;
     wire sample_ce;
     wire signed [15:0] pcm8,pcm4;
     cvs_av_machine dut(.clk(clk),.reset(reset),.reset_na(reset_na),.video_reset(video_reset),
-        .scan_run(scan_run),.ready(ready),.audio_ready(audio_ready),.audio_sense(1'b1),
+        .scan_run(scan_run),.ready(ready),
+        .audio_ready(audio_ready),.audio_sense(1'b1),
         .dl_wr(dl_wr),.dl_addr(dl_addr),.dl_data(dl_data),
         .in0(8'hff),.in1(8'hff),.in2(8'hff),.in3(8'hff),.dsw1(8'hff),.dsw2(8'hff),
         .req(req),.wr(wr),.memory_space(memory_space),.extended(extended),.data_port(data_port),

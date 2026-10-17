@@ -19,9 +19,13 @@ It must not already exist. A private `observation.json` records frozen source an
 dependency/tool identities, seed, archive/image hashes, independent initialization
 reference, exact compiler command, all findings, observations and capture hashes.
 The archive hash is checked before preparation and after execution. Maintained
-source must stay unchanged during the run. Captures are complete 227x256 fields,
-with pixel order and field length checked before retention. Display placement is
-still the provisional scan contract, not a physical board reference.
+source must stay unchanged during the run. Current captures are complete 244x248
+native source fields (MAME-visible y=8..255), with pixel order and field length
+checked before retention. Preview rotation preserves 244x248 geometry; its
+optional integer scale is only for local readability. Older reports captured
+before the native-pixel model retain their original 227x248 fields and are not
+comparable to current output. This is a normalized software comparison, not
+physical phase validation.
 
 ## Expected boundary and stimulus
 
@@ -85,8 +89,8 @@ are absent. One seed's later movement/jump run is not a multi-seed gameplay proo
 
 Use `tools/render_rom_observation.py` with Pillow to preview a completed report's
 hash-matching capture. It rotates the image clockwise 90 degrees per pinned MAME's
-ROT90 declaration and uses nearest-neighbour scaling. This affects the preview
-only; it does not repair hardware orientation, display clipping or PVI origins.
+ROT90 declaration, preserves the native 248x244 geometry, and affects the preview
+only.
 
 ## Qualification still missing
 

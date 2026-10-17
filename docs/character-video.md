@@ -106,3 +106,10 @@ bullet clipping/top rows, foreground masks, palette polarity and both pixel/CPU
 collision clearing, valid latency and held coordinate metadata. Each needs its designated assertion twice from a passing
 baseline. Candidate blockers remain. Render with tools/render_sprite_diag.py
 --kind character observed.log --expected expected.log --output results/<run>/preview.png.
+
+For hardware layer identification, the MiSTer OSD exposes independent blanking
+switches for S2636 objects, character/tilemap pixels, and bullets. They mask
+only final video priority selection; CPU behavior and the collision/event path
+remain active. The focused renderer regression drives each plane with a unique
+palette pen and verifies that each switch reveals the expected plane beneath
+it. This is a visual diagnostic control, not a claim about normal game output.

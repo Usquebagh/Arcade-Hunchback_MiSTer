@@ -4,7 +4,7 @@
     <manufacturer>Century Electronics</manufacturer>
     <category>Platform</category>
     <setname>hunchbak</setname>
-    <rbf>hunchback</rbf>
+    <rbf>hunchback_20261017</rbf>
     <rotation>vertical</rotation>
     <players>2 (alternating)</players>
     <joystick>2-way</joystick>

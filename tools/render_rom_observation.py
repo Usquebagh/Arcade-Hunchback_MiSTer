@@ -23,9 +23,9 @@ identity=hashlib.sha256(capture.read_bytes()).hexdigest()
 if not any(item['name']==capture.name and item['sha256']==identity for item in report['captures']):
     raise SystemExit('Capture hash is absent from its observation report')
 source=Image.open(capture).convert('RGB')
-if source.size!=(227,256):raise SystemExit('Unexpected provisional scan dimensions')
-# Pinned MAME CVS Hunchback declares ROT90. This rotates a preview only;
-# it does not repair the provisional physical scan/PVI placement or clipping.
+if source.size!=(244,248):raise SystemExit('Unexpected native CVS source dimensions')
+# Pinned MAME CVS Hunchback declares ROT90. Rotation preserves the native
+# 244x248 source; integer --scale is only for local preview readability.
 preview=source.transpose(Image.Transpose.ROTATE_270)
 preview=preview.resize(tuple(n*args.scale for n in preview.size),Image.Resampling.NEAREST)
 output.parent.mkdir(parents=True,exist_ok=True);preview.save(output)

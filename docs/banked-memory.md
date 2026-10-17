@@ -52,6 +52,16 @@ They do not follow the CPU char_page or FLAG. A normalized character pipeline
 uses these actual memories; an actual CPU scene checks distinct glyph pages and
 collision I/O. See [display contract and remaining gaps](character-video.md).
 
+The pre-conversion source at commit `b212459^` used synchronous CPU writes and
+returned stored RAM on a later CPU read. A simultaneous CPU read/write returned
+`cpu_din` through the bus response bypass; the display port separately bypassed
+a same-address write. The current regression now checks write/readback, explicit
+zero clear, and simultaneous CPU read/write on screen, attribute, bullet,
+palette, and each of the three character arrays. The existing display test
+continues to cover same-edge write forwarding independently for all seven
+display read paths. These are source-contract regressions; Quartus M10K
+read-during-write mode still requires fitter/netlist review.
+
 Missing: physical display arbitration, full S2636 semantics and Quartus memory
 inference/CDC/timing. The required banked
 memory coverage gap remains active until those pieces have meaningful checks.

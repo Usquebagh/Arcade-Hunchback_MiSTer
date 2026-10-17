@@ -213,10 +213,10 @@ timing gates remain incomplete. Required WARNING/SKIP still blocks every RBF.
 `hunchback.video.scan` compares every request/coordinate/line strobe with an
 independent enabled-time oracle over two 312-line frames, pauses and reset.
 `hunchback.video.assembly` executes actual VHDL CPU and actual shared SV RAM,
-scan, three PVIs and character pipeline. All 58112 normalized pixels, six-edge
+scan, three PVIs and character pipeline. All 56296 MAME-visible pixels, six-edge
 valid/sync alignment, black presence, foreground/bullet collisions and five CPU
 collision/completion readbacks match an independently specified synthetic scene.
-The scan window/origin and CPU stall are explicit fixtures, not board timing.
+The software-reference crop and CPU stall are explicit fixtures, not board timing.
 
 The initial unchanged-ROM test failed its first RAM write with unknown state.
 A cold synthetic reproducer retained that bug; the narrow EORZ R0 fix preserves

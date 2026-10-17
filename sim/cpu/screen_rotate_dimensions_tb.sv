@@ -23,7 +23,7 @@ module screen_rotate_dimensions_tb;
     task automatic pulse(input integer yy,input integer xx);
         begin
             @(negedge clk); x=xx[7:0];
-            pixel_valid=(yy>=43 && yy<=298);
+            pixel_valid=(yy>=51 && yy<=298);
             vs=!((yy==11 && xx>=28) || (yy>=12 && yy<=14) || (yy==15 && xx<11));
             pixel_ce=1;
             @(posedge clk); #1; pixel_ce=0;
@@ -35,13 +35,13 @@ module screen_rotate_dimensions_tb;
         repeat(3) @(posedge clk); reset=0;
         for(frame=0;frame<3;frame=frame+1)
             for(y=1;y<=312;y=y+1)
-                for(h=0;h<227;h=h+1) pulse(y,h);
+            for(h=0;h<244;h=h+1) pulse(y,h);
         repeat(4) @(posedge clk); #1;
-        if(fb_width!==12'd256 || fb_height!==12'd227) begin
-            $display("BDSM {\"status\":\"FAIL\",\"label\":\"rotation_full_raster_dimensions\",\"cycle\":0,\"expected\":\"256x227\",\"observed\":\"%0dx%0d\"}",fb_width,fb_height);
+        if(fb_width!==12'd248 || fb_height!==12'd244) begin
+            $display("BDSM {\"status\":\"FAIL\",\"label\":\"rotation_native_dimensions\",\"cycle\":0,\"expected\":\"248x244\",\"observed\":\"%0dx%0d\"}",fb_width,fb_height);
             $finish(1);
         end
-        $display("BDSM {\"status\":\"PASS\",\"observed\":\"screen_rotate measures full CVS 227x256 raster as 256x227 rotated buffer\"}");
+        $display("BDSM {\"status\":\"PASS\",\"observed\":\"screen_rotate accepts native 244x248 CVS pixels as a 248x244 rotated buffer\"}");
         $finish(0);
     end
 endmodule

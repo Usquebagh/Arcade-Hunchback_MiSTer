@@ -22,8 +22,8 @@ module cvs_machine_tb;
     reg boot=0,trace_on=0;
     reg [5:0] valid_expect=0,hs_expect=63,vs_expect=63,ce_expect=0;
     integer cycle=0,size=256,stores=0,pixels=0,scan_steps=0,trace_start=-1;
-    integer frame_ticks=70824,tick_count,hor,vert,frame_position;
-    integer x_want,y_want,pen_want,events_want,active,r_want,g_want,b_want;
+    integer frame_ticks=70824,tick_count,hor,vert,frame_position,pixel_phase_model=0,active_pixel_model=0;
+    integer x_want,x_sample,y_want,pen_want,events_want,active,r_want,g_want,b_want;
     reg sprite_want,bullet_want,visible_want,request_want;
     string image_name,expect_name;
     integer image_fd,image_size;
@@ -40,33 +40,45 @@ module cvs_machine_tb;
                     check({address,flag,write_data}===boot_expected[stores],"bootstrap_write",boot_expected[stores],{address,flag,write_data});stores=stores+1;
                 end else if(address>=15'h1c00 && address<15'h1c05)begin
                     check(address==15'h1c00+stores,"assembly_store_order",stores,address-15'h1c00);
-                    check(write_data===(stores==0?8'hff:stores==1?8'd0:8'd8),"assembly_cpu_readback",stores==0?255:stores==1?0:8,write_data);stores=stores+1;
+                    check(write_data===(stores==0?8'hf7:stores==1?8'd0:8'd8),"assembly_cpu_readback",stores==0?8'hf7:stores==1?0:8,write_data);stores=stores+1;
                 end
             end
-            if(video_reset)begin valid_expect=0;hs_expect=63;vs_expect=63;ce_expect=0;scan_steps=0;end
+            if(video_reset)begin valid_expect=0;hs_expect=63;vs_expect=63;ce_expect=0;scan_steps=0;pixel_phase_model=0;active_pixel_model=0;end
             else begin
                 tick_count=scan_steps/16;hor=tick_count%227;
                 vert=((tick_count+frame_ticks-6)/227)%312+1;
                 frame_position=(tick_count+frame_ticks-6)%frame_ticks;
-                request_want=scan_run && scan_steps%16==15 && vert>=43 && vert<=298;
+                request_want=scan_run && !(hor>=6 && hor<50) && pixel_phase_model==11 && vert>=51 && vert<=298;
                 valid_expect={valid_expect[4:0],request_want};
                 hs_expect={hs_expect[4:0],!(hor>=11 && hor<28)};
                 vs_expect={vs_expect[4:0],!(frame_position>=2292 && frame_position<3183)};
-                ce_expect={ce_expect[4:0],scan_run && scan_steps%16==15};
+                ce_expect={ce_expect[4:0],scan_run && !(hor>=6 && hor<50) && pixel_phase_model==11};
             end
-            check(pixel_ce_all===(!video_reset && scan_run && scan_steps%16==15),
-                "assembly_pixel_ce",!video_reset && scan_run && scan_steps%16==15,pixel_ce_all);
+            check(pixel_ce_all===(!video_reset && scan_run && !(hor>=6 && hor<50) && pixel_phase_model==11),
+                "assembly_pixel_ce",!video_reset && scan_run && !(hor>=6 && hor<50) && pixel_phase_model==11,pixel_ce_all);
             clk=1;#5;cycle=cycle+1;
             check(pixel_valid===valid_expect[5],"assembly_latency",valid_expect[5],pixel_valid);
             check(mister_pixel_ce===ce_expect[5],"assembly_mister_ce",ce_expect[5],mister_pixel_ce);
-            check(display_enable===(pixel_valid && out_x>=8'd44),"assembly_display_enable",pixel_valid && out_x>=8'd44,display_enable);
+            check(display_enable===pixel_valid,"assembly_display_enable",pixel_valid,display_enable);
             check(hsync_n===hs_expect[5] && vsync_n===vs_expect[5],"assembly_sync",hs_expect[5]+2*vs_expect[5],hsync_n+2*vsync_n);
-            if(!video_reset && scan_run)scan_steps=scan_steps+1;
+            if(!video_reset && scan_run)begin
+                if(scan_steps%16==15 && hor==5)begin pixel_phase_model=0;active_pixel_model=0;end
+                else if(hor>=6 && hor<50)begin pixel_phase_model=0;active_pixel_model=0;end
+                else if(pixel_phase_model==11)begin pixel_phase_model=0;active_pixel_model=active_pixel_model+1;end
+                else pixel_phase_model=pixel_phase_model+1;
+                scan_steps=scan_steps+1;
+            end
             if(!boot && pixel_valid)begin
-                x_want=pixels%227;y_want=pixels/227;
+                x_sample=pixels%244;x_want=x_sample;y_want=8+pixels/244;
                 check(out_x==x_want && out_y==y_want,"assembly_coordinates",x_want+256*y_want,out_x+256*out_y);
-                visible_want=x_want>=44;
-                sprite_want=x_want>=48 && x_want<56 && y_want>=8 && y_want<18;
+                visible_want=1;
+                // PVI field origin + fixed base +3 matches MAME's
+                // visible-relative -5.
+                sprite_want=x_want>=48 && x_want<56 && y_want>=31 && y_want<41;
+                if(x_want==48)
+                    check(collision_events[4]==sprite_want && collision[4]==(y_want>=31),
+                        "assembly_fixed_y_offset_collision",sprite_want+2*(y_want>=31),
+                        collision_events[4]+2*collision[4]);
                 bullet_want=x_want>=45 && x_want<=48 && y_want>=8 && y_want<16;
                 pen_want=sprite_want?14:bullet_want?7:1;
                 check(raw_pixel===3'd7,"assembly_character",7,raw_pixel);
@@ -128,9 +140,11 @@ module cvs_machine_tb;
             for(integer chip=0;chip<3;chip=chip+1)begin
                 for(integer obj=0;obj<4;obj=obj+1)begin
                     for(integer row=0;row<10;row=row+1)poke(13'h1500+chip*256+(obj==3?64:obj*16)+row,obj==0?255:0);
-                    poke(13'h1500+chip*256+(obj==3?64:obj*16)+10,obj==0?48:255);
+                    // Program HC=74 so the MAME device X offset -26 places this
+                    // fixture's primary at the independently expected X=48.
+                    poke(13'h1500+chip*256+(obj==3?64:obj*16)+10,obj==0?74:255);
                     poke(13'h1500+chip*256+(obj==3?64:obj*16)+11,255);
-                    poke(13'h1500+chip*256+(obj==3?64:obj*16)+12,obj==0?8:255);
+                    poke(13'h1500+chip*256+(obj==3?64:obj*16)+12,obj==0?28:255);
                     poke(13'h1500+chip*256+(obj==3?64:obj*16)+13,255);
                 end
                 poke(13'h15c0+chip*256,0);poke(13'h15c1+chip*256,chip==0?32:chip==1?16:0);poke(13'h15c2+chip*256,0);
@@ -152,13 +166,15 @@ module cvs_machine_tb;
             for(integer n=0;n<1500000 && video_fx!=8'h55;n=n+1)tick;
             check(video_fx==8'h55,"assembly_cpu_initialization",85,video_fx);
             ready=0;scan_run=1;
-            for(integer n=0;n<1200000 && pixels<58112;n=n+1)tick;
-            check(pixels==58112,"assembly_complete_field",58112,pixels);
-            check(collision===8'hff,"assembly_accumulated",255,collision);
+            for(integer n=0;n<1200000 && pixels<60512;n=n+1)tick;
+            check(pixels==60512,"assembly_complete_field",60512,pixels);
+            // The fixed PVI Y origin places the fixture sprite clear of the
+            // synthetic bullet; collision bit 3 stays low.
+            check(collision===8'hf7,"assembly_accumulated",8'hf7,collision);
             scan_run=0;repeat(8)tick;ready=1;
             for(integer n=0;n<15000 && video_fx!=8'h66;n=n+1)tick;
             check(video_fx==8'h66 && stores==5,"assembly_cpu_completion",5,stores);
-            $display("BDSM {\"status\":\"PASS\",\"cycle\":%0d,\"observed\":\"Actual CPU/RAM/three PVIs/character/raster: 58112 independent pixels, sync/latency and five collision/status readbacks\"}",cycle);$finish(0);
+            $display("BDSM {\"status\":\"PASS\",\"cycle\":%0d,\"observed\":\"Actual CPU/RAM/three PVIs/character/raster: 60512 native 244x248 pixels, sync/latency and five collision/status readbacks\"}",cycle);$finish(0);
         end
     end
 endmodule
