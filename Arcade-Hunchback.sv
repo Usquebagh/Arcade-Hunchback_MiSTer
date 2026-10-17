@@ -4,6 +4,8 @@ module emu #(
     // Temporary hardware diagnostic: show a white screen for 1.75 s whenever
     // the OSD soft-reset status bit reaches the FPGA.
     parameter DIAGNOSTIC_PROBES = 1'b1,
+    // Temporary audio-chain hardware probe; remove after the fault is located.
+    parameter DIAGNOSTIC_AUDIO_PROBE = 1'b1,
     parameter integer RESET_HOLD_CYCLES = 1_140_000
 ) (
     `include "sys/emu_ports.vh"
@@ -117,6 +119,8 @@ module emu #(
     wire [7:0] dac8;
     wire [7:0] h_count;
     wire [8:0] v_count;
+    wire audio_req,audio_wr,audio_memory_space;
+    wire [14:0] audio_address;
 
     // Optional HPS-boundary video probes for shell diagnostics. MiSTer joystick
     // bits are active-high; cvs_mister_input converts them to active-low CVS
@@ -149,6 +153,40 @@ module emu #(
         assign diagnostic_green = green;
         assign diagnostic_blue = blue;
     end endgenerate
+    // Three large colour bars spanning the source raster in x and y=0..15:
+    // blue/white tracks SP_LAT2 (dac4[2]), green tracks audio-CPU ROM
+    // fetches with changing addresses, and yellow tracks nonzero final audio.
+    // The bars pass through the normal rotation path so they remain visible
+    // on the hardware's current display orientation.
+    reg [14:0] audio_probe_last_pc=15'd0;
+    reg audio_probe_cpu_seen=1'b0,audio_probe_output_seen=1'b0;
+    wire audio_probe_fetch=audio_req && audio_memory_space && !audio_wr && audio_address<15'h1000;
+    always @(posedge clk_sys) begin
+        if(core_reset) begin
+            audio_probe_last_pc<=15'd0;
+            audio_probe_cpu_seen<=1'b0;
+            audio_probe_output_seen<=1'b0;
+        end else begin
+            if(audio_probe_fetch) begin
+                if(audio_probe_last_pc!=audio_address) audio_probe_cpu_seen<=1'b1;
+                audio_probe_last_pc<=audio_address;
+            end
+            if(audio_sample_ce && sound_ac!=16'sd0) audio_probe_output_seen<=1'b1;
+        end
+    end
+    wire audio_probe_pixel=DIAGNOSTIC_AUDIO_PROBE && display_enable && out_y<16;
+    wire [7:0] probe_red=audio_probe_pixel ?
+        (out_x<81 ? (dac4[2] ? 8'hff : 8'h00) :
+         out_x<162 ? (audio_probe_cpu_seen ? 8'h00 : 8'hff) :
+                    (audio_probe_output_seen ? 8'hff : 8'h00)) : diagnostic_red;
+    wire [7:0] probe_green=audio_probe_pixel ?
+        (out_x<81 ? (dac4[2] ? 8'hff : 8'h00) :
+         out_x<162 ? (audio_probe_cpu_seen ? 8'hff : 8'h00) :
+                    (audio_probe_output_seen ? 8'hff : 8'h00)) : diagnostic_green;
+    wire [7:0] probe_blue=audio_probe_pixel ?
+        (out_x<81 ? (dac4[2] ? 8'hff : 8'h20) :
+         out_x<162 ? 8'h00 :
+                    (audio_probe_output_seen ? 8'h00 : 8'hff)) : diagnostic_blue;
     wire [15:0] speech_bit_address;
     wire speech_sample_tick,speech_sample_valid,speech_protocol_error,speech_talk_status;
     wire signed [15:0] pcm8,pcm4,speech_pcm,discrete_pcm;
@@ -166,6 +204,8 @@ module emu #(
         .collision_events(collision_events),.collision(collision),.video_fx(video_fx),
         .audio_command(audio_command),.audio_trigger(audio_trigger),.intack(intack),
         .audio_intack(audio_intack),.audio_irq(audio_irq),.dac8(dac8),.dac4(dac4),.discrete(discrete),
+        .audio_req(audio_req),.audio_wr(audio_wr),.audio_memory_space(audio_memory_space),
+        .audio_address(audio_address),
         .dac8_wr(dac8_wr),.dac4_wr(dac4_wr),.discrete_wr(discrete_wr),.sample_ce(audio_sample_ce),.pcm8(pcm8),.pcm4(pcm4),
         .discrete_pcm(discrete_pcm),
         .speech_sample_tick(speech_sample_tick),.speech_sample_valid(speech_sample_valid),
@@ -194,7 +234,7 @@ module emu #(
         .rotate_pixel_ce(rotate_pixel_ce),.rotate_de(rotate_de));
     screen_rotate video_rotation (
         .CLK_VIDEO(CLK_VIDEO),.CE_PIXEL(rotate_pixel_ce),
-        .VGA_R(diagnostic_red),.VGA_G(diagnostic_green),.VGA_B(diagnostic_blue),
+        .VGA_R(probe_red),.VGA_G(probe_green),.VGA_B(probe_blue),
         .VGA_HS(hsync_n),.VGA_VS(vsync_n),.VGA_DE(rotate_de),
         .rotate_ccw(rotate_ccw),.no_rotate(no_rotate),.flip(1'b0),.video_rotated(video_rotated),
         .FB_EN(fb_en),.FB_FORMAT(fb_format),.FB_WIDTH(fb_width),.FB_HEIGHT(fb_height),
@@ -212,9 +252,9 @@ module emu #(
     assign FB_FORCE_BLANK=1'b0;
     assign VIDEO_ARX=!ar ? (video_rotated ? 13'd248 : 13'd244) : ar==2'd1 ? 13'd0 : ar==2'd2 ? 13'd1 : 13'd2;
     assign VIDEO_ARY=!ar ? (video_rotated ? 13'd244 : 13'd248) : ar==2'd1 ? 13'd0 : 13'd0;
-    assign VGA_R=diagnostic_red;
-    assign VGA_G=diagnostic_green;
-    assign VGA_B=diagnostic_blue;
+    assign VGA_R=probe_red;
+    assign VGA_G=probe_green;
+    assign VGA_B=probe_blue;
     assign VGA_HS=hsync_n;
     assign VGA_VS=vsync_n;
     assign VGA_DE=display_enable;
