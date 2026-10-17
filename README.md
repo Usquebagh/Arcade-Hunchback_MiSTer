@@ -44,11 +44,13 @@ Copy the dated core and its MRA to the MiSTer SD card:
 | --- | --- |
 | [hunchback_20261017.rbf](releases/hunchback_20261017.rbf) | `_Arcade/cores/` |
 | [Hunchback (CVS).mra](releases/Hunchback%20(CVS).mra) | `_Arcade/` |
-| Your own `hunchbak.zip` | `_Arcade/mame/` |
+| Your own `hunchbak.zip` | `games/mame/` |
 
 Launch Hunchback through the MRA. It expects the `hunchbak.zip` archive. **No
 ROMs are included in this repository or in the RBF.** Supply your own legally
 obtained ROM archive, and keep only one Hunchback RBF in `_Arcade/cores/`.
+Older MiSTer installations may also support `_Arcade/mame/` as a legacy ROM
+location.
 
 ## Build and tests
 
