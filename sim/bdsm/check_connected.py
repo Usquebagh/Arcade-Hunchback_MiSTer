@@ -40,8 +40,19 @@ def main():
         if reset_items!=[('R','0')] or 'status[0]' not in shell.split('wire reset_async=',1)[1].split(';',1)[0]:
             emit('FAIL',label='mister_single_reset_binding',cycle=0,expected=1,observed=len(reset_items))
             return 1
+        reset_pos=conf.find('"R[0],Reset;"')
+        cheat_pos=conf.find('"C,Cheats;"')
         jline=re.search(r'"J1,([^\"]+)"',conf)
         jnline=re.search(r'"jn,([^\"]+)"',conf)
+        j_pos=conf.find('"J1,')
+        jn_pos=conf.find('"jn,')
+        version_pos=conf.find('"V,')
+        if (reset_pos < 0 or cheat_pos < 0 or j_pos < 0 or jn_pos < j_pos or
+            version_pos < jn_pos or reset_pos > j_pos or cheat_pos > j_pos or
+            conf.find('"C,Cheats;"',cheat_pos+1) >= 0 or
+            not re.search(r'"V,[^\"]*;"\s*$',conf)):
+            emit('FAIL',label='mister_menu_action_order',cycle=0,expected=1,observed=0)
+            return 1
         expected_slots=['Jump','Start 2','Start 1','Coin']
         mra=Path('releases/Hunchback (CVS).mra').read_text()
         mra_buttons=re.search(r'<buttons names="([^"]+)" default="([^"]+)"',mra)

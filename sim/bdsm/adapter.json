@@ -867,7 +867,7 @@
       "required": true,
       "tools": ["ghdl", "iverilog", "vvp"],
       "timeout": 300,
-      "expectation": "With HPS output pins driven by a fixture, verify actual wrapper ROM-download hold, external/menu/user reset including a one-cycle OSD R0 pulse stretched for the configured minimum, synchronized CPU release and reset-vector refetch, active-low joystick mapping and representative MAME DSW2/DSW3 mappings through the actual synthesized-CPU hierarchy.",
+      "expectation": "With HPS output pins driven by a fixture, verify actual wrapper ROM-download hold, external/menu/user reset including a one-cycle OSD R0 pulse stretched for the configured minimum, synchronized CPU release and reset-vector refetch, active-low joystick mapping, representative MAME DSW2/DSW3 mappings, and menu action CONF_STR entries before J1/joystick metadata through the actual synthesized-CPU hierarchy.",
       "reference": "docs/mister-shell.md; independent shell contracts and MAME-compatible logical input assignments. HPS protocol, physical controls, PLL behavior, DIPs and hardware remain unqualified."
     }
   ],
@@ -2473,7 +2473,8 @@
       "new": "J1,Jump,Start 1,Coin,Jump 2,Start 2,Coin 2;",
       "failure_label": "mister_conf_button_order",
       "reason": "J1 labels must match the consecutive HPS bits assigned by the MRA button list."
-    }
+    },
+    {"id":"mister_actions_after_joystick_metadata","check":"hunchback.mister.shell_behavior","file":"Arcade-Hunchback.sv","old":"\"R[0],Reset;\",\n        \"C,Cheats;\",\n        \"-;\",\n        \"J1,Jump,Start 2,Start 1,Coin;\",","new":"\"-;\",\n        \"J1,Jump,Start 2,Start 1,Coin;\",\n        \"R[0],Reset;\",\n        \"C,Cheats;\",","failure_label":"mister_menu_action_order","reason":"OSD action entries must precede J1/joystick metadata, which terminates the menu option declarations."}
   ],
   "build": {
     "command": [

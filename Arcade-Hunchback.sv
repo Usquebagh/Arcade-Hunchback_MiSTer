@@ -30,6 +30,7 @@ module emu #(
     wire [15:0] ioctl_index;
     wire [21:0] unused_gamma_bus;
     wire clk_sys,pll_locked;
+    // OSD actions are listed before the terminal joystick metadata entries.
     localparam CONF_STR={
         "Hunchback (CVS);",
         "-;",
@@ -44,12 +45,11 @@ module emu #(
         "O[13],Meter pulses,2,5;",
         "O[122:121],Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
         "-;",
-        // MRA names map consecutively to HPS joystick bits [4..7].
-        "J1,Jump,Start 2,Start 1,Coin;",
-        "jn,A,X,Start,Select;",
         "R[0],Reset;",
         "C,Cheats;",
-        // MiSTer displays this permanent build identifier in the OSD version line.
+        "-;",
+        "J1,Jump,Start 2,Start 1,Coin;",
+        "jn,A,X,Start,Select;",
         "V,v261017-05-DIP-CHEATS-RESET-PROBE;"
     };
     hps_io #(.CONF_STR(CONF_STR)) hps_io (
