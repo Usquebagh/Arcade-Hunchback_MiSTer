@@ -2,7 +2,9 @@
 
 An FPGA implementation of Century Electronics' **Hunchback** arcade game for
 the [MiSTer FPGA](https://github.com/MiSTer-devel/Main_MiSTer/wiki), based on
-the original Century Video System (CVS) hardware.
+the original Century Video System (CVS) hardware. Playing as Hunch Back, a
+deformed bell-ringer, you must avoid various obstacles and rescue the young
+gypsy woman Esmeralda from the tower of a well-guarded fortress.
 
 > **Beta / work in progress.** The core has booted on MiSTer and reached
 > attract mode and gameplay on earlier engineering images. The current dated
