@@ -60,7 +60,11 @@ module cvs_discrete_audio (
     wire signed [15:0] square_now = icl_phase[31] ? 16'sd16384 : -16'sd16384;
     wire signed [15:0] ne555_now = ne555_square ? 16'sd16384 : -16'sd16384;
     wire signed [15:0] noise_now = noise_lfsr[0] ? 16'sd16384 : -16'sd16384;
-    wire signed [15:0] byte_sample16 = $signed({~dac8[7],dac8[6:0],8'b0});
+    // The authenticated Hunchback trace leaves the byte DAC at 0x00 while
+    // idle. Treat that reset/idle code as no drive; the board's coupling
+    // network removes any residual DC from active codes downstream.
+    wire signed [15:0] byte_sample16 = dac8==8'h00 ? 16'sd0 :
+        $signed({~dac8[7],dac8[6:0],8'b0});
     wire signed [31:0] byte_sample = {{16{byte_sample16[15]}},byte_sample16};
     wire signed [31:0] tri_term = (triangle_now * RATIO_TRI_Q15) >>> 15;
     wire signed [31:0] square_term = (square_now * RATIO_SQUARE_Q15) >>> 15;

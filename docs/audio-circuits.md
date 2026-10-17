@@ -105,18 +105,20 @@ That full-scale normalization is an explicit engineering gain choice because
 the reverse-engineered sheet does not establish calibrated LM3900/mixer gain.
 For the observed SP_LAT2-only toggling (code 0 to code 4), the expected ladder
 swing is approximately 4355 counts, about 13.3% of full scale. This replaces
-the earlier raw conductance scaling (about 512 counts for that bit). Byte-DAC
-output remains signed full scale and speech is an independent signed channel;
-their relative analog levels and final headroom are not measured. The sum can
-therefore still clip when channels coincide.
+the earlier raw conductance scaling (about 512 counts for that bit). The
+authenticated trace leaves the byte DAC at code 0; this observed idle code is
+treated as no drive, while the other codes use the offset-binary mapping. The
+discrete/DAC path is AC-coupled before speech is added and before final output
+saturation. That ordering prevents the idle bias from rail-clipping the speech
+channel. The retained regression verifies code 0 against the centered silence
+code, full signed speech pass-through, and an SP_LAT2 waveform of 4514 counts
+peak-to-peak around a 131-count midpoint when mixed with speech.
 
-The MiSTer output now passes the combined signed mix through a one-pole digital
-AC-coupling filter at the 48 kHz sample cadence. Its coefficient is 4084/4096,
-corresponding to a nominal 22.4 Hz corner, and prevents an idle offset-binary
-byte-DAC code from pinning the output. The schematic's final output coupling
-values are not legible enough to derive a board-specific cutoff, so this is an
-engineering approximation. The retained DC-blocker regression verifies that
-the observed SP_LAT2 transition remains a centered non-silent waveform.
+The discrete/DAC path uses a one-pole digital AC-coupling filter at the 48 kHz
+sample cadence. Its coefficient is 4084/4096, corresponding to a nominal
+22.4 Hz corner. The schematic's final output coupling values are not legible
+enough to derive a board-specific cutoff, so this is an engineering assumption,
+not a calibrated board response.
 
 The 555 frequency/duty and RC products are calculated from schematic values.
 The 8 Hz/code FM law, LFSR noise spectrum, envelope loading, analog-switch and

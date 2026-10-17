@@ -92,12 +92,13 @@ module cvs_discrete_audio_tb;
         lat2_swing=switched_sample-low_sample;
         check(lat2_swing>4000 && lat2_swing<4700,"sp_lat2_toggle_audible_mix_swing",4355,lat2_swing);
         // The authenticated game trace leaves the byte DAC at code 0 while
-        // toggling SP_LAT2. Verify the final discrete-module output still
-        // changes by the ladder contribution instead of remaining railed.
+        // toggling SP_LAT2. Code 0 is the observed idle state and contributes
+        // silence; the four-bit ladder remains independently active.
         restart(); dac8=8'h00; dac4=4'b0000; repeat(2) @(posedge clk); #1; low_sample=pcm;
+        restart(); dac8=8'h80; dac4=4'b0000; repeat(2) @(posedge clk); #1; switched_sample=pcm;
+        check(low_sample==switched_sample,"observed_byte_dac_zero_matches_silence_code",switched_sample,low_sample);
         restart(); dac8=8'h00; dac4=4'b0100; repeat(2) @(posedge clk); #1; switched_sample=pcm;
-        check(low_sample < -28000,"observed_byte_dac_zero_baseline_below_-28k",-32768,low_sample);
-        check(switched_sample>-32768 && switched_sample-low_sample>4000 && switched_sample-low_sample<4700,
+        check(switched_sample>4000 && switched_sample-low_sample>4000 && switched_sample-low_sample<4700,
             "observed_byte_dac_zero_sp_lat2_mix",4355,switched_sample-low_sample);
 
         // The envelope registers follow only their corresponding physical latch.

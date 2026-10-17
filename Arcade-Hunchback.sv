@@ -171,7 +171,7 @@ module emu #(
                 if(audio_probe_last_pc!=audio_address) audio_probe_cpu_seen<=1'b1;
                 audio_probe_last_pc<=audio_address;
             end
-            if(audio_sample_ce && sound_ac!=16'sd0) audio_probe_output_seen<=1'b1;
+            if(audio_sample_ce && audio_out!=16'sd0) audio_probe_output_seen<=1'b1;
         end
     end
     wire audio_probe_pixel=DIAGNOSTIC_AUDIO_PROBE && display_enable && out_y<16;
@@ -190,6 +190,7 @@ module emu #(
     wire [15:0] speech_bit_address;
     wire speech_sample_tick,speech_sample_valid,speech_protocol_error,speech_talk_status;
     wire signed [15:0] pcm8,pcm4,speech_pcm,discrete_pcm;
+    wire signed [15:0] audio_out;
     wire audio_sample_ce;
     cvs_full_machine machine (
         .clk(clk_sys),.reset(core_reset),.reset_na(!core_reset),.video_reset(core_reset),.scan_run(1'b1),
@@ -262,19 +263,12 @@ module emu #(
     // pcm4 is a raw offset-binary diagnostic sample and is not added here.
     // The resistor-weighted SP_LAT0..3 path is already included once inside
     // discrete_pcm, with the byte DAC and modeled discrete sources.
-    // The discrete-audio model owns the byte-DAC route because SP_LAT4 selects
-    // either MIX2 or the 8038 FM node. Add speech as an independent channel,
-    // then model the board's AC coupling with a 20 Hz high-pass at the 48 kHz
-    // audio sample cadence. The corner is an engineering assumption because
-    // the output coupling network is not specified legibly in the source sheet.
-    wire signed [17:0] sound_sum={{2{speech_pcm[15]}},speech_pcm}+{{2{discrete_pcm[15]}},discrete_pcm};
-    wire signed [15:0] sound_out=sound_sum>18'sd32767 ? 16'sh7fff :
-        sound_sum< -18'sd32768 ? 16'sh8000 : sound_sum[15:0];
-    wire signed [15:0] sound_ac;
-    cvs_audio_dc_blocker audio_coupling(.clk(clk_sys),.reset(core_reset),.sample_ce(audio_sample_ce),
-        .x(sound_out),.y(sound_ac));
-    assign AUDIO_L=sound_ac;
-    assign AUDIO_R=sound_ac;
+    // Couple the DAC/discrete mix before adding speech and before final
+    // saturation so its idle offset cannot rail or erase the speech channel.
+    cvs_audio_output audio_output(.clk(clk_sys),.reset(core_reset),.sample_ce(audio_sample_ce),
+        .speech_pcm(speech_pcm),.discrete_pcm(discrete_pcm),.audio_pcm(audio_out));
+    assign AUDIO_L=audio_out;
+    assign AUDIO_R=audio_out;
     assign AUDIO_S=1'b1;
     assign AUDIO_MIX=2'b00;
     assign LED_USER=rom_download || speech_talk_status;

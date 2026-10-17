@@ -117,6 +117,7 @@
     "rtl/machine/cvs_audio_samples.sv",
     "rtl/machine/cvs_discrete_audio.sv",
     "rtl/machine/cvs_audio_dc_blocker.sv",
+    "rtl/machine/cvs_audio_output.sv",
     "sim/cpu/cvs_discrete_audio_tb.sv",
     "sim/cpu/cvs_audio_dc_blocker_tb.sv",
     "sim/bdsm/audio_samples.cpp",

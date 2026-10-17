@@ -51,7 +51,8 @@ def main():
         work = core / 'build' / 'bdsm-audio_dc_blocker'
         work.mkdir(parents=True, exist_ok=True)
         image = work / 'test.vvp'
-        sources = ['sim/cpu/cvs_audio_dc_blocker_tb.sv','rtl/machine/cvs_audio_dc_blocker.sv']
+        sources = ['sim/cpu/cvs_audio_dc_blocker_tb.sv','rtl/machine/cvs_audio_output.sv',
+                   'rtl/machine/cvs_audio_dc_blocker.sv']
         compile_run = subprocess.run(['iverilog','-g2012','-Wall','-s','cvs_audio_dc_blocker_tb','-o',str(image),*sources],capture_output=True,text=True)
         (work/'compile.log').write_text(compile_run.stdout+compile_run.stderr)
         if compile_run.returncode:
