@@ -1,102 +1,99 @@
-# Hunchback CVS arcade hardware for MiSTer FPGA
+# Hunchback (CVS, 1983) for MiSTer FPGA
 
-A private development project for **Hunchback (set 1)**, Century Electronics
-(1983), on the original CVS hardware. The Galaxian, Scramble and Donkey Kong
-conversions are separate boards; their ROMs are not interchangeable with CVS.
+An FPGA implementation of Century Electronics' **Hunchback** arcade game for
+the [MiSTer FPGA](https://github.com/MiSTer-devel/Main_MiSTer/wiki), based on
+the original Century Video System (CVS) hardware.
 
-> **Status:** private development core; no qualified RBF candidate yet.
-> Reset, main/audio CPU clock enables, program ROM, mirrored system RAM and the
-> standalone U15L decoder have synthetic tests. An adapted S2650A passes exhaustive
-> ALU and directed CPU/bus regressions; startup diagnostics remain unresolved.
-> CPU-side FLAG-banked RAM and memory routing now have exhaustive synthetic checks.
-> The connected CPU runs a synthetic program through actual ROM/RAM and raw I/O;
-> provisional raster profiles and CPU vblank/interrupt checks also pass.
-> Four-object S2636 rendering/status and a three-chip CPU assembly have synthetic
-> pixel tests. Shared display RAM and a normalized character/bullet/palette/mixer
-> pipeline pass independent pixel and actual-CPU collision read/clear checks.
-> A provisional main/video assembly checks a complete synthetic field with real
-> PVIs and CPU status reads. The unchanged parent ROM matches 4,143 initialization
-> writes and its return. Longer two-state diagnostics display the title and game
-> field after coin/start; independent attract/gameplay verification remains open.
-> The actual three-CPU main/audio/speech assembly now passes a synthetic
-> integration check. A MiSTer shell, PLL and Quartus project are wired for
-> bring-up, but have not passed Quartus or actual hardware testing. Physical
-> input/DIP wiring, complete game/reference coverage and audio calibration remain.
-> The normalized speech engine can produce PCM from the local ROM; physical TMS
-> protocol, channel mix and analog sound remain unverified.
-> Actual MiSTer testing is pending.
+> **Beta / work in progress.** The core has booted on MiSTer and reached
+> attract mode and gameplay on earlier engineering images. The current dated
+> image is still under hardware test. Sound is incomplete: DAC audio and speech
+> have been heard, while the bell, walking and jumping effects remain absent.
+> OSD reset and control-direction fixes in the current image need hardware
+> confirmation. Quartus fitting succeeds, but the core clock currently misses
+> setup timing by 0.185 ns. This RBF is an engineering beta, not a qualified
+> candidate.
+
+The CVS implementation is distinct from Hunchback conversions for Galaxian,
+Scramble and Donkey Kong hardware; their ROMs are not interchangeable with the
+CVS set.
 
 ## Original hardware
 
-| Subsystem | Reference hardware | Current implementation |
+| Subsystem | Original hardware | FPGA implementation |
 | --- | --- | --- |
-| Main CPU | Signetics S2650A, crystal / 8 | Connected synthetic ROM/RAM/I/O program passes; full CPU and game coverage pending |
-| Audio/speech CPUs | Two S2650As, crystal / 16 | Three actual CPU instances in a synthetic main/audio/speech assembly; hardware timing and full game behavior pending |
-| Video | Signetics 2621 PAL timing, three S2636 sprite chips, character ROM/RAM | Timing, S2636 objects/status, character/bullet/mixer and shared-memory CPU checks; physical phases, complete PVI and composed game coverage pending |
-| Program | Five 4 KiB EPROMs, staggered in four 8 KiB pages | Downloadable ROM and mirrored 1 KiB system RAM |
-| Sound | 8/4-bit DAC, discrete circuits, TMS5100 speech | Raw digital channels and normalized speech PCM reach a provisional MiSTer mix; physical gain, discrete path, speech protocol and analog references pending |
+| Main, audio and speech CPUs | Three Signetics S2650 processors | Connected CPU, memory, I/O and speech subsystems; complete game-level equivalence is still being tested |
+| Video | Signetics 2621 timing, three S2636 PVIs and character circuitry | CVS timing, object and character paths with rotation support; physical PAL and pixel-phase equivalence remain open |
+| Sound | DACs, discrete analog effects and TMS5100 speech | DAC and speech paths are present; several discrete effects and calibrated analog behavior are incomplete |
+| Controls | Two-player alternating, two-way joystick and jump button | MiSTer OSD and HPS input mapping; current build awaits hardware confirmation |
 
-## ROMs and installation
+## Status and known gaps
 
-Supply your own `hunchbak.zip`. The merged archive may include conversion and
-clone sets; the loader authenticates only the 13 CVS parent chips by exact name,
-size, CRC and SHA-1 against pinned MAME. ROMs and manuals remain local and ignored.
+- **Sound is incomplete.** The bell, walking and jumping effects are not yet
+  reproduced. Discrete analog circuits and a calibrated mix remain outstanding.
+- **Current hardware retest is pending.** Reset and control-direction changes
+  are included in the dated image but have not yet been confirmed on hardware.
+- **Timing is not closed.** The latest engineering build fitted, with −0.185 ns
+  worst setup slack and −0.487 ns TNS on the core clock.
+- **The candidate gate is incomplete.** Physical input and DIP behavior, PAL
+  equivalence, full-game references, analog audio references, timing exceptions
+  and complete MiSTer validation remain open.
 
-`releases/Hunchback (CVS).mra` is a **draft**, with a documented ROM download
-layout. It cannot launch a game until the matching `Arcade-Hunchback.rbf` exists.
-Do not install it as a tested release. Switches will be added with verified input
-wiring. See [architecture](docs/architecture.md) and [references](docs/references.md).
+Please report issues with the exact RBF date and OSD build identifier.
 
-## Development and tests
+## Installation
 
-Use the existing Ubuntu WSL toolchain. From the project directory in WSL:
+Copy the dated engineering RBF and MRA to the MiSTer SD card:
 
-During development, run the focused check for the changed subsystem and its
-retained regressions. The user permits deferring the full regression/mutation
-campaign until a frozen candidate; the following commands also show that final
-workflow. Real-ROM initialization can be checked with
-`bash tools/bdsm.sh test --check hunchback.rom.startup --rom-dir "$PWD"`.
+| File | MiSTer SD-card destination |
+| --- | --- |
+| [hunchback_20261017.rbf](releases/hunchback_20261017.rbf) | `_Arcade/cores/` |
+| [Hunchback (CVS).mra](releases/Hunchback%20(CVS).mra) | `_Arcade/` |
+| Your own `hunchbak.zip` | `_Arcade/mame/` |
+
+Launch Hunchback through the MRA. The MRA expects the `hunchbak.zip` archive;
+the loader checks the CVS parent ROM chips. **No ROMs are included in this
+repository or in the RBF. Supply your own legally obtained ROM archive.** Keep
+only one Hunchback RBF in `_Arcade/cores/` to avoid ambiguous matching.
+
+The image is explicitly an engineering beta. It has not passed the complete
+candidate regression, mutation campaign or Quartus timing gates.
+
+## Build and tests
+
+The project uses MiSTer-BDSM as a submodule and Quartus Prime Lite 17.0.2 for
+Cyclone V. Clone the submodule with the project:
 
 ```sh
-git submodule update --init MiSTer-BDSM
+git clone --recurse-submodules https://github.com/Usquebagh/Arcade-Hunchback_MiSTer.git
+cd Arcade-Hunchback_MiSTer
 bash tools/bdsm.sh test --suite smoke
 bash tools/bdsm.sh test --suite lint
-bash tools/bdsm.sh test --check hunchback.rom.layout --rom-dir "$PWD"
-bash tools/bdsm.sh mutate --seed 1 --repeats 2
-bash tools/bdsm.sh regression --rom-dir "$PWD"
-bash tools/bdsm.sh build --rom-dir "$PWD"
 ```
 
-The final command requests a candidate, and **must block** while required
-subsystem/reference/constraint coverage is missing. A smoke PASS is evidence for
-the declared boundary, never overall game accuracy. Local reports are stored in
-ignored `results/`; the framework hashes frozen core/adapter/runner inputs and
-records tools, seeds, assertions, missing coverage and mutation traces. Important
-faults must trigger the designated assertion twice; compilation errors do not count.
+The direct engineering compile is `bash build.sh`; it runs Quartus in the
+`theypsilon/quartus-lite-c5:17.0.2` container and writes
+`output_files/Arcade-Hunchback.rbf`. That output is not a candidate. The
+qualification workflow is `bash tools/bdsm.sh build`; it requires the
+configured checks, mutation campaign and timing/constraint gates. It currently
+reports incomplete required coverage and must not be treated as a successful
+candidate build.
 
-The intended build uses Quartus Lite 17.0.2, Cyclone V `5CSEBA6U23I7`, and `sys_top`,
-matching the user's existing cores. Integration and its constraints are pending;
-there is no Quartus synthesis project yet. Candidate gates require the configured
-regressions and reviewed timing/constraint evidence from one frozen snapshot.
+Focused subsystem checks and remaining coverage gaps are documented in
+[validation](docs/validation.md) and the subsystem notes. Hardware testing is
+still necessary even after a future candidate passes the configured gates.
 
-## Privacy and license
+## Research and credits
 
-No pushes, publication, PRs, binaries or test-result uploads until the user confirms
-hardware testing. Local commits are permitted. See [agent workflow](AGENTS.md).
-Original code is BSD-3-Clause. MiSTer-BDSM is MIT and pinned as a submodule.
-Imported Arcadia CPU/packages retain original notices and the supplied upstream
-GPL-2.0 license; see the vendor README. Future imports retain their licenses.
-See [CPU tests and gaps](docs/cpu.md).
-See [main bus and I/O tests](docs/main-bus.md).
-See [provisional video timing and remaining gaps](docs/video-timing.md).
-See [S2636 objects, status, pixel expectations and gaps](docs/s2636.md).
-See [character/bullet/mixer expectations and gaps](docs/character-video.md).
-See [provisional scan, composed assembly and early bootstrap](docs/video-assembly.md).
-See [private real-ROM observations and their limits](docs/rom-observation.md).
-See [audio CPU/digital control checks and reference gaps](docs/audio-digital.md).
-See [connected main/video/audio expectations and observations](docs/audio-assembly.md).
-See [raw DAC sample checks and private preview limitations](docs/audio-samples.md).
-See [audio wiring audit](docs/audio-wiring.md) and [speech CPU/digital interface](docs/speech-digital.md).
-See [TMS5100 command-controller checks and remaining LPC work](docs/tms5100-control.md).
-See [TMC0281 frames and coefficient ROMs](docs/tms5100-frames.md) and
-[numeric lattice/PCM checks](docs/tms5100-lattice.md).
+CVS board research was informed by Kevtris's reverse-engineered technical
+documentation. The supplied schematics, PAL/CUPL sources and JEDEC files are
+not redistributed here. See [reference provenance](docs/references.md) for
+research attribution and scope. MAME contributors provided compatibility
+references for CVS ROM layout, memory mapping and device behavior. The MiSTer
+framework and imported Arcadia CPU modules retain their respective licenses;
+see [LICENSES](LICENSES/) and the source notices.
+
+## License
+
+Original core and tools are BSD-3-Clause. Imported components retain their
+upstream licenses and notices; see [LICENSE](LICENSE), [LICENSES](LICENSES/)
+and the vendored component documentation.

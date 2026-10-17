@@ -21,6 +21,7 @@
 *.smsg
 *.sof
 *.rbf
+!/releases/*.rbf
 *.vcd
 __pycache__/
 *.pyc
