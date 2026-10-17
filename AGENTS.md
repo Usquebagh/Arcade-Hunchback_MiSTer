@@ -44,10 +44,17 @@ unreviewed unconstrained paths. Audit CDC and every timing exception's endpoints
 Required SKIP/WARNING means incomplete coverage and blocks a candidate. Keep
 explicit blockers for unimplemented CPU/video/input/audio/game/PLL/integration
 coverage; do not remove blockers until replaced by meaningful executed checks.
-Do not bypass `tools/bdsm.sh build` with a direct Quartus build, use the diagnostic
-profile, or label an unqualified binary a candidate. Record source/dependency
-hashes, tool versions, seed, expectations, observations and missing coverage.
-Even a gated candidate remains hardware-testing-pending until actual MiSTer tests.
+For ordinary development and hardware smoke-test images, use the unqualified
+engineering build path: run `bash build.sh` to invoke Quartus directly and bypass
+the candidate coverage preflight. Label and report these outputs as
+`ENGINEERING_UNQUALIFIED_NOT_A_CANDIDATE`. The required coverage gates are
+long-term candidate research; their SKIP status must not stop an engineering
+build. Do not use the diagnostic profile. This path does not qualify an RBF as a
+candidate. For a frozen candidate snapshot, still require all configured checks,
+the complete mutation campaign, and Quartus timing/constraint gates described
+above. Record source/dependency hashes, tool versions, seed, expectations,
+observations and missing coverage. Even a gated candidate remains
+hardware-testing-pending until actual MiSTer tests.
 
 ROMs, generated images, schematics, private research, game recordings, simulator
 traces, reports and Quartus working outputs stay ignored. Never commit those
@@ -232,10 +239,10 @@ boundary. Preserve the independent
 all-position CE oracle through horizontal and vertical blanking and
 the delayed DE/RGB/sync alignment. Keep the PLL frequency, pixel origins,
 physical controls/DIP decode, discrete/analog audio and actual MiSTer checks as
-explicit coverage gaps until separately verified. Build only through
-`tools/bdsm.sh build`; do not use a direct Quartus build or label an output an
-RBF candidate until the frozen complete regression, mutation campaign and
-Quartus timing/constraint gates all pass.
+explicit coverage gaps until separately verified. For development, build with
+`bash build.sh` and label the result unqualified. Use `tools/bdsm.sh build` only
+for the frozen candidate workflow after its complete regression, mutation
+campaign and Quartus timing/constraint gates are ready to run.
 
 For CONF_STR or joystick-label changes, audit the complete string: option bit
 ranges must be unique and ordered, status bit 0 must have exactly one `R[0]`
