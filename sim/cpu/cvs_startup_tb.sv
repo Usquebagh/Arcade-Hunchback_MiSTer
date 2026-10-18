@@ -2,7 +2,7 @@
 // Actual CPU/memory/PVI machine. Scan is paused; this checks initialization only.
 module cvs_startup_tb;
     reg clk=0,reset=1,reset_na=0,video_reset=1,scan_run=0,ready=1,dl_wr=0;
-    wire cheat_reset=1'b0;
+    wire cheat_reset=reset;
     wire [128:0] cheat_code=129'd0;
     reg [15:0] dl_addr=0;
     reg [7:0] dl_data=0;

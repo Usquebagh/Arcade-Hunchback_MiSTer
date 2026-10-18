@@ -9,7 +9,7 @@ module cvs_cold_cpu_tb;
     wire [7:0] write_data;
     cvs_clock clocks(.clk(clk),.reset(reset),.ce_main(),.ce_audio(),.ce_main_step(ce),.ce_audio_step());
     cvs_main dut(.clk(clk),.reset(reset),.reset_na(reset_na),.ce(ce),.ready(1'b1),
-        .cheat_reset(1'b0),.cheat_code(129'd0),
+        .cheat_reset(reset),.cheat_code(129'd0),
         .irq(1'b0),.sense(1'b0),.ivec(8'd0),.intack(),.dl_wr(dl_wr),.dl_addr(dl_addr),.dl_data(dl_data),
         .in0(8'hff),.in1(8'hff),.in2(8'hff),.in3(8'hff),.dsw1(8'hff),.dsw2(8'hff),.collision(8'd0),
         .char_page(),.char_mode(),.scroll(),.video_fx(),.audio_command(),.collision_clear(),.audio_trigger(),

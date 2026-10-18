@@ -175,14 +175,59 @@ module mister_shell_tb;
         if(dut.core_reset!==1'b1)fail("user_button_reset_assertion",1,dut.core_reset);
         menu_buttons=0;
 
-        // The integrated discrete model owns byte-DAC routing and weighted
-        // four-bit/discrete mixing; verify that its signed output reaches HPS.
-        force dut.discrete_pcm=16'sd20000;
-        force dut.speech_pcm=16'sd0;
-        #1;
-        if(dut.AUDIO_L!==16'd20000 || dut.AUDIO_R!==16'd20000)
-            fail("audible_byte_dac_not_clipped_by_raw_four_bit",20000,dut.AUDIO_L);
-        release dut.discrete_pcm;release dut.speech_pcm;
+        // Independent AC-coupling expectations are recorded in docs/mister-shell.md.
+        // Keep the actual output filter, sum and both HPS audio connections.
+        begin : dac_ac_coupling
+            localparam integer DAC_STEP=20000;
+            localparam integer HELD_STEP=DAC_STEP-(DAC_STEP*12)/4096;
+            localparam integer RETURN_TAIL=HELD_STEP-DAC_STEP-(HELD_STEP*12)/4096;
+            reg signed [15:0] expected_tail;
+            force dut.discrete_pcm=16'sd0;
+            force dut.speech_pcm=16'sd0;
+            force dut.audio_sample_ce=1'b0;
+            // The preceding user-button reset clears the filter histories.
+            clocks(TEST_RESET_HOLD_CYCLES+8);
+            if(dut.core_reset!==1'b0)fail("dac_reset_released",0,dut.core_reset);
+            if(dut.AUDIO_L!==16'd0)fail("dac_idle_left",0,dut.AUDIO_L);
+            if(dut.AUDIO_R!==16'd0)fail("dac_idle_right",0,dut.AUDIO_R);
+
+            force dut.discrete_pcm=16'sd20000;
+            clocks(3);
+            if(dut.AUDIO_L!==16'd0)fail("dac_wait_sample_left",0,dut.AUDIO_L);
+            if(dut.AUDIO_R!==16'd0)fail("dac_wait_sample_right",0,dut.AUDIO_R);
+            force dut.audio_sample_ce=1'b1;clocks(1);
+            force dut.audio_sample_ce=1'b0;
+            if(dut.AUDIO_L!==16'(DAC_STEP))fail("dac_step_left_unclipped",DAC_STEP,dut.AUDIO_L);
+            if(dut.AUDIO_R!==16'(DAC_STEP))fail("dac_step_right_unclipped",DAC_STEP,dut.AUDIO_R);
+            clocks(3);
+            if(dut.AUDIO_L!==16'(DAC_STEP))fail("dac_hold_left",DAC_STEP,dut.AUDIO_L);
+            if(dut.AUDIO_R!==16'(DAC_STEP))fail("dac_hold_right",DAC_STEP,dut.AUDIO_R);
+
+            force dut.audio_sample_ce=1'b1;clocks(1);
+            force dut.audio_sample_ce=1'b0;
+            if(dut.AUDIO_L!==16'(HELD_STEP))fail("dac_leak_left",HELD_STEP,dut.AUDIO_L);
+            if(dut.AUDIO_R!==16'(HELD_STEP))fail("dac_leak_right",HELD_STEP,dut.AUDIO_R);
+            force dut.discrete_pcm=16'sd0;
+            force dut.audio_sample_ce=1'b1;clocks(1);
+            force dut.audio_sample_ce=1'b0;
+            expected_tail=16'(RETURN_TAIL);
+            if(dut.AUDIO_L!==expected_tail)fail("dac_return_left",RETURN_TAIL,dut.AUDIO_L);
+            if(dut.AUDIO_R!==expected_tail)fail("dac_return_right",RETURN_TAIL,dut.AUDIO_R);
+            // abs(tail)*12/4096 is below one, so the documented minimum leak
+            // returns this tail to exact silence in 116 enabled samples.
+            for(integer sample_index=0;sample_index<-RETURN_TAIL;sample_index=sample_index+1)begin
+                force dut.audio_sample_ce=1'b1;clocks(1);
+                force dut.audio_sample_ce=1'b0;
+                expected_tail=expected_tail+16'sd1;
+                if(dut.AUDIO_L!==expected_tail)fail("dac_tail_left",expected_tail,dut.AUDIO_L);
+                if(dut.AUDIO_R!==expected_tail)fail("dac_tail_right",expected_tail,dut.AUDIO_R);
+            end
+            clocks(3);
+            if(dut.AUDIO_L!==16'd0)fail("dac_final_idle_left",0,dut.AUDIO_L);
+            if(dut.AUDIO_R!==16'd0)fail("dac_final_idle_right",0,dut.AUDIO_R);
+            release dut.audio_sample_ce;
+            release dut.discrete_pcm;release dut.speech_pcm;
+        end
 
         $display("BDSM {\"status\":\"PASS\",\"observed\":\"MiSTer shell ROM-load/reset sequencing and MAME-compatible joystick mapping with actual CPU hierarchy\"}");
         $finish(0);

@@ -51,14 +51,38 @@ both the scan coordinate and rotation raster. `cvs_scan` selects source rows
 matching the native scan dimensions after rotation. This is an RTL/schematic
 derivation; physical PCK/PIXCLK phases and origins remain open.
 
-The top-level currently sums the provisionally scaled raw DAC8 and normalized
-speech PCM channels with signed saturation. The raw DAC4 latch remains exposed
-for diagnostics but is excluded from the audible mix: its observed attract
-value is code 0, mapped to -32768 by the provisional offset-binary sampler,
-which clipped the previous equal-gain sum to the negative rail. The DAC4
-schematic bit significance/resistor weights, discrete oscillator path, analog
-filtering and speech channel gain remain unverified; this is not calibrated
-audio coverage.
+The integrated discrete model combines the byte DAC, weighted four-bit DAC
+and discrete sources. Its signed output passes through the digital AC-coupling
+stage before normalized speech PCM is added and the sum is saturated. The raw
+DAC4 sampler remains diagnostic; summing its offset-binary idle level directly
+would clip the audible path. Circuit weights, filtering and speech gain remain
+engineering assumptions or unverified; this is not calibrated audio coverage.
+
+### DAC expectation through AC coupling
+
+Reference class: independent numeric expectations from the engineering filter
+contract in `docs/audio-circuits.md`, not a measured board response. The shell
+regression preserves the original requirement that a 20000-count signed discrete/
+DAC signal reaches both HPS audio outputs without disconnection, four-bit
+truncation or gain loss. A constant level is no longer an output expectation:
+the AC-coupling coefficient is 4084/4096 at the logical 48 kHz sample cadence.
+For integer state `Y`, each enabled sample applies
+`Y_next = X - X_previous + Y - sign(Y)*max(1, floor(abs(Y)*12/4096))`,
+with zero leak at `Y=0`; reset clears both histories. Output saturation is not
+reached by this stimulus.
+
+The fixture holds speech and the discrete/DAC input at zero during the existing
+user reset, then controls only the sample enable and discrete/DAC input at the
+shell boundary. It retains the actual coupling, sum and left/right wiring.
+From cleared history, a 0-to-20000 step must produce exactly 20000 on the first
+enabled edge, and hold that output between enabled edges. The second enabled
+edge must produce `20000 - floor(20000*12/4096) = 19942`. Returning the input
+to zero on the third enabled edge must produce
+`19942 - 20000 - floor(19942*12/4096) = -116`. This negative tail loses one
+count per enabled edge and must reach exactly zero after 116 more samples.
+Both outputs must be zero before the step and after that tail, including an
+idle hold. Exact assertions on both channels protect gain, sign, sample hold,
+AC coupling and silence, rather than accepting any nonzero transient.
 
 Hardware testing confirmed that selecting OSD Reset produces the visible white
 hold, so `status[0]` reaches the FPGA and the reset path asserts. The core reset

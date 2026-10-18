@@ -176,7 +176,7 @@ def main():
     # a variable-index combinational read must react to every entry. Keep their
     # exact text in the result/log; every other diagnostic remains unreviewed.
     array_note=re.compile(r"rtl/machine/cvs_s2636_objects\.sv:\d+: warning: @\* is sensitive to all (256 words in array 'registers'|4 words in array '(active_duplicate|duplicate_hc|render_row|scale|active_line|in_object|next_row)')\.")
-    cheat_array_note=re.compile(r"rtl/machine/cvs_cheat_engine\.sv:(75|77|79): warning: @\* is sensitive to all 16 words in array '(code_compare_enable|code_compare|code_value)'\.")
+    cheat_array_note=re.compile(r"rtl/machine/cvs_cheat_engine\.sv:(73|75|77): warning: @\* is sensitive to all 16 words in array '(code_compare_enable|code_compare|code_value)'\.")
     screen_init_note=re.compile(r"sys/arcade_video\.v:(268|300): warning: Static variable initialization requires explicit lifetime in this context\.")
     for line in (compile_run.stdout+compile_run.stderr).splitlines():
         if args.mode in ('s2636_connected','assembly_connected','bootstrap_connected','startup_connected','av_connected','full_connected','mister_shell_connected','mister_shell_behavior_connected') and array_note.fullmatch(line):
