@@ -4,11 +4,11 @@ Updated 2026-10-18. Full investigation notes:
 [audio-interrupt-handover.md](audio-interrupt-handover.md); circuit analysis:
 [audio-circuits.md](audio-circuits.md).
 
-## Fix awaiting hardware test (2026-10-18)
+## Reset-ordering fix (hardware-confirmed 2026-10-18)
 
 `cvs_cpu_reset` now releases each CPU's `reset_na` immediately and holds
 `reset` 4 more clocks, so every S2650 loads its opcode at address 0 before
-running (root cause below). It has been tested in simulation only:
+running (root cause below). Hardware now plays effects and speech; the simulation evidence:
 
 - **Sound:** the zero-initialised run and 8 random-state seeds each make
   226,272 DAC writes in the 7 s smoke timeline, and `0xe6` gets INTACK
@@ -21,7 +21,7 @@ running (root cause below). It has been tested in simulation only:
   `mister.shell_behavior` each fail, twice.
 - **Test image:** `v261018-164635` (seed 3), SHA-256
   `da1318aa29b9f929574cd53c2912243f8b01dafe36b3306f02aa82ebfaa03c1a`,
-  is staged locally and not yet deployed.
+  was the first hardware test of the fix (effects confirmed).
 
 **Timing:** a fitter seed sweep shows the core-clock setup result is
 dominated by seed noise. All failing paths are in the pre-existing main CPU
@@ -54,18 +54,20 @@ positive. Timing is still not closed.
 
 ## Current state
 
-Engineering beta (`ENGINEERING_UNQUALIFIED_NOT_A_CANDIDATE`). Last deployed
-image `v261018-001032`, SHA-256
-`201A2C14D014C560E438E35F3B19470DFCC2A3C5B26D74A070A6FCA0DA4A418A`, synced to
-`releases/hunchback_20261017.rbf`.
+Engineering beta (`ENGINEERING_UNQUALIFIED_NOT_A_CANDIDATE`). Release image
+`v261018-213253` (seed 3), SHA-256
+`126e36e9430ba53da66a5f9a97c5d8d95ecb9cbbbbe35447f6e52f7b0e2613d9`, is
+`releases/hunchback_20261018.rbf` (MRA `<rbf>hunchback_20261018`).
 
 | Area | Hardware state |
 | --- | --- |
 | Video geometry, sprites, fonts, rotation (CW/CCW) | Works (HDMI only; CRT untested) |
-| Controls, coin/start, OSD reset, DIPs, cheats | Works |
-| Speech (TMS5100) | Works at game start. **Silent** when the player falls |
-| Sound effects (bell, walking, jumping) | **Never heard** |
-| Timing | Not closed: worst setup −0.580 ns, hold +0.246 ns. The STA summary TNS (−8.542 ns) and the text report (−29.873 ns) disagree; this has not been audited |
+| Controls, coin/start, DIPs, cheats | Works. Registration and Meter Pulses left the OSD; they are fixed at the MAME defaults |
+| OSD reset | Works on `v261018-184613`. Unreliable on `v261018-164635`, with no reset-logic change between them, so suspect per-build timing. Recheck on every build |
+| Sound effects (music, walking, jumping, bell) | **Work** since the reset-ordering fix; close to the arcade. Mix uncalibrated (jump too loud) |
+| Speech (TMS5100) | **Works** (probe and Speech-only mix confirmed on `v261018-184613`) |
+| Timing | Not closed. Release build: worst setup −0.824 ns, TNS −25.4 ns; hold/recovery/removal positive. All failing paths are in the main CPU (`cvs_main`); varies roughly −0.3 to −1.3 ns by seed |
+| Diagnostics | OSD Audio Probe (Audio/Speech pages) and Audio mix, off by default |
 | Candidate coverage | Nine gates SKIP (cpu, banked_memory, video, input, audio, audio_reference, game_boot, mister_integration, constraints) |
 
 ## The sound problem

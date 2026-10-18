@@ -21,7 +21,10 @@ param(
     [string]$Rbf = 'output_files/Arcade-Hunchback.rbf',
     [string]$Mra = 'releases/Hunchback (CVS).mra',
     [switch]$NoLoad,
-    [switch]$NoBackup
+    [switch]$NoBackup,
+    # For a renamed release: back up differently named hunchback* RBFs
+    # locally, then remove them from the card, keeping exactly one.
+    [switch]$ReplaceOther
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
@@ -57,17 +60,27 @@ function Invoke-Remote([string]$cmd) {
 # 1. Precheck: only the expected hunchback RBF (or none) may exist.
 $existing = @(Invoke-Remote "ls -1 $cores/hunchback* 2>/dev/null; true" | Where-Object { $_ })
 $others = @($existing | Where-Object { (Split-Path -Leaf $_) -ne $rbfName })
-if ($others.Count -gt 0) {
-    throw "Other hunchback RBFs on the card; remove them by hand first:`n$($others -join "`n")"
+if ($others.Count -gt 0 -and -not $ReplaceOther) {
+    throw "Other hunchback RBFs on the card; rerun with -ReplaceOther or remove them by hand:`n$($others -join "`n")"
 }
 
-# 2. Back up the card copy locally.
+# 2. Back up every card copy locally (never on the card).
 if ($existing.Count -gt 0 -and -not $NoBackup) {
     $backup = Join-Path $root ("results/card-backups/" + (Get-Date -Format 'yyyyMMddTHHmmss'))
     New-Item -ItemType Directory -Force $backup | Out-Null
-    & scp -o BatchMode=yes "${target}:$cores/$rbfName" "$backup/"
-    if ($LASTEXITCODE -ne 0) { throw 'Backup failed' }
-    Write-Host "Backed up card RBF to $backup"
+    foreach ($f in $existing) {
+        & scp -o BatchMode=yes "${target}:$f" "$backup/"
+        if ($LASTEXITCODE -ne 0) { throw "Backup failed: $f" }
+    }
+    Write-Host "Backed up card RBF(s) to $backup"
+}
+if ($others.Count -gt 0) {
+    if ($NoBackup) { throw '-ReplaceOther requires a backup; do not combine with -NoBackup' }
+    foreach ($f in $others) {
+        if ($f -notmatch '^/media/fat/_Arcade/cores/hunchback[^/]*\.rbf$') { throw "Refusing to remove $f" }
+        Invoke-Remote "rm -f '$f'" | Out-Null
+        Write-Host "Removed $f from the card (backed up)"
+    }
 }
 
 # 3. Upload to /tmp (no spaces in remote paths), then move into place.

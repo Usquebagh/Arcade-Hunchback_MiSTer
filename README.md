@@ -9,10 +9,10 @@ fortress obstacles and rescue Esmeralda.
 
 > **Beta / work in progress.** The core boots and plays on real MiSTer hardware.
 > Video geometry, fonts, sprite alignment and controls are confirmed working
-> on real MiSTer hardware. OSD reset and the MRA cheats are also confirmed
-> working on hardware. DAC audio and speech work; schematic-derived digital
-> approximations now cover the 555, 8038, noise and envelope paths. The sound
-> mix and effect triggers still need hardware listening and validation.
+> on real MiSTer hardware, as are the MRA cheats. Since the 2026-10-18 beta,
+> sound effects (music, walking, jumping, the bell) and speech also play on
+> hardware. They sound close to the arcade, but the mix is not calibrated:
+> the jump is louder than it should be.
 
 This core targets CVS hardware. Hunchback conversions for Galaxian, Scramble
 and Donkey Kong hardware use different game ROMs.
@@ -25,6 +25,10 @@ component values, but the 8038 FM curve, noise source, filter response, mix gain
 and bell/walking/jumping trigger mapping are not calibrated against recordings.
 See [the circuit analysis](docs/audio-circuits.md) for the assumptions and the
 remaining gaps.
+
+The OSD also has an **Audio mix** item (Normal, Speech only, Effects only) and
+on-screen **Audio Probe** status bars. They are diagnostics and are off by
+default.
 
 ## Cheats
 
@@ -44,7 +48,7 @@ Copy the dated core and its MRA to the MiSTer SD card:
 
 | File | MiSTer SD-card destination |
 | --- | --- |
-| [hunchback_20261017.rbf](releases/hunchback_20261017.rbf) | `_Arcade/cores/` |
+| [hunchback_20261018.rbf](releases/hunchback_20261018.rbf) | `_Arcade/cores/` |
 | [Hunchback (CVS).mra](releases/Hunchback%20(CVS).mra) | `_Arcade/` |
 | Your own `hunchbak.zip` | `games/mame/` |
 

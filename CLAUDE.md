@@ -138,7 +138,7 @@ Ryzen 9 5950X (16C/32T), 64 GB RAM. Always use the whole machine:
 - Report setup/hold slack with every build. Timing is not closed (worst setup
   −0.580 ns), and it must not get worse.
 - On the card: exactly one `hunchback*` RBF in `_Arcade/cores/`, named as the
-  MRA `<rbf>` says (`hunchback_20261017`). Verify the SHA-256 after copying,
+  MRA `<rbf>` says (`hunchback_20261018`). Verify the SHA-256 after copying,
   and confirm the OSD build ID matches `build_id.v` before trusting any
   hardware result. Never list `_Arcade/` in full. Back up to
   `results/card-backups/`, never to the card. ROMs: `games/mame/hunchbak.zip`.
