@@ -4,6 +4,54 @@ Updated 2026-10-18. Full investigation notes:
 [audio-interrupt-handover.md](audio-interrupt-handover.md); circuit analysis:
 [audio-circuits.md](audio-circuits.md).
 
+## Fix awaiting hardware test (2026-10-18)
+
+`cvs_cpu_reset` now releases each CPU's `reset_na` immediately and holds
+`reset` 4 more clocks, so every S2650 loads its opcode at address 0 before
+running (root cause below). It has been tested in simulation only:
+
+- **Sound:** the zero-initialised run and 8 random-state seeds each make
+  226,272 DAC writes in the 7 s smoke timeline, and `0xe6` gets INTACK
+  within 1.6 audio CE periods. The whole-run (address, value) sequence
+  equals pinned MAME's 226,078 writes. After a one-time ~4.84 ms step
+  (consistent with SENSE oscillator phase), the RTL runs a constant offset
+  ahead of MAME.
+- **Checks:** 26 checks pass through the BDSM runner (including the new
+  `hunchback.cpu.reset_boot`). With the tail removed, `cpu.reset_boot` and
+  `mister.shell_behavior` each fail, twice.
+- **Test image:** `v261018-164635` (seed 3), SHA-256
+  `da1318aa29b9f929574cd53c2912243f8b01dafe36b3306f02aa82ebfaa03c1a`,
+  is staged locally and not yet deployed.
+
+**Timing:** a fitter seed sweep shows the core-clock setup result is
+dominated by seed noise. All failing paths are in the pre-existing main CPU
+banked-memory/cheat read path; none involve reset.
+
+| Seed | `main` worst / TNS (ns) | Reset fix worst / TNS (ns) |
+| --- | --- | --- |
+| 1 | −1.074 / −31.3 | −1.282 / −64.1 |
+| 2 | −0.843 / −20.5 | −1.008 / −33.8 |
+| 3 | −0.503 / −5.1 | −0.324 / −3.4 |
+
+The QSF now uses `SEED 3`. Hold, recovery, removal and pulse width are all
+positive. Timing is still not closed.
+
+**Open findings:**
+
+- `cvs_discrete_audio.sv` mixes the ICL8038 triangle ungated, which gives a
+  constant ~56 Hz hum (AC RMS 1551.7, about −26 dBFS) with no DAC activity.
+  Check it against the schematic.
+- The 4-bit DAC weighting is reversed relative to MAME (D0 as LSB in MAME,
+  strongest branch in the RTL).
+- Sound harness:
+  - It segments events by time, so the SENSE-phase offset shows up as
+    "event mismatches". It needs sequence-aligned event matching and an
+    explicit SENSE phase.
+  - A MAME-vs-MAME calibration gives zero-tolerance waveform thresholds;
+    these need a reasoned tolerance.
+- `8c68bb0` had broken five checks (cheat-engine X in testbenches,
+  DC-blocker shell expectation). Repaired in `ff9b4fc`.
+
 ## Current state
 
 Engineering beta (`ENGINEERING_UNQUALIFIED_NOT_A_CANDIDATE`). Last deployed
@@ -94,10 +142,8 @@ The main and speech CPUs share the same reset wiring, so they also skip their
 opcode at address 0. They appear to survive it, since the game and its
 start-of-game speech run, but their startup is not as designed either.
 
-**Proposed fix (awaiting approval, since it is an RTL change):** in the top
-level, hold `reset` at least 4 clocks after `reset_na` releases, matching the
-testbenches. Add a zero-init, top-level-ordered reset regression. Then
-hardware-test it.
+**Fix:** implemented as `cvs_cpu_reset` (see the section at the top). It is
+waiting for a hardware test.
 
 ## Ruled out (don't revisit without new evidence)
 

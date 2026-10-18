@@ -107,7 +107,16 @@ Ryzen 9 5950X (16C/32T), 64 GB RAM. Always use the whole machine:
   and merges.
 - Quartus: no native Windows install exists yet. `build.sh` runs the Docker
   image inside WSL, so run it from `~/hunchback-work/repo` and copy
-  `output_files/*.rbf` and the reports back.
+  `output_files/*.rbf` and the reports back. The template's pre-flow
+  script rewrites `build_id.v` at every compile, so each build (seed sweeps
+  included) gets its own OSD ID. Read the ID from the build directory's
+  `build_id.v`, never assume it.
+- **Timing comparisons need a seed sweep.** Core-clock setup varies by about
+  1 ns between fitter seeds of the same netlist (see `docs/STATUS.md`). Never
+  call a change a timing regression or a timing fix from one compile; run
+  seeds 1–3 of both designs in parallel and compare the ranges.
+- BDSM ROM checks need `--rom-dir ~/hunchback-work/roms`, otherwise they
+  SKIP. The runner works in git-less WSL copies.
 - WSL2 gets 50% of RAM (32 GB) by default and there is no `.wslconfig`.
   If parallel builds start swapping, ask the user before raising `memory=`
   in `%USERPROFILE%\.wslconfig`.
