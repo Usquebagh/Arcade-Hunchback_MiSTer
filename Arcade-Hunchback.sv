@@ -42,6 +42,8 @@ module emu #(
         "O[12],Orientation,Rotate CW,Rotate CCW;",
         "O[13],Meter pulses,2,5;",
         "O[14],Audio Probe,Off,On;",
+        "O[15],Probe page,Audio,Speech;",
+        "O[17:16],Audio mix,Normal,Speech only,Effects only;",
         "O[122:121],Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
         "-;",
         "R[0],Reset;",
@@ -158,6 +160,39 @@ module emu #(
             end else audio_probe_heartbeat_count<=audio_probe_heartbeat_count+24'd1;
         end
     end
+    // Speech page: the same latch-once bars for the speech CPU and TMS5100.
+    wire [15:0] speech_bit_address;
+    wire speech_sample_tick,speech_sample_valid,speech_protocol_error,speech_talk_status;
+    wire signed [15:0] pcm8,pcm4,speech_pcm,discrete_pcm;
+    wire speech_req,speech_wr,speech_ctl_wr,speech_pdc_wr;
+    wire [14:0] speech_address;
+    reg speech_probe_left_vector=1'b0;
+    reg speech_probe_command_nonzero=1'b0;
+    reg speech_probe_tms_write=1'b0;
+    reg speech_probe_talk=1'b0;
+    reg speech_probe_pcm_nonzero=1'b0;
+    reg speech_probe_protocol_error=1'b0;
+    always @(posedge clk_sys) begin
+        if(core_reset) begin
+            speech_probe_left_vector<=1'b0;
+            speech_probe_command_nonzero<=1'b0;
+            speech_probe_tms_write<=1'b0;
+            speech_probe_talk<=1'b0;
+            speech_probe_pcm_nonzero<=1'b0;
+            speech_probe_protocol_error<=1'b0;
+        end else begin
+            if(speech_req && !speech_wr && speech_address>=15'h0010) speech_probe_left_vector<=1'b1;
+            if(audio_command[6:0]!=7'd0) speech_probe_command_nonzero<=1'b1;
+            if(speech_ctl_wr || speech_pdc_wr) speech_probe_tms_write<=1'b1;
+            if(speech_talk_status) speech_probe_talk<=1'b1;
+            if(speech_sample_valid && speech_pcm!=16'sd0) speech_probe_pcm_nonzero<=1'b1;
+            if(speech_protocol_error) speech_probe_protocol_error<=1'b1;
+        end
+    end
+    wire speech_page=status[15];
+    wire [6:0] probe_lit=speech_page ?
+        {audio_probe_heartbeat,speech_probe_protocol_error,speech_probe_pcm_nonzero,speech_probe_talk,
+         speech_probe_tms_write,speech_probe_command_nonzero,speech_probe_left_vector} : 7'd0;
     wire audio_probe_pixel=status[14] && display_enable && out_y<16;
     wire probe_bar0=out_x<35;
     wire probe_bar1=out_x>=35 && out_x<70;
@@ -167,19 +202,24 @@ module emu #(
     wire probe_bar5=out_x>=175 && out_x<210;
     wire probe_bar6=out_x>=210;
     wire probe_heartbeat_lit=probe_bar6 && audio_probe_heartbeat;
-    wire [7:0] probe_red=audio_probe_pixel ?
+    wire speech_probe_white=(probe_bar0 && probe_lit[0]) || (probe_bar1 && probe_lit[1]) ||
+        (probe_bar2 && probe_lit[2]) || (probe_bar3 && probe_lit[3]) || (probe_bar4 && probe_lit[4]) ||
+        (probe_bar6 && probe_lit[6]);
+    // A protocol error is a fault: show it red only.
+    wire speech_probe_red_only=probe_bar5 && probe_lit[5];
+    wire [7:0] probe_red=audio_probe_pixel ? (speech_page ?
+        (speech_probe_white || speech_probe_red_only ? 8'hff : 8'h00) :
         ((probe_bar3 && audio_probe_command_nonzero) || (probe_bar4 && audio_probe_ii_seen) ||
          (probe_bar5 && audio_probe_interrupt_sample) ||
-         probe_heartbeat_lit ? 8'hff : 8'h00) : diagnostic_red;
-    wire [7:0] probe_green=audio_probe_pixel ?
+         probe_heartbeat_lit ? 8'hff : 8'h00)) : diagnostic_red;
+    wire [7:0] probe_green=audio_probe_pixel ? (speech_page ?
+        (speech_probe_white ? 8'hff : 8'h00) :
         ((probe_bar1 && audio_probe_audio_irq) || (probe_bar2 && audio_probe_audio_intack) ||
-         (probe_bar3 && audio_probe_command_nonzero) || probe_heartbeat_lit ? 8'hff : 8'h00) : diagnostic_green;
-    wire [7:0] probe_blue=audio_probe_pixel ?
+         (probe_bar3 && audio_probe_command_nonzero) || probe_heartbeat_lit ? 8'hff : 8'h00)) : diagnostic_green;
+    wire [7:0] probe_blue=audio_probe_pixel ? (speech_page ?
+        (speech_probe_white ? 8'hff : 8'h00) :
         ((probe_bar0 && audio_probe_command_trigger) || (probe_bar2 && audio_probe_audio_intack) ||
-         (probe_bar5 && audio_probe_interrupt_sample) || probe_heartbeat_lit ? 8'hff : 8'h00) : diagnostic_blue;
-    wire [15:0] speech_bit_address;
-    wire speech_sample_tick,speech_sample_valid,speech_protocol_error,speech_talk_status;
-    wire signed [15:0] pcm8,pcm4,speech_pcm,discrete_pcm;
+         (probe_bar5 && audio_probe_interrupt_sample) || probe_heartbeat_lit ? 8'hff : 8'h00)) : diagnostic_blue;
     wire signed [15:0] audio_out;
     wire audio_sample_ce;
     wire cpu_reset,cpu_reset_na;
@@ -206,7 +246,9 @@ module emu #(
         .discrete_pcm(discrete_pcm),
         .speech_sample_tick(speech_sample_tick),.speech_sample_valid(speech_sample_valid),
         .speech_protocol_error(speech_protocol_error),.speech_pcm(speech_pcm),.speech_talk_status(speech_talk_status),
-        .speech_bit_address(speech_bit_address)
+        .speech_bit_address(speech_bit_address),
+        .speech_req(speech_req),.speech_wr(speech_wr),.speech_address(speech_address),
+        .speech_ctl_wr(speech_ctl_wr),.speech_pdc_wr(speech_pdc_wr)
     );
 
     wire mister_pixel_ce;
@@ -260,8 +302,11 @@ module emu #(
     // discrete_pcm, with the byte DAC and modeled discrete sources.
     // Couple the DAC/discrete mix before adding speech and before final
     // saturation so its idle offset cannot rail or erase the speech channel.
+    // Diagnostic OSD mix: 0 normal, 1 speech only, 2 effects only.
+    wire signed [15:0] mix_speech=status[17:16]==2'd2 ? 16'sd0 : speech_pcm;
+    wire signed [15:0] mix_discrete=status[17:16]==2'd1 ? 16'sd0 : discrete_pcm;
     cvs_audio_output audio_output(.clk(clk_sys),.reset(core_reset),.sample_ce(audio_sample_ce),
-        .speech_pcm(speech_pcm),.discrete_pcm(discrete_pcm),.audio_pcm(audio_out));
+        .speech_pcm(mix_speech),.discrete_pcm(mix_discrete),.audio_pcm(audio_out));
     assign AUDIO_L=audio_out;
     assign AUDIO_R=audio_out;
     assign AUDIO_S=1'b1;
