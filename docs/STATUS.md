@@ -56,6 +56,49 @@ like this:
 - magenta black, green lit: inspect the CPU state, clock enable and the
   request/ack gate.
 
+## Root cause found in simulation (2026-10-18, not yet hardware-confirmed)
+
+**The S2650s never load their opcode at address 0 on hardware.** The opcode
+at address 0 is meant to be loaded during reset: `sgs2650.vhd:952` forces
+a read of address 0 while `reset` is high, and line 877 latches the result
+with `ri <= dr`. That latch sits in the clocked branch, which only runs once
+`reset_na` is high (line 847).
+
+- Every `sim/cpu` testbench releases `reset_na`, waits 4 clocks, then
+  releases `reset`, so the opcode gets loaded.
+- `Arcade-Hunchback.sv:186` wires `.reset(core_reset), .reset_na(!core_reset)`,
+  so both release on the same edge and the load never happens.
+
+The first instruction executed is therefore the power-up value of `ri`. On an
+FPGA that is zero, a 1-byte instruction. The audio program starts with a
+3-byte branch, so the CPU starts at address 1, runs the branch's operand
+bytes as opcodes and wanders out of ROM. That gives zero DAC writes and no
+INTACK.
+
+Evidence, from the actual audio RTL, the GHDL-synthesised CPU and the
+authenticated ROM (diagnostic in `~/hunchback-work/diag`, not committed):
+
+| Release | Initial state | DAC writes before `0xe6` | After | INTACK |
+| --- | --- | --- | --- | --- |
+| Together (MiSTer top) | zero | 0 | 0 | never |
+| Together | random seeds 1–5 | 0 | 0 | yes, wrong routine |
+| Together | random seeds 6–8 | 40,441 | 3,823 | yes |
+| Staggered (testbenches) | zero + seeds 1–8 | 40,441 | 3,823 | yes |
+
+40,441 equals pinned MAME's count for the same timeline. The earlier
+"simulation acknowledges" results came from staggered-release benches and
+randomised state. The `18d27d9` state/`req_i`/`intack` initialisation is
+in all of these runs and does not fix it.
+
+The main and speech CPUs share the same reset wiring, so they also skip their
+opcode at address 0. They appear to survive it, since the game and its
+start-of-game speech run, but their startup is not as designed either.
+
+**Proposed fix (awaiting approval, since it is an RTL change):** in the top
+level, hold `reset` at least 4 clocks after `reset_na` releases, matching the
+testbenches. Add a zero-init, top-level-ordered reset regression. Then
+hardware-test it.
+
 ## Ruled out (don't revisit without new evidence)
 
 | Hypothesis | Evidence |
@@ -72,7 +115,8 @@ like this:
 
 ## Open questions
 
-1. Does `18d27d9` make INTACK assert on hardware? This is the primary next step.
+1. Does the staggered reset release (above) make INTACK assert and produce
+   sound on hardware? `18d27d9` alone does not, even in simulation.
 2. Why does speech work at start but not on a fall?
 3. Schematic `SP_D0` vs MAME bit 7 (0x1880–3) / bit 0 (0x1884–7) for the
    latch data bit. Unresolved; no physical measurement.
