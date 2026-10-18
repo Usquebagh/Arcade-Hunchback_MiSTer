@@ -1,0 +1,5 @@
+seconds,command
+0.050,0x40
+0.060,0x3f
+1.000,0xe6
+4.000,0xff
