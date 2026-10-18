@@ -59,8 +59,7 @@ Windows Quartus and no Windows Python. MiSTer-BDSM is checked out (ignored) at
 Codex). The MAME 0.264 Ubuntu package is installed in WSL, but it is **not
 the reference**: its CVS IRQ, clocks and S2650 timing differ from the pin.
 The reference is the pinned revision, with source at
-`~/src/mame-c806573e925ce00fe3e8d8fe417eba63f83275ce` in WSL, built as a
-single driver.
+`~/hunchback-work/mame-c806573e` in WSL, built as a single driver.
 
 From PowerShell, run repo commands through WSL. Put anything with nested
 quotes in a script file rather than an inline `bash -lc` string:
@@ -89,6 +88,26 @@ Ryzen 9 5950X (16C/32T), 64 GB RAM. Always use the whole machine:
 - **Long jobs** (Quartus, mutation campaigns, ROM observation runs, MAME
   captures) **run in the background** while you keep working. Check them
   when they finish; don't poll.
+- **The repo stays on C:. WSL work happens in the WSL filesystem.** Git and
+  heavy I/O on `/mnt/c` are slow, and WSL warns about them. Anything run inside
+  WSL uses `~/hunchback-work`: Verilator builds and `obj_dir`, sim runs, BDSM
+  checks, MAME captures, the pinned MAME build (`~/hunchback-work/mame-c806573e`)
+  and Codex workspaces. Before each build or run, rsync the sources in:
+
+  ```bash
+  rsync -a --delete --exclude=.git --exclude=/results/ --exclude=/db/ \
+    --exclude=/incremental_db/ --exclude=/output_files/ --exclude=/build/ \
+    "/mnt/c/Users/markm/Documents/AI MiSTer Cores/Arcade-Hunchback_MiSTer/" \
+    ~/hunchback-work/repo/
+  ```
+
+  Outputs stay in `~/hunchback-work/repo/results/`. Copy back to the C: repo
+  only the small artifacts you need (a summary, an RBF).
+- **Run git only from Windows**, never from WSL: commits, diffs, worktrees
+  and merges.
+- Quartus: no native Windows install exists yet. `build.sh` runs the Docker
+  image inside WSL, so run it from `~/hunchback-work/repo` and copy
+  `output_files/*.rbf` and the reports back.
 - WSL2 gets 50% of RAM (32 GB) by default and there is no `.wslconfig`.
   If parallel builds start swapping, ask the user before raising `memory=`
   in `%USERPROFILE%\.wslconfig`.
@@ -183,22 +202,23 @@ access to WSL (`Wsl/Service/E_ACCESSDENIED`), and every HDL tool lives in
 WSL. WSL has its own Codex (`~/.local/bin/codex`, Node in
 `~/.local/node-v24.20.0`, login copied to `~/.codex/auth.json`). Its
 `workspace-write` sandbox can run Verilator, but not Docker (so no Quartus
-builds) and not the network. A Windows `git worktree` doesn't resolve inside
-WSL, so each task gets a **local clone** at `~/hunchback-wt/<task>` on branch
-`codex/<task>`, with `MiSTer-BDSM` symlinked in. Launcher (kept in the
-session scratchpad; recreate it if it's missing):
+builds) and not the network. Git stays on Windows, so a task works like this:
 
-```bash
-# codex_task.sh <task> <prompt-file> [medium|high]
-git clone -q --no-hardlinks -b main "$repo" "$HOME/hunchback-wt/$task"
-git -C "$HOME/hunchback-wt/$task" checkout -q -b "codex/$task"
-cd "$HOME/hunchback-wt/$task"
-codex exec -m gpt-6.1-sol -c "model_reasoning_effort=\"$effort\"" \
-  -s workspace-write -o "$HOME/hunchback-wt/$task.last.txt" - < "$prompt"
-```
+1. **Windows:** `git worktree add "..\hunchback-wt-<task>" -b codex/<task> main`.
+2. **WSL:** rsync that worktree (excluding `.git`) into
+   `~/hunchback-work/codex/<task>`, and add the ignored inputs it needs
+   (`MiSTer-BDSM`, ROM zip) there.
+3. **WSL:** `codex exec --skip-git-repo-check -m gpt-6.1-sol -c
+   'model_reasoning_effort="medium"' -s workspace-write -o ../<task>.last.txt
+   - < prompt.md`, run in that directory. Codex's workspace has no git, so it
+   cannot commit.
+4. **WSL:** rsync the changed sources back into the Windows worktree, never
+   `results/` or build output.
+5. **Windows:** `git -C ..\hunchback-wt-<task> diff`, review it, run the
+   checks in `~/hunchback-work`, commit on `codex/<task>`, merge into `main`,
+   then `git worktree remove`.
 
-Run independent tasks as parallel background jobs. Merge by fetching the
-clone's branch into the Windows repo after review.
+Run independent tasks as parallel background jobs.
 
 - `codex exec` flags checked on codex-cli 0.163.0: `-C/--cd`, `-s/--sandbox
   read-only|workspace-write|danger-full-access`, `-m`, `-o/--output-last-message`,
@@ -216,13 +236,13 @@ clone's branch into the Windows repo after review.
   absolute path rather than copying them: `MISTER_BDSM_PATH` to
   `<main>/MiSTer-BDSM` and the ROM zip by path. Never copy ROMs into tracked
   paths.
-- **Review before merge (Claude):** read `git -C <clone> diff main` in full.
+- **Review before merge (Claude):** read the worktree's full diff (from Windows).
   Reject scope creep, weakened assertions, edited expected outputs, broad
   warning suppression and references to private material. Then run the
   AGENTS.md checks for the touched subsystem and the sound harness *yourself*
-  in the clone; Codex's own PASS claims don't count. Commit on
-  `codex/<task>` with an honest message, merge into `main`, then delete
-  the clone.
-- If the result is wrong, either reprompt Codex in the same clone
-  (`codex exec resume --last`) or discard the clone. Never hand-patch a
+  in `~/hunchback-work`; Codex's own PASS claims don't count. Commit on
+  `codex/<task>` with an honest message, merge into `main`, then remove
+  the worktree and the WSL workspace.
+- If the result is wrong, either reprompt Codex in the same workspace
+  (`codex exec resume --last`) or discard it. Never hand-patch a
   large Codex diff into `main` unreviewed.
