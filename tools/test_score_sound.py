@@ -264,6 +264,70 @@ class SoundScoreTests(unittest.TestCase):
         self.assertFalse(report['segments'][0]['waveform']['silence_fail'])
         self.assertLess(report['segments'][0]['metrics']['log_spectral_distance_db'], 1e-6)
 
+    def test_common_span_length_bound_both_directions(self):
+        # Exactly 10 ms is accepted; one sample beyond it is rejected. The
+        # longer capture's tail is deliberately loud and has an extra event:
+        # neither waveform nor event comparison may include that tail.
+        for extra in (1, 479, 480, 481):
+            for longer in ('ref', 'dut'):
+                with self.subTest(extra=extra, longer=longer):
+                    fixture(self.ref)
+                    fixture(self.dut, source='rtl')
+                    path = self.ref if longer == 'ref' else self.dut
+                    signal = np.concatenate((tone(), np.full(extra, .9)))
+                    fixture(path, signal=signal,
+                            events=self.events + [(1, 1000000, 0x1840, 0x55)],
+                            source='mame' if longer == 'ref' else 'rtl')
+                    code, report, _ = self.score()
+                    if extra > 480:
+                        self.assertEqual(code, 2)
+                        self.assertEqual(report['status'], 'NOT_SCORABLE')
+                        self.assertIn('maximum is 10 ms', report['incomplete'][0])
+                        continue
+                    self.assertEqual(code, 0)
+                    span = report['capture_span']
+                    self.assertEqual(span['difference_samples'], extra if longer == 'dut' else -extra)
+                    self.assertEqual(span['common_frames'], RATE)
+                    self.assertEqual(span['common_seconds'], 1)
+                    self.assertEqual(report['segments'][-1]['end_seconds'], 1)
+                    for segment in report['segments']:
+                        self.assertTrue(segment['events']['raw_match'])
+                        self.assertEqual(segment['metrics']['log_spectral_distance_db'], 0)
+
+    def test_command_outside_common_span_rejected(self):
+        fixture(self.ref, signal=np.concatenate((tone(), np.zeros(480))))
+        # Manifest duration can round to the correct WAV count while a command
+        # sits a fraction of a sample beyond the actual shorter capture.
+        command_time = 1 + .2 / RATE
+        for path in (self.ref, self.dut):
+            manifest = path / 'manifest.json'
+            data = json.loads(manifest.read_text())
+            data['timeline'].append([command_time, '0x00'])
+            if path == self.dut:
+                data['duration_seconds'] = 1 + .4 / RATE
+            manifest.write_text(json.dumps(data))
+            (path / 'timeline.csv').write_text(
+                f'seconds,command\n0,0xe6\n0.5,0x65\n{command_time},0x00\n')
+        code, report, _ = self.score()
+        self.assertEqual(code, 2)
+        self.assertIn('beyond common WAV span', report['incomplete'][0])
+
+    def test_rtl_command_edge_quantization_only(self):
+        for offset, expected in ((.5 / 57272724, 0), (2 / 57272724, 2)):
+            fixture(self.dut, source='rtl')
+            path = self.dut / 'manifest.json'
+            data = json.loads(path.read_text())
+            data['timeline'][1][0] += offset
+            path.write_text(json.dumps(data))
+            (self.dut / 'timeline.csv').write_text(
+                f'seconds,command\n0,0xe6\n{.5 + offset},0x65\n')
+            code, report, _ = self.score()
+            self.assertEqual(code, expected)
+            if expected == 0:
+                self.assertAlmostEqual(report['timeline_deltas_seconds'][1], offset)
+            else:
+                self.assertIn('timelines differ', report['incomplete'][0])
+
     def test_sample_rate_mismatch_and_missing_files(self):
         fixture(self.dut, signal=tone(rate=44100), rate=44100)
         code, report, _ = self.score()

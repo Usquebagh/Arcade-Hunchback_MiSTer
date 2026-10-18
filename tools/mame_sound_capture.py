@@ -60,6 +60,7 @@ def main():
     mode.add_argument('--record', type=float, metavar='SECONDS')
     parser.add_argument('--mame', default='mame')
     parser.add_argument('--duration', type=float, metavar='S')
+    parser.add_argument('--throttle', action='store_true', help='run at real time for reference calibration')
     args = parser.parse_args()
     requested = read_timeline(args.timeline) if args.timeline else []
     duration = args.duration if args.duration is not None else (
@@ -103,7 +104,7 @@ def main():
                       lua_string('directed' if args.timeline else 'record') +
                       f',\ncapture_seconds={math.ceil(duration)},\ncycle_hz={cycle_hz},\ntimeline={{\n{table}\n}}\n}}\n')
     command = [binary, 'hunchbak', '-noreadconfig', '-rompath', str(rom_dir),
-               '-video', 'none', '-sound', 'none', '-nothrottle', '-samplerate', '48000',
+               '-video', 'none', '-sound', 'none', '-throttle' if args.throttle else '-nothrottle', '-samplerate', '48000',
                '-wavwrite', str(out / 'mix.wav'), '-seconds_to_run', str(math.ceil(duration)),
                '-autoboot_delay', '0', '-autoboot_script', str(script), '-skip_gameinfo',
                '-noautosave', '-norewind', '-noplugins', '-nojoystick']
@@ -134,7 +135,8 @@ def main():
                   '60 Hz video and DAC3 placeholder; pinned src/mame/misc/cvs.cpp uses main /8, '
                   'rising-bit-7 IRQ, 50 Hz and beep0..2. No beep devices exist in 0.264.']
     if args.timeline:
-        notes += ['Main CPU is stopped before its first instruction with an all-program HALT read tap '
+        notes += ['seconds=0 is MAME machine start/reset, verified by lua-status start_seconds=0. Commands use scheduler timers from that origin; no game warm-up offset.',
+                  'Main CPU is stopped before its first instruction with an all-program HALT read tap '
                   'and PS bit 0x2000 (PSU.II) set. ROMs unchanged; no main/game initialization, video or '
                   'speech commands from gameplay. Audio and speech CPUs continue. Commands use '
                   'maincpu.spaces.data:write_u8(0,value), invoking the real driver handler. '

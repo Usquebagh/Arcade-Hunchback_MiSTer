@@ -21,12 +21,17 @@ builds the actual audio modules with `-j 32`. Cached builds live under
 new SV bench fail the build; existing RTL/vendor warnings remain visible.
 The C++ driver compiles with `-Wall -Wextra -Werror`.
 
-The first invocation benchmarks single-thread versus two-thread execution on
-the fixed seven-second smoke timeline, verifies all five captures are identical,
-and selects the faster configuration. `--threads N` benchmarks single-thread
-versus N (two when N=1), then explicitly uses N. Measurements are cached by
-source/tool identity, printed and included in each manifest. Build time is
-excluded from reported simulation wall time.
+The default model uses one simulation thread (previously measured at 70 s
+versus 413 s for two threads), with no automatic benchmark on source changes.
+`--benchmark-threads N` opts into the fixed seven-second single-thread versus
+N-thread benchmark (N=2..32), verifies all five captures are bit-identical,
+and selects the faster model. Measurements are cached by source/tool identity,
+printed and included in each manifest. Build time is excluded from simulation
+wall time. Compilation still uses `-j 32`.
+
+Use `--revision REV` or `HUNCHBACK_REV` for the source revision. Without either,
+the manifest records `unknown` with a note; the runner never invokes git.
+Frozen per-file SHA-256 identities are always retained.
 
 `--x-random --seed N` uses `--x-initial unique --x-assign unique`,
 `context.randReset(2)` and `+verilator+seed+N`. `--reset-stress N` additionally
@@ -42,7 +47,15 @@ Eight requested seeds are a smoke campaign; the contract calls for at least 32.
 
 Edge zero denotes the first active master posedge after release; timeline rows
 apply at `round(seconds * 57272724)`. Reported seconds use that same integer
-edge origin, independent of simulator context time. `audio_cpu_cycle` counts
+edge origin, independent of simulator context time or reset pin sequencing.
+`timeline.csv` contains the applied edge-quantized seconds and commands, exactly
+matching the manifest. MAME directed mode halts its main CPU at machine start;
+the RTL bench has no main CPU. Both timelines start at reset release, excluding
+RTL ROM download/reset hold (4096+576 master edges in the default run, about
+81.6 us). The first RTL edge is the logical zero, less than one master period
+after physical release. No download offset is added to commands or WAVs.
+The scorer permits only half a master period plus CSV nanosecond rounding
+between the two command timelines and reports those deltas. `audio_cpu_cycle` counts
 actual `ce_audio_step` pulses, at 57272724/192 = **298295.4375 Hz**; it does not
 count the board oscillator. SENSE toggles after 75360 master edges. Command
 updates preserve the main bus's rising-bit-7 rule. In particular smoke `0xff`

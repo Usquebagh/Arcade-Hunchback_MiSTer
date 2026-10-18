@@ -3,7 +3,7 @@
 """Compare sound capture directories without ROMs, MAME, scipy or resampling.
 
 Reference class: capture compatibility, not board/analog accuracy. Segments are
-half-open REF command intervals; the final one ends at REF duration_seconds.
+half-open REF command intervals; the final one ends at the common WAV span.
 Waveform timing is measured before alignment, shape after alignment. Duration
 is the span of active 10 ms frames (including intervening gaps), not clip size.
 Pitch is the interpolated dominant FFT peak, not a fundamental-frequency model.
@@ -37,7 +37,7 @@ NUMERIC_FLOORS = {
     'pitch_error_cents': 1e-6,
 }
 METHOD = {
-    'segmentation': 'REF [command i, command i+1); final end = REF duration_seconds',
+    'segmentation': 'REF [command i, command i+1); final end = min(REF, DUT WAV frames) / sample rate',
     'intervals': 'diff(audio_cpu_cycle) / manifest.audio_cpu_cycle_hz; DUT / REF; no clock correction',
     'alignment': 'DC removal, unit RMS; FFT cross-correlation, +/-20 ms; positive lag = DUT later',
     'activity': 'nonoverlapping 10 ms RMS frames, first/last above -40 dB relative to segment peak absolute amplitude; before alignment',
@@ -231,13 +231,24 @@ def divergence(ref, dut):
 def compare(ref, dut):
     if ref['rate'] != dut['rate']:
         raise ValueError('sample-rate mismatch; resampling is not supported')
-    if ref['timeline'] != dut['timeline']:
+    # Only RTL master-edge rounding and the capture CSV's nanosecond precision
+    # may move a command; no alignment or free timeline fitting is permitted.
+    tolerance = .5 / 57272724 + 1e-9 if 'rtl' in (ref['manifest']['source'], dut['manifest']['source']) else 1e-9
+    if len(ref['timeline']) != len(dut['timeline']) or any(
+            a[1] != b[1] or abs(a[0] - b[0]) > tolerance
+            for a, b in zip(ref['timeline'], dut['timeline'])):
         raise ValueError('REF and DUT command timelines differ')
-    if abs(ref['duration'] - dut['duration']) > 1 / ref['rate'] + 1e-9:
-        raise ValueError('capture durations differ; REF segments are not fully comparable')
+    ref_frames, dut_frames = len(ref['audio']), len(dut['audio'])
+    difference = dut_frames - ref_frames
+    common_frames = min(ref_frames, dut_frames)
+    duration = common_frames / ref['rate']
+    if abs(difference) > ref['rate'] * .010:
+        raise ValueError(f'capture WAV lengths differ by {difference} samples; maximum is 10 ms')
+    if any(t >= duration for t, _ in ref['timeline'] + dut['timeline']):
+        raise ValueError('command timeline extends beyond common WAV span')
     segments, all_ratios = [], []
     for i, (start, command) in enumerate(ref['timeline']):
-        end = ref['timeline'][i + 1][0] if i + 1 < len(ref['timeline']) else ref['duration']
+        end = ref['timeline'][i + 1][0] if i + 1 < len(ref['timeline']) else duration
         re = [e for e in ref['events'] if start <= e[0] < end]
         de = [e for e in dut['events'] if start <= e[0] < end]
         raw_index = divergence(event_view(re), event_view(de))
@@ -269,6 +280,11 @@ def compare(ref, dut):
     median = float(np.median(all_ratios)) if all_ratios else None
     spread = max(abs(r - median) for r in all_ratios) if all_ratios else None
     return dict(schema_version=1, method=METHOD, silence_floor_dbfs=FLOOR_DBFS,
+                capture_span=dict(ref_frames=ref_frames, dut_frames=dut_frames,
+                                  difference_samples=difference, difference_seconds=difference / ref['rate'],
+                                  common_frames=common_frames, common_seconds=duration,
+                                  maximum_difference_seconds=.010),
+                timeline_deltas_seconds=[b[0] - a[0] for a, b in zip(ref['timeline'], dut['timeline'])],
                 reference=dict(manifest=ref['manifest'], sha256=ref['sha256']),
                 dut=dict(manifest=dut['manifest'], sha256=dut['sha256']), segments=segments,
                 clock_ratio=dict(dut_over_ref=median, max_abs_deviation_from_median=spread,

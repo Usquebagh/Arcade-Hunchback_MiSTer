@@ -1,6 +1,7 @@
 # Sound section versus MAME: harness contract
 
-Status: **expectations recorded before implementation.** Nothing here has run yet.
+Status: **expectations recorded before implementation.** Integration calibration
+and comparison results are recorded below (2026-10-18).
 
 ## Purpose and reference class
 
@@ -136,3 +137,88 @@ prove what silicon does.
 3. Replay timelines from scripted MAME gameplay.
 4. Register as a BDSM check (`hunchback.audio.mame_compare`). It is
    local-only because it needs the ROM and MAME.
+
+## Integration time origin and calibration (2026-10-18)
+
+Directed MAME starts at `machine.time=0`: the main CPU is held by the HALT
+read overlay with interrupts inhibited before its first instruction. The Lua
+scheduler applies commands at absolute machine seconds, verified by
+`start_seconds=0`, PC=0 and zero unexpected main commands. The RTL bench has
+no main CPU. Its driver schedules edge zero at the first active posedge after
+reset release, after downloading ROM and holding reset. Both use elapsed time
+from machine start/reset release; no game initialization interval is added.
+The default RTL prelude is 4096 download plus 576 reset edges (about 81.6 us),
+excluded from WAVs and event timestamps. Physical release to logical edge zero
+is less than one master period; reset pin sequencing does not enter the runner's
+time calculation. Commands are rounded to the nearest 57,272,724 Hz master edge.
+`timeline.csv` records these applied times, matching the manifest. The scorer
+accepts only half a master period plus 1 ns CSV rounding against REF command
+times and records `timeline_deltas_seconds`; event segmentation remains at REF
+command boundaries. This does not compensate clock rate or interrupt latency.
+
+Each WAV must still have exactly `round(manifest.duration_seconds * rate)`
+frames. Across captures, a difference of at most 10 ms is accepted. Both event
+and waveform comparisons stop at the common span, the minimum WAV frame count
+divided by sample rate. `score.json.capture_span` records both lengths, signed
+DUT-minus-REF difference and common duration. A larger difference is
+NOT_SCORABLE; commands outside the common span are rejected. This accommodates
+the pinned MAME WAV writer's extra sample without padding or resampling.
+
+Noise-floor captures used the supplied pinned binary (`0.289 (unknown)`) and
+seven-second directed `sim/harness/timelines/smoke.csv`: `results/mame-a` used
+`-nothrottle`, `results/mame-b` used `-throttle`. Both used 48 kHz because the
+scorer rejects unequal sample rates and does no resampling. Each completed
+from 0 to 7 s, wrote 226,078 DAC events and 336,001 mono samples
+(7.000020833333333 s). The WAV and DAC-event files were bit-identical across
+throttle variants. The binary hash is retained in each manifest; the version
+string alone does not authenticate the source pin.
+
+Calibration used only those references, before any RTL comparison:
+
+```sh
+python3 tools/score_sound.py --calibrate results/mame-a results/mame-b \
+  --output results/thresholds-calibrated.json
+```
+
+All observed errors were zero. The exact `3 * max(observed, numeric_floor)`
+rule produced interval-ratio and envelope-correlation error limits of `3e-9`;
+lag/onset/duration limits of `3e-6` ms; spectral distance `3e-6` dB; and pitch
+error `3e-6` cents. These establish only repeatability of this deterministic
+reference pair, not an empirical allowance for sample-rate changes, analog
+noise or physical hardware. The tracked `sound_thresholds.json` is unchanged;
+the lead owns any decision to adopt this local calibration.
+
+The same seven-second RTL run (`results/rtl`, one simulation thread, revision
+`unknown` with source hashes) completed in 78.68 s with 336,000 samples,
+zero DAC events and no INTACK for `0xe6`. Its runner returned FAIL (exit 1).
+The calibrated comparison (`results/score.json`) also returned FAIL (exit 1):
+
+| Command | REF writes | RTL writes | Event match | Mix silence failure |
+| --- | ---: | ---: | --- | --- |
+| 0x40 | 407 | 0 | FAIL | no |
+| 0x3f | 38,018 | 0 | FAIL | no |
+| 0xe6 | 64,295 | 0 | FAIL | no |
+| 0xff | 121,342 | 0 | FAIL | no |
+
+The accepted span was exactly 7 s; DUT-minus-REF length was -1 sample
+(-20.833333 us). Applied RTL command deltas were -3.492 ns, -7.683 ns, 0 and
+0. The reference's pre-first-command writes remain outside command segments.
+
+**Open discrepancy:** the expected mixed-WAV silence failure did not occur.
+Both raw RTL DAC channels were constant -32768 (zero AC energy), but the real
+mixed output ranged from -2574 to 2849, with whole-capture AC RMS 1551.684 in
+PCM16 units. In the audible REF `0xe6` segment, REF/DUT AC RMS were
+0.03653/0.04735 full scale. Thus `mix.wav` is not silent by the existing -50 dBFS
+check, despite zero DAC writes. No audio samples, silence definition or event
+assertions were changed to force the expected failure label. Event matching
+and waveform differences still reject this capture. This mix activity remains
+an RTL/audio investigation outside the harness integration scope.
+
+The 20 scorer unit tests passed, including positive/negative 10 ms bounds,
+one sample beyond either bound, common-tail exclusion and master-edge rounding.
+Five disposable scorer mutations (reject exactly 10 ms, accept over 10 ms,
+compare the longer tail, ignore event mismatch, ignore silence) each failed
+their designated regression twice with assertion failures and no tool errors.
+Existing five output-mutation classes also remained detected twice; these are
+scorer proofs, not actual RTL mutation proofs. No reset files, RTL or tracked
+thresholds were edited, and no candidate/hardware/analog claim follows.
