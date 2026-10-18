@@ -1,0 +1,10 @@
+{
+  "interval_ratio_max_abs_deviation": null,
+  "lag_ms": null,
+  "onset_error_ms": null,
+  "duration_error_ms": null,
+  "envelope_correlation_error": null,
+  "log_spectral_distance_db": null,
+  "pitch_error_cents": null,
+  "provenance": "not yet calibrated"
+}
