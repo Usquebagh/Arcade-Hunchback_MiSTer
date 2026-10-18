@@ -1,11 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Private MiSTer shell integration; board clocks, input wiring and analog mix remain provisional.
 module emu #(
-    // Temporary hardware diagnostic: show a white screen for 1.75 s whenever
-    // the OSD soft-reset status bit reaches the FPGA.
-    parameter DIAGNOSTIC_PROBES = 1'b1,
-    // Temporary audio-chain hardware probe; remove after the fault is located.
-    parameter DIAGNOSTIC_AUDIO_PROBE = 1'b1,
     parameter integer RESET_HOLD_CYCLES = 1_140_000
 ) (
     `include "sys/emu_ports.vh"
@@ -46,6 +41,7 @@ module emu #(
         "O[11],Registration length,3,10;",
         "O[12],Orientation,Rotate CW,Rotate CCW;",
         "O[13],Meter pulses,2,5;",
+        "O[14],Audio Probe,Off,On;",
         "O[122:121],Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
         "-;",
         "R[0],Reset;",
@@ -115,78 +111,72 @@ module emu #(
     wire [3:0] palette_index,dac4,discrete;
     wire bullet_present,background_collision,hsync_n,vsync_n;
     wire [7:0] collision_events,collision,video_fx;
-    wire audio_trigger,intack,audio_intack,audio_irq,dac8_wr,dac4_wr,discrete_wr;
+    wire audio_trigger,intack,audio_intack,audio_irq,audio_interrupt_inhibit,audio_interrupt_sample;
+    wire dac8_wr,dac4_wr,discrete_wr;
     wire [7:0] dac8;
     wire [7:0] h_count;
     wire [8:0] v_count;
     wire audio_req,audio_wr,audio_memory_space;
     wire [14:0] audio_address;
 
-    // Optional HPS-boundary video probes for shell diagnostics. MiSTer joystick
-    // bits are active-high; cvs_mister_input converts them to active-low CVS
-    // matrix levels. Give status/reset priority so a held button cannot hide them.
-    generate if (DIAGNOSTIC_PROBES) begin : diagnostic_video_probes
-        reg [26:0] reset_probe_hold = 27'd0;
-        always @(posedge clk_sys) begin
-            if (!pll_locked) reset_probe_hold <= 27'd0;
-            else if (status[0]) reset_probe_hold <= 27'd100_000_000;
-            else if (reset_probe_hold != 0) reset_probe_hold <= reset_probe_hold - 27'd1;
-        end
-        wire diag_reset = status[0] || (reset_probe_hold != 0);
-        wire diag_status = status[14];
-        wire diag_credit1 = joy0[7];
-        wire diag_credit2 = joy1[7];
-        assign diagnostic_red = diag_reset ? 8'hff :
-                                diag_status ? 8'hff :
-                                diag_credit1 ? 8'h00 :
-                                diag_credit2 ? 8'h00 : red;
-        assign diagnostic_green = diag_reset ? 8'hff :
-                                  diag_status ? 8'h00 :
-                                  diag_credit1 ? 8'hff :
-                                  diag_credit2 ? 8'h00 : green;
-        assign diagnostic_blue = diag_reset ? 8'hff :
-                                 diag_status ? 8'h00 :
-                                 diag_credit1 ? 8'h00 :
-                                 diag_credit2 ? 8'hff : blue;
-    end else begin : normal_video
-        assign diagnostic_red = red;
-        assign diagnostic_green = green;
-        assign diagnostic_blue = blue;
-    end endgenerate
-    // Three large colour bars spanning the source raster in x and y=0..15:
-    // blue/white tracks SP_LAT2 (dac4[2]), green tracks audio-CPU ROM
-    // fetches with changing addresses, and yellow tracks nonzero final audio.
-    // The bars pass through the normal rotation path so they remain visible
-    // on the hardware's current display orientation.
-    reg [14:0] audio_probe_last_pc=15'd0;
-    reg audio_probe_cpu_seen=1'b0,audio_probe_output_seen=1'b0;
-    wire audio_probe_fetch=audio_req && audio_memory_space && !audio_wr && audio_address<15'h1000;
+    // OSD-selectable audio diagnostics: event bars latch once seen and stay
+    // black if absent. The PSU-II bar records whether interrupt inhibit was
+    // ever set; the heartbeat is an independent pixel-clock control.
+    assign diagnostic_red=red;
+    assign diagnostic_green=green;
+    assign diagnostic_blue=blue;
+    reg audio_probe_command_trigger=1'b0;
+    reg audio_probe_audio_irq=1'b0;
+    reg audio_probe_audio_intack=1'b0;
+    reg audio_probe_command_nonzero=1'b0;
+    reg audio_probe_ii_seen=1'b0;
+    reg audio_probe_interrupt_sample=1'b0;
+    reg [23:0] audio_probe_heartbeat_count=24'd0;
+    reg audio_probe_heartbeat=1'b0;
     always @(posedge clk_sys) begin
         if(core_reset) begin
-            audio_probe_last_pc<=15'd0;
-            audio_probe_cpu_seen<=1'b0;
-            audio_probe_output_seen<=1'b0;
+            audio_probe_command_trigger<=1'b0;
+            audio_probe_audio_irq<=1'b0;
+            audio_probe_audio_intack<=1'b0;
+            audio_probe_command_nonzero<=1'b0;
+            audio_probe_ii_seen<=1'b0;
+            audio_probe_interrupt_sample<=1'b0;
+            audio_probe_heartbeat_count<=24'd0;
+            audio_probe_heartbeat<=1'b0;
         end else begin
-            if(audio_probe_fetch) begin
-                if(audio_probe_last_pc!=audio_address) audio_probe_cpu_seen<=1'b1;
-                audio_probe_last_pc<=audio_address;
-            end
-            if(audio_sample_ce && audio_out!=16'sd0) audio_probe_output_seen<=1'b1;
+            if(audio_trigger) audio_probe_command_trigger<=1'b1;
+            if(audio_irq) audio_probe_audio_irq<=1'b1;
+            if(audio_intack) audio_probe_audio_intack<=1'b1;
+            if(audio_command!=8'd0) audio_probe_command_nonzero<=1'b1;
+            if(audio_interrupt_inhibit) audio_probe_ii_seen<=1'b1;
+            if(audio_interrupt_sample) audio_probe_interrupt_sample<=1'b1;
+            // CLK_VIDEO is 57.272727 MHz. Toggle every quarter second for
+            // two complete bright/dark cycles per second.
+            if(audio_probe_heartbeat_count==24'd14_318_399) begin
+                audio_probe_heartbeat_count<=24'd0;
+                audio_probe_heartbeat<=~audio_probe_heartbeat;
+            end else audio_probe_heartbeat_count<=audio_probe_heartbeat_count+24'd1;
         end
     end
-    wire audio_probe_pixel=DIAGNOSTIC_AUDIO_PROBE && display_enable && out_y<16;
+    wire audio_probe_pixel=status[14] && display_enable && out_y<16;
+    wire probe_bar0=out_x<35;
+    wire probe_bar1=out_x>=35 && out_x<70;
+    wire probe_bar2=out_x>=70 && out_x<105;
+    wire probe_bar3=out_x>=105 && out_x<140;
+    wire probe_bar4=out_x>=140 && out_x<175;
+    wire probe_bar5=out_x>=175 && out_x<210;
+    wire probe_bar6=out_x>=210;
+    wire probe_heartbeat_lit=probe_bar6 && audio_probe_heartbeat;
     wire [7:0] probe_red=audio_probe_pixel ?
-        (out_x<81 ? (dac4[2] ? 8'hff : 8'h00) :
-         out_x<162 ? (audio_probe_cpu_seen ? 8'h00 : 8'hff) :
-                    (audio_probe_output_seen ? 8'hff : 8'h00)) : diagnostic_red;
+        ((probe_bar3 && audio_probe_command_nonzero) || (probe_bar4 && audio_probe_ii_seen) ||
+         (probe_bar5 && audio_probe_interrupt_sample) ||
+         probe_heartbeat_lit ? 8'hff : 8'h00) : diagnostic_red;
     wire [7:0] probe_green=audio_probe_pixel ?
-        (out_x<81 ? (dac4[2] ? 8'hff : 8'h00) :
-         out_x<162 ? (audio_probe_cpu_seen ? 8'hff : 8'h00) :
-                    (audio_probe_output_seen ? 8'hff : 8'h00)) : diagnostic_green;
+        ((probe_bar1 && audio_probe_audio_irq) || (probe_bar2 && audio_probe_audio_intack) ||
+         (probe_bar3 && audio_probe_command_nonzero) || probe_heartbeat_lit ? 8'hff : 8'h00) : diagnostic_green;
     wire [7:0] probe_blue=audio_probe_pixel ?
-        (out_x<81 ? (dac4[2] ? 8'hff : 8'h20) :
-         out_x<162 ? 8'h00 :
-                    (audio_probe_output_seen ? 8'h00 : 8'hff)) : diagnostic_blue;
+        ((probe_bar0 && audio_probe_command_trigger) || (probe_bar2 && audio_probe_audio_intack) ||
+         (probe_bar5 && audio_probe_interrupt_sample) || probe_heartbeat_lit ? 8'hff : 8'h00) : diagnostic_blue;
     wire [15:0] speech_bit_address;
     wire speech_sample_tick,speech_sample_valid,speech_protocol_error,speech_talk_status;
     wire signed [15:0] pcm8,pcm4,speech_pcm,discrete_pcm;
@@ -204,7 +194,9 @@ module emu #(
         .background_collision(background_collision),.hsync_n(hsync_n),.vsync_n(vsync_n),
         .collision_events(collision_events),.collision(collision),.video_fx(video_fx),
         .audio_command(audio_command),.audio_trigger(audio_trigger),.intack(intack),
-        .audio_intack(audio_intack),.audio_irq(audio_irq),.dac8(dac8),.dac4(dac4),.discrete(discrete),
+        .audio_intack(audio_intack),.audio_irq(audio_irq),.audio_interrupt_inhibit(audio_interrupt_inhibit),
+        .audio_interrupt_sample(audio_interrupt_sample),
+        .dac8(dac8),.dac4(dac4),.discrete(discrete),
         .audio_req(audio_req),.audio_wr(audio_wr),.audio_memory_space(audio_memory_space),
         .audio_address(audio_address),
         .dac8_wr(dac8_wr),.dac4_wr(dac4_wr),.discrete_wr(discrete_wr),.sample_ce(audio_sample_ce),.pcm8(pcm8),.pcm4(pcm4),

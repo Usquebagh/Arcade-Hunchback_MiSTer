@@ -6,7 +6,7 @@ module cvs_audio_cpu (
     input wire [11:0] dl_addr,
     input wire [7:0] dl_data, command,
     input wire command_trigger,
-    output wire intack, irq,
+    output wire intack, irq, interrupt_inhibit, interrupt_sample,
     output wire [7:0] dac8,
     output wire [3:0] dac4, discrete,
     output wire dac8_wr, dac4_wr, discrete_wr,
@@ -19,7 +19,8 @@ module cvs_audio_cpu (
     sgs2650 cpu(.clk(clk),.reset(reset),.reset_na(reset_na),.ce(ce),.ack(ack),
         .req(req),.wr(wr),.mio(memory_space),.ene(extended),.dc(data_port),
         .ad(address),.dw(write_data),.dr(read_data),.ph(phase),.flag(flag),
-        .\int (irq),.intack(intack),.ivec(8'h03),.sense(sense));
+        .\int (irq),.intack(intack),.interrupt_inhibit(interrupt_inhibit),.interrupt_sample(interrupt_sample),
+        .ivec(8'h03),.sense(sense));
     cvs_audio_bus bus_boundary(.clk(clk),.reset(reset),.ready(ready),.req(req),.wr(wr),
         .memory_space(memory_space),.address(address),.din(write_data),.ack(ack),.dout(read_data),
         .dl_wr(dl_wr),.dl_addr(dl_addr),.dl_data(dl_data),.command(command),

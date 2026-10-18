@@ -5,7 +5,8 @@ module cvs_audio_cpu_tb;
     reg [11:0] dl_addr=0;
     reg [7:0] dl_data=0,command=0;
     wire ce,unused_main,unused_audio,unused_main_step;
-    wire intack,irq,dac8_wr,dac4_wr,discrete_wr,req,wr,memory_space,extended,data_port,flag;
+    wire intack,irq,interrupt_inhibit,interrupt_sample,dac8_wr,dac4_wr,discrete_wr;
+    wire req,wr,memory_space,extended,data_port,flag;
     wire [7:0] dac8,write_data,read_data;
     wire [3:0] dac4,discrete;
     wire [14:0] address;
@@ -14,8 +15,8 @@ module cvs_audio_cpu_tb;
         .ce_main_step(unused_main_step),.ce_audio_step(ce));
     cvs_audio_cpu dut(.*,.sense(1'b1));
     reg [7:0] program_bytes[0:511],expected[0:8];
-    integer cycle=0,size=256,stores=0,acks=0,dac8_count=0,dac4_count=0,discrete_count=0,last_transfer=-1,trace_start=-1;
-    reg previous_ack=0,trace_on=0;
+    integer cycle=0,size=256,stores=0,acks=0,eligible_samples=0,dac8_count=0,dac4_count=0,discrete_count=0,last_transfer=-1,trace_start=-1;
+    reg previous_ack=0,previous_irq=0,trace_on=0;
     task check(input condition,input [8*40-1:0] label_text,input integer want,input integer got);
         if(condition!==1'b1)begin
             $display("BDSM {\"status\":\"FAIL\",\"label\":\"%0s\",\"cycle\":%0d,\"expected\":%0d,\"observed\":\"%0d\"}",label_text,cycle,want,got);$finish(1);
@@ -24,6 +25,10 @@ module cvs_audio_cpu_tb;
     task tick;
         begin
             clk=0;#5;
+            if(!reset && interrupt_sample)begin
+                eligible_samples=eligible_samples+1;
+                $display("AUDIO_IRQ_ELIGIBLE cycle=%0d command=%02x irq=%b intack=%b psu_ii=%b",cycle,command,irq,intack,interrupt_inhibit);
+            end
             if(!reset && req && ready)begin
                 if(last_transfer>=0)check((cycle-last_transfer)%192==0,"audio_cpu_cadence",192,cycle-last_transfer);
                 last_transfer=cycle;
@@ -34,6 +39,12 @@ module cvs_audio_cpu_tb;
             end
             clk=1;#5;cycle=cycle+1;
             if(!reset)begin
+                if(intack)check(interrupt_inhibit===1'b1,"audio_cpu_ii_on_intack",1,interrupt_inhibit);
+                if(irq && !previous_irq)
+                    $display("AUDIO_IRQ_SAMPLE cycle=%0d command=%02x irq=%b intack=%b psu_ii=%b",cycle,command,irq,intack,interrupt_inhibit);
+                if(intack && !previous_ack)
+                    $display("AUDIO_IRQ_ACCEPT cycle=%0d irq=%b intack=%b psu_ii=%b",cycle,irq,intack,interrupt_inhibit);
+                previous_irq=irq;
                 if(intack && !previous_ack)acks=acks+1;previous_ack=intack;
                 if(dac8_wr)dac8_count=dac8_count+1;
                 if(dac4_wr)dac4_count=dac4_count+1;
@@ -63,6 +74,9 @@ module cvs_audio_cpu_tb;
         byte_out(8'h12);store(13'h1005);load(13'h1800);store(13'h1006);byte_out(8'h70);store(13'h1007);
         byte_out(8'hf0);instruction2(8'h04,8'h66);store(13'h1008);byte_out(8'h40);
         tick;
+        check(req===1'b0,"audio_cpu_async_reset_request",0,req);
+        check(intack===1'b0,"audio_cpu_async_reset_intack",0,intack);
+        check(interrupt_inhibit===1'b0,"audio_cpu_async_reset_ii",0,interrupt_inhibit);
         for(integer n=0;n<512;n=n+1)begin dl_wr=1;dl_addr=n;dl_data=program_bytes[n];tick;end
         dl_wr=0;reset_na=1;repeat(4)tick;reset=0;
         for(integer n=0;n<15000 && !(req && wr && address==15'h1001);n=n+1)tick;
@@ -71,12 +85,16 @@ module cvs_audio_cpu_tb;
         for(integer n=0;n<10000 && stores<3;n=n+1)tick;
         check(stores==3,"audio_cpu_ram",3,stores);repeat(3000)tick;
         check(!req && acks==0,"audio_cpu_halt",0,acks);
+        check(interrupt_inhibit===1'b0,"audio_cpu_ii_idle_before_irq",0,interrupt_inhibit);
         command=8'h9b;command_trigger=1;tick;command_trigger=0;
         for(integer n=0;n<30000 && stores<9;n=n+1)tick;
         check(stores==9 && acks==1,"audio_cpu_completion",9,stores);
+        check(eligible_samples>0,"audio_cpu_interrupt_boundary_reached",1,eligible_samples);
         check(dac8===8'h9b && dac4===4'hd && discrete===4'hb,"audio_cpu_controls",16'hbd9b,{discrete,dac4,dac8});
         check(dac8_count==1 && dac4_count==5 && discrete_count==5,"audio_cpu_strobes",551,dac8_count+10*dac4_count+100*discrete_count);
         check(irq===1'b0,"audio_cpu_irq_clear",0,irq);
+        check(interrupt_inhibit===1'b0,"audio_cpu_ii_cleared_by_rete",0,interrupt_inhibit);
+        $display("AUDIO_RETE_RETURN cycle=%0d irq=%b intack=%b psu_ii=%b",cycle,irq,intack,interrupt_inhibit);
         $display("BDSM {\"status\":\"PASS\",\"cycle\":%0d,\"observed\":\"Actual audio CPU/RAM: nine independent signatures, /192 cadence, ready stall, HALT/vector/RETE and digital DAC/discrete writes\"}",cycle);$finish(0);
     end
 endmodule

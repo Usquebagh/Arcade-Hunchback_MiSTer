@@ -22,7 +22,7 @@ module cvs_full_machine (
     output wire [1:0] phase,
     output wire [7:0] h_count,
     output wire [8:0] v_count,
-    output wire audio_intack, audio_irq,
+    output wire audio_intack, audio_irq, audio_interrupt_inhibit, audio_interrupt_sample,
     output wire [7:0] dac8,
     output wire [3:0] dac4, discrete,
     output wire dac8_wr, dac4_wr, discrete_wr,

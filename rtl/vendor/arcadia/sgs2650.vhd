@@ -80,6 +80,8 @@ ENTITY sgs2650 IS
 
     int    : IN  std_logic;
     intack : OUT std_logic;
+    interrupt_inhibit : OUT std_logic;
+    interrupt_sample : OUT std_logic;
     ivec   : IN  uv8; -- Interrupt vector
     sense  : IN  std_logic;
     flag   : OUT std_logic;
@@ -843,6 +845,13 @@ BEGIN
   Sync:PROCESS (clk,reset_na) IS
   BEGIN
     IF reset_na='0' THEN
+      -- The MiSTer wrapper holds reset_na low for the full core reset. Keep
+      -- the interrupt acceptance sequencer deterministic from FPGA power-up;
+      -- relying on the enum/register power-up value made simulation and
+      -- hardware differ before the first opcode boundary.
+      state<=sOPCODE;
+      req_i<='0';
+      intack<='0';
       iar<="000000000000000";
       psu_sp<="000";
       psu_ii<='0';
@@ -941,6 +950,11 @@ BEGIN
   -- During reset the memory interface can prime opcode zero synchronously.
   -- Outside reset, issue at most one transfer per enabled machine step.
   req<='0' WHEN reset_na='0' ELSE '1' WHEN reset='1' ELSE req_c AND ce;
+  interrupt_inhibit<=psu_ii;
+  -- Exact condition sampled by the sequential CPU at an enabled opcode/HALT
+  -- boundary, including the outstanding-transfer acknowledge gate.
+  interrupt_sample<=to_std_logic(ce='1' AND (((req_i='1') AND (ack='1')) OR req_i='0') AND
+                    (state=sOPCODE OR state=sHALT) AND int='1' AND psu_ii='0');
   ad <=(OTHERS=>'0') WHEN reset='1' ELSE ad_c;
   dw <=dw_c;
   wr <='0' WHEN reset='1' ELSE wr_c;

@@ -53,7 +53,7 @@ int main(int argc,char** argv) {
     std::ofstream audio_samples("audio-samples.log"),audio_output_samples("audio-output-samples.log");
     uint64_t audio_acks=0,audio_reads=0,audio_writes=0,dac8_writes=0,dac4_writes=0,discrete_writes=0,command_events=0;
     uint64_t audio_sample_origin=0;
-    bool last_audio_ack=false;
+    bool last_audio_ack=false,last_audio_irq=false,last_audio_sample=false;
     m.audio_ready=1;m.audio_sense=0;m.speech_ready=1;m.speech_sense=0;
 #endif
     auto fail=[&](const char* label,uint64_t expected_value,uint64_t observed_value) {
@@ -140,15 +140,24 @@ int main(int argc,char** argv) {
         }
         m.clk=1;m.eval();++cycle;
 #ifdef AUDIO_OBSERVE
-        if(m.reset)last_audio_ack=false;
+        if(m.reset)last_audio_ack=last_audio_irq=last_audio_sample=false;
         else {
             if(m.audio_trigger) {
                 ++command_events;audio_events<<cycle<<" COMMAND "<<unsigned(m.audio_command)<<"\n";
             }
+            if(m.audio_irq && !last_audio_irq)
+                audio_events<<cycle<<" IRQ_ASSERT ii="<<unsigned(m.audio_interrupt_inhibit)
+                            <<" sample="<<unsigned(m.audio_interrupt_sample)<<"\n";
+            if(m.audio_interrupt_sample && !last_audio_sample)
+                audio_events<<cycle<<" IRQ_SAMPLE ii="<<unsigned(m.audio_interrupt_inhibit)
+                            <<" intack="<<unsigned(m.audio_intack)<<"\n";
             if(m.audio_intack && !last_audio_ack) {
-                ++audio_acks;audio_events<<cycle<<" ACK\n";
+                ++audio_acks;audio_events<<cycle<<" ACK ii="<<unsigned(m.audio_interrupt_inhibit)
+                                         <<" sample="<<unsigned(m.audio_interrupt_sample)<<"\n";
             }
             last_audio_ack=m.audio_intack;
+            last_audio_irq=m.audio_irq;
+            last_audio_sample=m.audio_interrupt_sample;
             if(audio_command_read) {
                 ++audio_reads;
                 audio_bus<<cycle-1<<" R 1800 "<<std::hex<<unsigned(m.audio_read_data)<<std::dec<<"\n";

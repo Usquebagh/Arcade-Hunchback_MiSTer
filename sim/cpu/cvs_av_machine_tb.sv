@@ -6,7 +6,7 @@ module cvs_av_machine_tb;
     reg [15:0] dl_addr=0;
     reg [7:0] dl_data=0;
     wire req,wr,memory_space,extended,data_port,flag,audio_trigger;
-    wire audio_req,audio_wr,audio_memory_space,audio_intack,audio_irq,dac8_wr;
+    wire audio_req,audio_wr,audio_memory_space,audio_intack,audio_irq,audio_interrupt_inhibit,audio_interrupt_sample,dac8_wr;
     wire [14:0] address,audio_address;
     wire [7:0] write_data,audio_write_data,audio_read_data,audio_command,dac8;
     wire [3:0] dac4;
@@ -22,7 +22,9 @@ module cvs_av_machine_tb;
         .flag(flag),.address(address),.write_data(write_data),.audio_command(audio_command),.audio_trigger(audio_trigger),
         .audio_req(audio_req),.audio_wr(audio_wr),.audio_memory_space(audio_memory_space),
         .audio_address(audio_address),.audio_write_data(audio_write_data),.audio_read_data(audio_read_data),
-        .audio_intack(audio_intack),.audio_irq(audio_irq),.dac8(dac8),.dac8_wr(dac8_wr),.dac4(dac4),
+        .audio_intack(audio_intack),.audio_irq(audio_irq),.audio_interrupt_inhibit(audio_interrupt_inhibit),
+        .audio_interrupt_sample(audio_interrupt_sample),
+        .dac8(dac8),.dac8_wr(dac8_wr),.dac4(dac4),
         .sample_ce(sample_ce),.pcm8(pcm8),.pcm4(pcm4));
     reg [7:0] main_program[0:1023],audio_program[0:4095],commands[0:4],responses[0:1];
     integer cycle=0,size=0,updates=0,triggers=0,acks=0,reads=0,stores=0,dacs=0;
@@ -70,6 +72,8 @@ module cvs_av_machine_tb;
             check($signed(pcm8)===want_pcm8,"av_sample8",want_pcm8,$signed(pcm8));
             check($signed(pcm4)===want_pcm4,"av_sample4",want_pcm4,$signed(pcm4));
             if(!reset)begin
+                if(audio_intack)check(audio_interrupt_inhibit===1'b1,"av_ii_on_intack",1,audio_interrupt_inhibit);
+                if(audio_intack)check(audio_interrupt_sample===1'b0,"av_sample_not_eligible_after_accept",0,audio_interrupt_sample);
                 if(audio_intack && !previous_ack)acks=acks+1;previous_ack=audio_intack;
                 if(command_write)begin
                     check(audio_command===commands[updates],"av_command_latch",commands[updates],audio_command);
