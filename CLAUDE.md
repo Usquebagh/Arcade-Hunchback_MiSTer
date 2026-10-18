@@ -55,7 +55,12 @@ Icarus 12.0, Yosys 0.33, GHDL 4.1.0, Python 3.12 + numpy, Docker 29 with
 `theypsilon/quartus-lite-c5:17.0.2` (Quartus Lite 17.0.2). There is no native
 Windows Quartus and no Windows Python. MiSTer-BDSM is checked out (ignored) at
 `./MiSTer-BDSM`. Codex CLI: `%APPDATA%\npm\codex.cmd` (Node.js LTS in
-`C:\Program Files\nodejs`). MAME is not installed yet.
+`C:\Program Files\nodejs`). WSL has a second Codex install (see Delegating to
+Codex). The MAME 0.264 Ubuntu package is installed in WSL, but it is **not
+the reference**: its CVS IRQ, clocks and S2650 timing differ from the pin.
+The reference is the pinned revision, with source at
+`~/src/mame-c806573e925ce00fe3e8d8fe417eba63f83275ce` in WSL, built as a
+single driver.
 
 From PowerShell, run repo commands through WSL. Put anything with nested
 quotes in a script file rather than an inline `bash -lc` string:
@@ -171,22 +176,38 @@ each time you escalate**, with the reason and the two failed attempts. A
 failed attempt is a diff that is rejected at review or fails its acceptance
 checks.
 
-**Codex never commits to `main`** and never pushes. Workflow:
+**Codex never commits to `main`** and never pushes.
 
-```powershell
-$env:Path = "C:\Program Files\nodejs;$env:APPDATA\npm;$env:Path"
-$task = "audio-wav-writer"
-git worktree add "..\hunchback-wt-$task" -b "codex/$task" main
-codex exec -C "..\hunchback-wt-$task" -s workspace-write `
-  -m $model -c "model_reasoning_effort=`"$effort`"" `
-  -o "..\hunchback-wt-$task.last.txt" "<prompt>"
+**Run Codex inside WSL, not Windows.** The Windows Codex sandbox is denied
+access to WSL (`Wsl/Service/E_ACCESSDENIED`), and every HDL tool lives in
+WSL. WSL has its own Codex (`~/.local/bin/codex`, Node in
+`~/.local/node-v24.20.0`, login copied to `~/.codex/auth.json`). Its
+`workspace-write` sandbox can run Verilator, but not Docker (so no Quartus
+builds) and not the network. A Windows `git worktree` doesn't resolve inside
+WSL, so each task gets a **local clone** at `~/hunchback-wt/<task>` on branch
+`codex/<task>`, with `MiSTer-BDSM` symlinked in. Launcher (kept in the
+session scratchpad; recreate it if it's missing):
+
+```bash
+# codex_task.sh <task> <prompt-file> [medium|high]
+git clone -q --no-hardlinks -b main "$repo" "$HOME/hunchback-wt/$task"
+git -C "$HOME/hunchback-wt/$task" checkout -q -b "codex/$task"
+cd "$HOME/hunchback-wt/$task"
+codex exec -m gpt-6.1-sol -c "model_reasoning_effort=\"$effort\"" \
+  -s workspace-write -o "$HOME/hunchback-wt/$task.last.txt" - < "$prompt"
 ```
+
+Run independent tasks as parallel background jobs. Merge by fetching the
+clone's branch into the Windows repo after review.
 
 - `codex exec` flags checked on codex-cli 0.163.0: `-C/--cd`, `-s/--sandbox
   read-only|workspace-write|danger-full-access`, `-m`, `-o/--output-last-message`,
-  `--json`, `--ephemeral`, `--worktree` (Codex-managed). Use our own `git worktree`
-  so that we choose the branch name and location. Recheck `codex exec --help`
-  after upgrades. Never use `--dangerously-bypass-approvals-and-sandbox`.
+  `--json`, `--ephemeral`, `--worktree` (Codex-managed). Recheck
+  `codex exec --help` after upgrades. Never use
+  `--dangerously-bypass-approvals-and-sandbox`.
+- Network is blocked. Fetch any reference material Codex needs beforehand
+  into the ignored `docs/private/` and give its absolute `/mnt/c/...` path
+  (e.g. `docs/private/mame-c806573e/`).
 - The prompt must be self-contained. Include the goal, the files in scope, the
   files that are out of scope, the acceptance checks to run, the instruction
   to follow `AGENTS.md`, and the instruction **not to commit** (leave changes
@@ -195,13 +216,13 @@ codex exec -C "..\hunchback-wt-$task" -s workspace-write `
   absolute path rather than copying them: `MISTER_BDSM_PATH` to
   `<main>/MiSTer-BDSM` and the ROM zip by path. Never copy ROMs into tracked
   paths.
-- **Review before merge (Claude):** read `git -C <wt> diff main` in full.
+- **Review before merge (Claude):** read `git -C <clone> diff main` in full.
   Reject scope creep, weakened assertions, edited expected outputs, broad
   warning suppression and references to private material. Then run the
   AGENTS.md checks for the touched subsystem and the sound harness *yourself*
-  in the worktree; Codex's own PASS claims don't count. Commit on
-  `codex/<task>` with an honest message, merge into `main`, then
-  `git worktree remove` and delete the branch.
-- If the result is wrong, either reprompt Codex in the same worktree
-  (`codex exec resume --last`) or discard the worktree. Never hand-patch a
+  in the clone; Codex's own PASS claims don't count. Commit on
+  `codex/<task>` with an honest message, merge into `main`, then delete
+  the clone.
+- If the result is wrong, either reprompt Codex in the same clone
+  (`codex exec resume --last`) or discard the clone. Never hand-patch a
   large Codex diff into `main` unreviewed.

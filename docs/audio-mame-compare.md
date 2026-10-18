@@ -23,6 +23,34 @@ timing, and the resulting waveform has the same shape. What a PASS does
 - **Not the hardware INTACK fault.** Simulation already acknowledges the
   interrupt. Only the reset-stress mode below targets that fault class.
 
+## Reference version
+
+Pinned-source findings (from `cvs.cpp` at `c806573e`, read 2026-10-18):
+
+- The audio IRQ is asserted when bit 7 rises against the previous command
+  (`audio_command_w_sync`) and cleared by the INTACK handler, which returns
+  vector `0x03`. This is the same rule as the RTL.
+- Writes of an unchanged command are ignored.
+- Both sound CPUs run at 14.318181 MHz / 16.
+- 0x1880–0x1883 take bit 7.
+- The 4-bit DAC is `DAC_4BIT_R2R` with **D0 as the LSB**.
+  `cvs_discrete_audio.sv` gives `dac4[0]` the *strongest* branch (12k), from
+  the schematic. That is a significance conflict, so the waveform metrics
+  will report it until the schematic reading is rechecked.
+- 0x1840 writes also retune placeholder beeper 2, and 0x1884–0x1887 drive
+  placeholder beepers.
+
+The Ubuntu **MAME 0.264** package is not a valid stand-in for the pin:
+
+- Its driver has a level-sensitive audio IRQ.
+- Its main CPU runs at /16; the pin uses /8.
+- Its speech CPU SENSE uses a ROM-clock hack.
+- Its `s2650.cpp` differs by about 1,078 lines, including cycle counts and
+  interrupt-check placement.
+
+The pinned revision is built as a single-driver binary in WSL. 0.264 runs
+are only for testing the tooling.
+
 ## Inputs
 
 A **command timeline**: a list of `(time, byte)` command writes. It comes from
