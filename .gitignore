@@ -8,6 +8,19 @@
 *.7z
 *.wav
 *.pcm
+# Loose ROM/PROM dumps from hunchbak.zip and its clones, should one ever be
+# extracted into the tree (*.zip/*.bin above miss these chip-label names).
+/roms/
+*.cp[0-9]
+*.sp[0-9]
+*.sdp[0-9]
+*.gp[0-9]
+*.prm
+82s[0-9]*.*
+hb.*
+hbprom.*
+hbsc-*
+gal_hb_*
 /docs/private/
 /build/
 /results/
