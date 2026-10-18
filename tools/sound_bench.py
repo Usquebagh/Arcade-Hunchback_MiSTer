@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import random
 import re
@@ -164,19 +165,26 @@ def check_run(output, rows, duration):
 def run(binary, build_info, image, output, rows, duration, seed, x_random, reset_edges,
         release_ps, common):
     output.mkdir(parents=True, exist_ok=False)
+    applied = [[edge / MASTER, f'0x{byte:02x}'] for edge, byte in rows]
+    with (output / 'timeline.csv').open('w', newline='') as stream:
+        writer = csv.writer(stream)
+        writer.writerow(['seconds', 'command'])
+        writer.writerows(applied)
     prepared = output / 'timeline-edges.txt'
     prepared.write_text(''.join(f'{edge} {byte}\n' for edge, byte in rows))
     command = [str(binary), str(image), str(prepared), str(output), str(round(duration * MASTER)),
                str(reset_edges), str(release_ps), f'+verilator+seed+{seed}']
     metadata = dict(common, source='rtl', sample_rate=48000, audio_cpu_cycle_hz=MASTER / 192,
                     duration_seconds=round(duration * MASTER) / MASTER,
-                    timeline=[[edge / MASTER, f'0x{byte:02x}'] for edge, byte in rows],
+                    timeline=applied, timeline_quantization_seconds=1 / MASTER,
                     seed=seed if x_random else None, x_random=x_random, build=build_info,
                     reset_edges_after_download=reset_edges, release_offset_ps=release_ps,
                     command=command, status='INCOMPLETE', notes=[
                         'Stage 1; speech PCM=0. Actual GHDL-synthesized S2650; no mock CPU or initialized work RAM.',
                         'audio_cpu_cycle counts pre-edge ce_audio_step pulses: master / (64 * 3) = 298295.4375 Hz, not board oscillator cycles.',
-                        'Edge 0 is the first active posedge after reset release; seconds=edge/57272724. Commands use Python round(seconds*master).',
+                        'seconds=0 is reset release (first active posedge is edge 0); seconds=edge/57272724. Commands use Python round(seconds*master). ROM download and reset hold are excluded, independent of reset pin sequencing.',
+                        'MAME directed commands start at machine time zero with main CPU halted. RTL has no main CPU; pre-release download/reset time is not a command offset. Residual edge quantization is at most half a master period.',
+                        *(['Revision unavailable: neither --revision nor HUNCHBACK_REV supplied; source hashes remain authoritative.'] if common['version'] == 'unknown' else []),
                         'ROM download and shared reset match cvs_av_machine; SENSE toggles every 75360 master edges.',
                         'WAV sampling uses pre-edge sample_ce/PCM, as synchronous consumers do. No DC removal or gain in captures.',
                         'Reset is held for the 4096-edge download plus 576..5760 extra master edges (3..30 audio CE periods); normal run uses 576.',
@@ -212,15 +220,17 @@ def main():
     parser.add_argument('--duration', type=float, default=7)
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--x-random', action='store_true')
-    parser.add_argument('--threads', type=int, help='Benchmark 1 versus N; explicitly select N for this run')
+    parser.add_argument('--revision', default=os.environ.get('HUNCHBACK_REV') or 'unknown')
+    parser.add_argument('--benchmark-threads', type=int, metavar='N',
+                        help='opt in to a bit-identical 1-versus-N benchmark; use the faster model')
     parser.add_argument('--reset-stress', type=int, default=0)
     args = parser.parse_args()
     if not math.isfinite(args.duration) or not 0 < args.duration <= 3600:
         parser.error('Duration must be in (0,3600] seconds')
     if not 1 <= args.seed <= 2147483647 or not 0 <= args.reset_stress <= 10000:
         parser.error('Invalid seed or stress count')
-    if args.threads is not None and not 1 <= args.threads <= 32:
-        parser.error('Threads must be 1..32')
+    if args.benchmark_threads is not None and not 2 <= args.benchmark_threads <= 32:
+        parser.error('Benchmark threads must be 2..32')
     output = args.output.resolve()
     if not output.is_relative_to(ROOT / 'results') or output == ROOT / 'results':
         parser.error('Output must be a new directory under this repository’s ignored results/')
@@ -240,35 +250,37 @@ def main():
     build_root.mkdir(parents=True, exist_ok=True)
     image = build_root / ('image-' + hashlib.sha256(image_bytes).hexdigest() + '.bin')
     image.write_bytes(image_bytes)
-    common = dict(version=command_output(['git', 'rev-parse', 'HEAD']), source_sha256=hashes,
+    common = dict(version=args.revision, source_sha256=hashes,
                   tools=versions, rom_archive_sha256=archive_hash, image_sha256=digest(image),
                   rom_manifest_sha256=hashes['tools/rom_manifest.json'])
     rows = timeline(args.timeline, args.duration)
-    # Measure the fixed 7-second smoke once per frozen build/tool identity.
-    multi = args.threads if args.threads and args.threads > 1 else 2
-    binaries = {n: build(n, False, versions, hashes) for n in (1, multi)}
-    perf_key = hashlib.sha256(json.dumps(dict(hashes=hashes, versions=versions, multi=multi), sort_keys=True).encode()).hexdigest()
-    perf_dir = build_root / ('benchmark-' + perf_key)
-    perf_file = perf_dir / 'threading.json'
-    if perf_file.exists():
-        perf = json.loads(perf_file.read_text())
-    else:
-        smoke = timeline(ROOT / 'sim/harness/timelines/smoke.csv', 7)
-        measures = []
-        for n in (1, multi):
-            binary, info = binaries[n]
-            measures.append(run(binary, info, image, perf_dir / f't{n}', smoke, 7, 1, False, 576, 1, common))
-        same = all(digest(perf_dir / f't1/{name}') == digest(perf_dir / f't{multi}/{name}')
-                   for name in ('dac-events.csv', 'irq-events.csv', 'mix.wav', 'dac8.wav', 'dac4.wav'))
-        if not same:
-            raise ValueError('Threading changed capture contents; see ' + str(perf_dir))
-        times = {str(n): item['wall_seconds'] for n, item in zip((1, multi), measures)}
-        perf = dict(wall_seconds=times, bit_identical=same,
-                    selected_threads=min((1, multi), key=lambda n: times[str(n)]))
-        write_json(perf_file, perf)
-    print('Thread benchmark (7 s smoke): ' + json.dumps(perf), flush=True)
-    selected = args.threads or perf['selected_threads']
-    common['thread_benchmark'] = perf
+    selected = 1
+    common['thread_benchmark'] = None
+    if args.benchmark_threads is not None:
+        multi = args.benchmark_threads
+        binaries = {n: build(n, False, versions, hashes) for n in (1, multi)}
+        perf_key = hashlib.sha256(json.dumps(dict(hashes=hashes, versions=versions, multi=multi), sort_keys=True).encode()).hexdigest()
+        perf_dir = build_root / ('benchmark-' + perf_key)
+        perf_file = perf_dir / 'threading.json'
+        if perf_file.exists():
+            perf = json.loads(perf_file.read_text())
+        else:
+            smoke = timeline(ROOT / 'sim/harness/timelines/smoke.csv', 7)
+            measures = []
+            for n in (1, multi):
+                binary, info = binaries[n]
+                measures.append(run(binary, info, image, perf_dir / f't{n}', smoke, 7, 1, False, 576, 1, common))
+            same = all(digest(perf_dir / f't1/{name}') == digest(perf_dir / f't{multi}/{name}')
+                       for name in ('dac-events.csv', 'irq-events.csv', 'mix.wav', 'dac8.wav', 'dac4.wav'))
+            if not same:
+                raise ValueError('Threading changed capture contents; see ' + str(perf_dir))
+            times = {str(n): item['wall_seconds'] for n, item in zip((1, multi), measures)}
+            perf = dict(wall_seconds=times, bit_identical=same,
+                        selected_threads=min((1, multi), key=lambda n: times[str(n)]))
+            write_json(perf_file, perf)
+        print('Thread benchmark (7 s smoke): ' + json.dumps(perf), flush=True)
+        selected = perf['selected_threads']
+        common['thread_benchmark'] = perf
     binary, info = build(selected, args.x_random, versions, hashes)
     result = run(binary, info, image, output, rows, args.duration, args.seed,
                  args.x_random, 576, 1, common)
