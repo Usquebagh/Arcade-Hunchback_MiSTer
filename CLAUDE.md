@@ -162,17 +162,14 @@ harness and checks.
 
 | Tier | Model | Effort | When |
 | --- | --- | --- | --- |
-| Default | `CODEX_CHEAP_MODEL` (TBD) | `medium` | Every task to start with |
-| Escalation | `CODEX_STRONG_MODEL` (TBD) | `high` | After **two failed attempts** at the same task, or for timing-critical analysis (STA, CDC, cycle-exact behaviour) |
+| Default | `gpt-6.1-sol` | `medium` | Every task to start with |
+| Escalation | `gpt-6.1-sol` | `high` | After **two failed attempts** at the same task, or for timing-critical analysis (STA, CDC, cycle-exact behaviour) |
 
-Pass both on every call: `-m <model> -c model_reasoning_effort="medium"`.
-Don't rely on `~/.codex/config.toml` (currently `gpt-6.1-sol`/medium) for
-this. **Tell the user each time you escalate**, with the reason and the
-two failed attempts. A failed attempt is a diff that is rejected at review
-or fails its acceptance checks. Models in the local cache:
-`gpt-6.1-sol`, `gpt-6-astra`, `gpt-6-sol`, `gpt-6-luna`, `gpt-5.6-sol`,
-`gpt-5.6-terra`, `gpt-5.6-luna`. The user still has to choose the two tiers;
-until then, ask before running Codex.
+Pass both on every call: `-m gpt-6.1-sol -c model_reasoning_effort="medium"`
+(or `"high"`). Don't rely on `~/.codex/config.toml` for this. **Tell the user
+each time you escalate**, with the reason and the two failed attempts. A
+failed attempt is a diff that is rejected at review or fails its acceptance
+checks.
 
 **Codex never commits to `main`** and never pushes. Workflow:
 
