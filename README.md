@@ -1,78 +1,111 @@
 # Hunchback (CVS, 1983) for MiSTer FPGA
 
 An FPGA implementation of Century Electronics' **Hunchback** arcade game for
-the [MiSTer FPGA](https://github.com/MiSTer-devel/Main_MiSTer/wiki), based on
-the original Century Video System (CVS) hardware. Play as Hunchback, avoid the
-fortress obstacles and rescue Esmeralda.
+the [MiSTer FPGA](https://github.com/MiSTer-devel/Main_MiSTer/wiki) platform,
+based on the original Century Video System (CVS) hardware.
 
-<p align="center"><img src="docs/images/cabinet.png" alt="Hunchback upright cabinet"> <img src="docs/images/gameplay.png" alt="Hunchback on MiSTer"></p>
+Play as Quasimodo, leaping pits, swinging on ropes and dodging arrows and
+fireballs across the castle ramparts to ring the bell and rescue Esmeralda.
 
-> **Beta / work in progress.** The core boots and plays on real MiSTer hardware.
-> Video geometry, fonts, sprite alignment and controls are confirmed working
-> on real MiSTer hardware, as are the MRA cheats. Since the 2026-10-18 beta,
-> sound effects (music, walking, jumping, the bell) and speech also play on
-> hardware. They sound close to the arcade, but the mix is not calibrated:
-> the jump is louder than it should be.
+<p align="center">
+  <img src="docs/images/cabinet.png" alt="Hunchback upright cabinet" height="310">
+  <img src="docs/images/gameplay.png" alt="Hunchback running on MiSTer" height="310">
+</p>
 
-This core targets CVS hardware. Hunchback conversions for Galaxian, Scramble
-and Donkey Kong hardware use different game ROMs.
+This core targets the CVS board. The Hunchback conversions for Galaxian,
+Scramble and Donkey Kong hardware are different machines and need different
+ROMs.
 
-## Sound
+---
 
-The core combines byte-DAC and speech audio with a schematic-derived digital
-approximation of the original discrete sound paths. The 555 timing follows its
-component values, but the 8038 FM curve, noise source, filter response, mix gain
-and bell/walking/jumping trigger mapping are not calibrated against recordings.
-See [the circuit analysis](docs/audio-circuits.md) for the assumptions and the
-remaining gaps.
+## Original Hardware
 
-The OSD also has an **Audio mix** item (Normal, Speech only, Effects only) and
-on-screen **Audio Probe** status bars. They are diagnostics and are off by
-default.
+| Subsystem | Original Hardware | FPGA Implementation |
+|---|---|---|
+| **Main CPU** | Signetics 2650A @ 1.79 MHz (14.318 MHz ÷ 8) | S2650 core from Arcadia_MiSTer, with corrections |
+| **Sound CPU** | Signetics 2650A @ 895 kHz (14.318 MHz ÷ 16) | Same S2650 core |
+| **Speech CPU** | Signetics 2650A @ 895 kHz | Same S2650 core |
+| **Video timing** | Signetics 2621 sync generator, 312 lines, 50.54 Hz | `cvs_video_timing.sv` |
+| **Sprites** | 3 × Signetics 2636 PVI, with object collision detection | `cvs_s2636_objects.sv` |
+| **Background** | Character RAM/ROM, bullets, colour PROMs and hardware collision detection | `cvs_character_video.sv` |
+| **Sound** | 8-bit DAC, 4-bit weighted DAC, NE555, ICL8038 and noise discrete circuits | `cvs_discrete_audio.sv`, a digital model from the schematic |
+| **Speech** | TI TMS5100 (TMC0281) with serial speech ROM | `cvs_tms5100_*.sv`; coefficient tables from MAME |
+| **Display** | Vertical monitor, 244 × 248 visible | MiSTer framebuffer rotation (Rotate CW / CCW) |
+| **Controls** | Two-way joystick and jump button, two players alternating | D-pad or stick plus one button |
+
+Notes on the hardware and the design decisions are in
+[docs/architecture.md](docs/architecture.md), with per-subsystem detail in
+[docs/](docs/).
+
+---
+
+## Controls
+
+| Input | Function |
+|---|---|
+| **D-pad / Stick left-right** | Move |
+| **A** | Jump |
+| **Start** | Start 1 player |
+| **X** | Start 2 players |
+| **Select** | Coin |
+
+Player 2 uses the second controller in **Cocktail** mode. In **Upright** mode
+both players share the first controller and take turns.
+
+**OSD:** Coin A, Coin B, Lives, Cabinet, Bonus Life, Orientation (Rotate CW or
+CCW) and Aspect Ratio. **Reset** restarts the game.
+
+**Diagnostics:** **Audio Probe** shows on-screen status bars for the sound and
+speech hardware. **Audio mix** plays Speech only or Effects only. Both are
+off by default.
+
+---
+
+## ROMs
+
+```
+ROMs are not included. Use the MAME "hunchbak" set.
+
+/_Arcade/Hunchback (CVS).mra
+/_Arcade/cores/hunchback_YYYYMMDD.rbf
+/games/mame/hunchbak.zip
+```
+
+The latest core and MRA are
+[hunchback_20261018.rbf](releases/hunchback_20261018.rbf) and
+[Hunchback (CVS).mra](releases/Hunchback%20(CVS).mra). Keep only one
+Hunchback RBF in `_Arcade/cores/`. Older MiSTer installations may also
+support `_Arcade/mame/` as a legacy ROM location.
+
+---
 
 ## Cheats
 
-Cheats use MiSTer's standard HPS download path. The codes are included in the
-MRA and were converted from Pugsy's Hunchback entries in the MAME cheat
-collection; no separate `.cht` file is needed. Open **Cheats** in the MiSTer
-OSD to enable them.
+The cheats are included in the MRA, so no separate `.cht` file is needed. Open
+**Cheats** in the OSD to enable them:
 
-Available cheats are Infinite Credits, Infinite Time, Next Bell = Super Bonus
-Now!, Invincibility, P1 Infinite Lives and P2 Infinite Lives. The no-enemies
-cheat is absent from Pugsy's set and was deliberately not added rather than
-guessed.
+- Infinite Credits
+- Infinite Time
+- Next Bell = Super Bonus Now!
+- Invincibility
+- P1 Infinite Lives
+- P2 Infinite Lives
 
-## Installation
+They are converted from Pugsy's Hunchback entries in the MAME cheat
+collection. A no-enemies cheat is not part of that set, so it was left out
+rather than guessed.
 
-Copy the dated core and its MRA to the MiSTer SD card:
+---
 
-| File | MiSTer SD-card destination |
-| --- | --- |
-| [hunchback_20261018.rbf](releases/hunchback_20261018.rbf) | `_Arcade/cores/` |
-| [Hunchback (CVS).mra](releases/Hunchback%20(CVS).mra) | `_Arcade/` |
-| Your own `hunchbak.zip` | `games/mame/` |
+## Compilation
 
-Launch Hunchback through the MRA. It expects the `hunchbak.zip` archive. **No
-ROMs are included in this repository or in the RBF.** Supply your own legally
-obtained ROM archive, and keep only one Hunchback RBF in `_Arcade/cores/`.
-Older MiSTer installations may also support `_Arcade/mame/` as a legacy ROM
-location.
+Quartus Prime Lite 17.0.2 targeting the DE10-Nano's Cyclone V. Open
+`Arcade-Hunchback.qpf` and compile, or run `bash build.sh` to build in Docker.
+Each build stamps a UTC build ID on the OSD version line.
 
-## Build and tests
-
-Quartus Prime Lite 17.0.2 for Cyclone V is used to build the core. Run:
-
-```sh
-git clone https://github.com/Usquebagh/Arcade-Hunchback_MiSTer.git
-cd Arcade-Hunchback_MiSTer
-bash build.sh
-```
-
-Each Quartus build generates a UTC timestamp in the OSD version line. The
-result is an engineering build; broader validation is still in progress.
-
-MiSTer-BDSM is needed only for the regression and mutation suite. Clone it
-separately and set `MISTER_BDSM_PATH` to its checkout:
+The regression and mutation suite uses
+[MiSTer-BDSM](https://github.com/Usquebagh/MiSTer-BDSM). Clone it and set
+`MISTER_BDSM_PATH`:
 
 ```sh
 git clone https://github.com/Usquebagh/MiSTer-BDSM.git /path/to/MiSTer-BDSM
@@ -81,18 +114,29 @@ bash tools/bdsm.sh test --suite smoke
 bash tools/bdsm.sh test --suite lint
 ```
 
-## Research and credits
+A Verilator sound-section bench, a MAME capture tool and a comparison scorer
+are in `sim/harness/` and `tools/`. See
+[docs/audio-mame-compare.md](docs/audio-mame-compare.md).
 
-CVS board research was informed by Kevtris's reverse-engineered technical
-documentation. The private schematics, PAL/CUPL sources and JEDEC files are not
-redistributed here. See [reference provenance](docs/references.md). MAME
-contributors provided compatibility references for CVS ROM layout, memory
-mapping and device behavior. The MiSTer framework and imported Arcadia CPU
-modules retain their respective licenses; see [LICENSES](LICENSES/) and the
-source notices.
+---
+
+## Credits
+
+- **Hunchback (Arcade):** Century Electronics, 1983
+- **S2650 CPU:** DO (temlib), imported from MiSTer-devel's
+  [Arcadia_MiSTer](https://github.com/MiSTer-devel/Arcadia_MiSTer)
+- **TMS5100 coefficient tables:** MAME, by Frank Palazzolo, Couriersud and
+  Jonathan Gevaryahu
+- **Board research:** Kevtris's reverse-engineered CVS schematics and PAL
+  sources (not redistributed here)
+- **Cheats:** converted from Pugsy's MAME cheat collection
+- **Reference:** MAME `cvs` driver by Mike Coates and Couriersud. See
+  [reference provenance](docs/references.md)
+- **Test framework:** [MiSTer-BDSM](https://github.com/Usquebagh/MiSTer-BDSM)
+- **MiSTer Platform:** Sorgelig and the MiSTer community
 
 ## License
 
-Original core and tools are BSD-3-Clause. Imported components retain their
+The original core and tools are BSD-3-Clause. Imported components keep their
 upstream licenses and notices; see [LICENSE](LICENSE), [LICENSES](LICENSES/)
 and the vendored component documentation.
