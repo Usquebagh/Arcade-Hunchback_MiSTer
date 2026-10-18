@@ -387,6 +387,21 @@ class SoundScoreTests(unittest.TestCase):
         self.assertEqual([s['events']['ref_count'] for s in report['segments']], [4, 5])
         self.assertEqual(report['segments'][1]['intervals']['ratios'], [1, 1, 1, 1])
 
+    def test_wav_length_allows_one_sample_against_manifest(self):
+        for offset, scorable in ((1, True), (-1, True), (2, False), (-2, False)):
+            with self.subTest(offset=offset):
+                fixture(self.dut)
+                path = self.dut / 'manifest.json'
+                data = json.loads(path.read_text())
+                data['duration_seconds'] += offset / RATE
+                path.write_text(json.dumps(data))
+                code, report, _ = self.score()
+                if scorable:
+                    self.assertNotEqual(code, 2, report.get('incomplete'))
+                else:
+                    self.assertEqual(code, 2)
+                    self.assertIn('duration', ' '.join(report['incomplete']))
+
     def test_bad_inputs_do_not_pass(self):
         for change, message in (('timeline', 'timelines differ'), ('nan', 'non-finite'),
                                 ('truncate', 'duration'), ('header', 'expected header')):

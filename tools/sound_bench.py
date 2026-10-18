@@ -24,9 +24,12 @@ from prepare_hunchback import assemble, validated
 ROOT = Path(__file__).resolve().parents[1]
 MASTER = 57_272_724
 ACK_BOUND = 9  # longest unmasked instruction path (6), opcode/INTER (2), trigger (1)
+# cvs_cpu_reset holds the machine reset this many edges past core_reset, so the
+# 48 kHz sampler (reset with the CPUs, as in the top level) starts that much later.
+PRIME_CYCLES = 4
 VHDL = [f'rtl/vendor/arcadia/{name}.vhd' for name in ('base_pack', 'sgs2650_pack', 'sgs2650')]
 SV = [f'rtl/machine/{name}.sv' for name in (
-    'cvs_clock', 'cvs_audio_cpu', 'cvs_audio_bus', 'cvs_sync_rom', 'cvs_sync_ram_1p',
+    'cvs_cpu_reset', 'cvs_clock', 'cvs_audio_cpu', 'cvs_audio_bus', 'cvs_sync_rom', 'cvs_sync_ram_1p',
     'cvs_audio_samples', 'cvs_discrete_audio', 'cvs_audio_dc_blocker', 'cvs_audio_output')]
 HARNESS = ['sim/harness/cvs_sound_bench.sv', 'sim/harness/sound_bench.cpp']
 INPUTS = VHDL + SV + HARNESS + ['tools/sound_bench.py', 'tools/prepare_hunchback.py',
@@ -152,7 +155,7 @@ def check_run(output, rows, duration):
                 raise ValueError('Invalid WAV format: ' + name)
             count = wav.getnframes()
             data = wav.readframes(count)
-            if len(data) != count * 2 or count != round(duration * MASTER) * 48000 // MASTER:
+            if len(data) != count * 2 or count != (round(duration * MASTER) - PRIME_CYCLES) * 48000 // MASTER:
                 raise ValueError('Wrong WAV length: ' + name)
         samples = np.frombuffer(data, dtype='<i2').astype(np.float64)
         rms = [float(np.sqrt(np.mean(samples[i:i + 48000] ** 2)))
@@ -188,7 +191,7 @@ def run(binary, build_info, image, output, rows, duration, seed, x_random, reset
                         'ROM download and shared reset match cvs_av_machine; SENSE toggles every 75360 master edges.',
                         'WAV sampling uses pre-edge sample_ce/PCM, as synchronous consumers do. No DC removal or gain in captures.',
                         'Reset is held for the 4096-edge download plus 576..5760 extra master edges (3..30 audio CE periods); normal run uses 576.',
-                        'Release offset is 1..8728 ps into the low clock half-cycle. Shared reset restarts cvs_clock: first audio CE is always edge 191; relative CE phase diversity is unavailable without changing wiring.',
+                        'Release offset is 1..8728 ps into the low clock half-cycle. The CPU reset tail (cvs_cpu_reset, as in the top level) also restarts cvs_clock: first audio CE is always edge 195; relative CE phase diversity is unavailable without changing wiring.',
                         'Host context time is diagnostic only; all scheduling and timestamps use integer nominal master edges.',
                         'INTACK bound is 9 audio CE periods: <=6 steps to finish longest indirect instruction, opcode acceptance + INTER acknowledgement (2), trigger-to-IRQ allowance (1). Assumes unmasked interrupts/ready=1; masked firmware still fails the command deadline.',
                         'Two-state randomized startup is diagnostic, not native X/Z, physical power-up, CDC, calibrated analog or hardware validation.',

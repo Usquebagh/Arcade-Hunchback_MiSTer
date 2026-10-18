@@ -105,7 +105,9 @@ def load_capture(directory):
         raw = wav.readframes(count)
         if len(raw) != count * 2:
             raise ValueError('truncated WAV')
-    if count == 0 or rate != manifest['sample_rate'] or count != round(duration * rate):
+    # One sample of slack: the RTL sampler starts PRIME_CYCLES master edges after
+    # the timeline origin, so a window can hold one strobe fewer than duration*rate.
+    if count == 0 or rate != manifest['sample_rate'] or abs(count - round(duration * rate)) > 1:
         raise ValueError('WAV rate/duration disagrees with manifest')
     audio = np.frombuffer(raw, dtype='<i2').astype(float) / 32768
     identities = {name: hashlib.sha256((directory / name).read_bytes()).hexdigest()
