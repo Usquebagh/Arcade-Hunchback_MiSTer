@@ -99,3 +99,37 @@ mapping and representative MAME DSW2/DSW3 bytes through the actual synthesized
 S2650 and machine hierarchy. This checks wrapper behavior after the HPS
 interface; it does not exercise the HPS serial protocol, real joystick routing,
 physical controls or DIP switch placement/polarity.
+
+## CPU reset release contract (2026-10-18)
+
+Expectations recorded before the reset-tail implementation. Reference class:
+independent reset/bus ordering contract and synthetic instruction regression,
+not board measurements or game/voice qualification.
+
+`cvs_cpu_reset` must assert `reset` immediately with `reset_in` and drive
+`reset_na = !reset_in`. After release, synchronous `reset` stays asserted
+until the fourth subsequent rising master-clock edge (default `PRIME_CYCLES=4`),
+then releases on that edge. Before that edge all three CPUs must see
+`reset=1, reset_na=1`; afterward they must see `reset=0, reset_na=1`.
+An assertion during the tail immediately restores `reset=1, reset_na=0`
+and restarts the entire tail. Idle and asserted states are also checked.
+
+All three program buses use one-edge registered ROM data and response
+selectors. On the first edge after `reset_na` releases the bus accepts the
+address-zero read; on the second the CPU can capture that byte in `ri`.
+Four master edges provide two additional priming edges, independent of CPU
+enables (the CPU clocks its reset branch even when CE is low). No bus needs
+a longer tail. Bus ready is tied high in the shell.
+
+A ROM-free check must download synthetic BCTA-unconditional instructions
+(opcode 0x1f plus two absolute-address operands) through the actual top-level
+HPS download boundary into all three program ROM windows. With the actual
+GHDL-synthesized CPU and Verilator two-state zero power-up, without any `ri`
+initialization or randomized X flags, each CPU must read operands 1 and 2,
+then its branch target as the first post-operand access. The initial scan vblank
+IRQ is held inactive by this fixture so main executes the branch uninterrupted;
+this does not qualify machine IRQ timing. Simultaneous release
+and PRIME_CYCLES 0/1 are fault probes, each run twice; compilation failures
+and timeouts do not count as detection. The shell reset assertions independently
+check the exact four-edge contract. Existing physical/native unknown-state,
+clock, audio and hardware qualification gaps remain.

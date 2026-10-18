@@ -22,6 +22,7 @@ set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_main_memory.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_mister_input.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_rotation_raster.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_memory.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_cpu_reset.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_reset.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_s2636_bank.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/machine/cvs_s2636_objects.sv

@@ -892,8 +892,23 @@
       "required": true,
       "tools": ["ghdl", "iverilog", "vvp"],
       "timeout": 300,
-      "expectation": "With HPS output pins driven by a fixture, verify actual wrapper ROM-download hold, external/menu/user reset including a one-cycle OSD R0 pulse stretched for the configured minimum, synchronized CPU release and reset-vector refetch, active-low joystick mapping, representative MAME DSW2/DSW3 mappings, and menu action CONF_STR entries before J1/joystick metadata through the actual synthesized-CPU hierarchy.",
+      "expectation": "With HPS output pins driven by a fixture, verify actual wrapper ROM-download hold, external/menu/user reset including a one-cycle OSD R0 pulse stretched for the configured minimum, asynchronous reset_na release followed by exactly four CPU priming clocks, tail reassertion, idle states and reset-vector refetch, active-low joystick mapping, representative MAME DSW2/DSW3 mappings, and menu action CONF_STR entries before J1/joystick metadata through the actual synthesized-CPU hierarchy.",
       "reference": "docs/mister-shell.md; independent shell contracts and MAME-compatible logical input assignments. HPS protocol, physical controls, PLL behavior, DIPs and hardware remain unqualified."
+    },
+    {
+      "id": "hunchback.cpu.reset_boot",
+      "suite": "smoke",
+      "mode": "reset_boot_connected",
+      "required": true,
+      "tools": [
+        "ghdl",
+        "verilator",
+        "make",
+        "g++"
+      ],
+      "timeout": 300,
+      "expectation": "Zero-power-up actual top-level main, audio and speech CPUs read operands 1 and 2 then their synthetic absolute branch target as the first post-operand access.",
+      "reference": "docs/mister-shell.md; independent synthetic reset/instruction ordering contract, no ROM or physical hardware qualification."
     }
   ],
   "mutations": [

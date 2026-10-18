@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Stage 1: actual audio section; command writes replace only the main CPU.
 module cvs_sound_bench (
-    input wire clk, reset, reset_na,
+    input wire clk, core_reset,
     input wire dl_wr,
     input wire [15:0] dl_addr,
     input wire [7:0] dl_data,
@@ -16,6 +16,9 @@ module cvs_sound_bench (
     output wire sample_ce,
     output wire signed [15:0] pcm8, pcm4, audio_pcm
 );
+    wire reset,reset_na;
+    cvs_cpu_reset cpu_reset_sequence(.clk(clk),.reset_in(core_reset),
+        .reset(reset),.reset_na(reset_na));
     wire unused_main_ce, unused_audio_ce, unused_main_step;
     cvs_clock clocks(.clk(clk),.reset(reset),.ce_main(unused_main_ce),
         .ce_audio(unused_audio_ce),.ce_main_step(unused_main_step),.ce_audio_step(audio_ce));
@@ -23,7 +26,7 @@ module cvs_sound_bench (
     reg [16:0] sense_divider;
     reg sense_380;
     always @(posedge clk) begin
-        if(reset) begin sense_divider<=0;sense_380<=0;end
+        if(core_reset) begin sense_divider<=0;sense_380<=0;end
         else if(sense_divider==17'd75359) begin sense_divider<=0;sense_380<=~sense_380;end
         else sense_divider<=sense_divider+17'd1;
         trigger<=1'b0;
@@ -62,6 +65,6 @@ module cvs_sound_bench (
         .ne555_square(unused_ne555),.icl8038_square(unused_icl),.icl8038_triangle(unused_triangle),
         .icl8038_frequency_hz(unused_frequency),.byte_dac_to_mix(unused_byte_mix),
         .envelope_22_q16(unused_envelope22),.envelope_10_q16(unused_envelope10));
-    cvs_audio_output audio_output(.clk(clk),.reset(reset),.sample_ce(sample_ce),
+    cvs_audio_output audio_output(.clk(clk),.reset(core_reset),.sample_ce(sample_ce),
         .speech_pcm(16'sd0),.discrete_pcm(discrete_pcm),.audio_pcm(audio_pcm));
 endmodule

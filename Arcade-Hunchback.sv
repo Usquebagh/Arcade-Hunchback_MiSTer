@@ -182,8 +182,11 @@ module emu #(
     wire signed [15:0] pcm8,pcm4,speech_pcm,discrete_pcm;
     wire signed [15:0] audio_out;
     wire audio_sample_ce;
+    wire cpu_reset,cpu_reset_na;
+    cvs_cpu_reset cpu_reset_sequence(.clk(clk_sys),.reset_in(core_reset),
+        .reset(cpu_reset),.reset_na(cpu_reset_na));
     cvs_full_machine machine (
-        .clk(clk_sys),.reset(core_reset),.reset_na(!core_reset),.video_reset(core_reset),.scan_run(1'b1),
+        .clk(clk_sys),.reset(cpu_reset),.reset_na(cpu_reset_na),.video_reset(core_reset),.scan_run(1'b1),
         .ready(1'b1),.audio_ready(1'b1),.audio_sense(sense_380),.speech_ready(1'b1),.speech_sense(sense_380),
         .dl_wr(ioctl_wr && rom_download),.cheat_reset(cheat_reset),.cheat_code(cheat_code),
         .dl_addr(ioctl_addr[15:0]),.dl_data(ioctl_dout),

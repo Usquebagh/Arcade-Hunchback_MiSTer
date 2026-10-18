@@ -35,6 +35,35 @@ module mister_shell_tb;
         end
     endtask
 
+    localparam integer TEST_PRIME_CYCLES=4;
+    reg previous_core_reset=1;
+    integer prime_edges=0;
+    task automatic check_cpu_reset(input bit want_reset,input bit want_na);
+        begin
+            if(dut.machine.main_audio_video.main_video.main.reset!==want_reset ||
+               dut.machine.main_audio_video.audio.reset!==want_reset || dut.machine.speech.reset!==want_reset ||
+               dut.machine.main_audio_video.main_video.main.reset_na!==want_na ||
+               dut.machine.main_audio_video.audio.reset_na!==want_na || dut.machine.speech.reset_na!==want_na)
+                fail("cpu_reset_prime_order",{30'd0,want_reset,want_na},
+                     {30'd0,dut.machine.main_audio_video.audio.reset,dut.machine.main_audio_video.audio.reset_na});
+        end
+    endtask
+    // Fixed external contract: do not derive the expected tail from the DUT.
+    always @(posedge clk_50m)begin
+        #1;
+        if(dut.core_reset)begin
+            prime_edges=0;check_cpu_reset(1,0);
+        end else begin
+            if(previous_core_reset)prime_edges=0;
+            else prime_edges=prime_edges+1;
+            check_cpu_reset(prime_edges<TEST_PRIME_CYCLES,1);
+        end
+        previous_core_reset=dut.core_reset;
+    end
+    always @(posedge dut.core_reset)begin
+        #1;check_cpu_reset(1,0);
+    end
+
     task automatic clocks(input integer count);
         repeat(count)begin @(posedge clk_50m);#1;end
     endtask
@@ -74,7 +103,10 @@ module mister_shell_tb;
         if(dut.rom_loaded!==1'b1)fail("rom_load_completion",1,dut.rom_loaded);
         if(dut.core_reset!==1'b0)fail("reset_releases_after_rom",0,dut.core_reset);
 
+        // Reassert halfway through the first CPU tail, between edges.
+        clocks(2);
         reset=1;#1;
+        check_cpu_reset(1,0);
         if(dut.core_reset!==1'b1)fail("external_reset_assertion",1,dut.core_reset);
         reset=0;clocks(1);
         if(dut.core_reset!==1'b1)fail("external_reset_minimum_hold",1,dut.core_reset);
@@ -155,11 +187,7 @@ module mister_shell_tb;
         if(dut.core_reset!==1'b1)fail("menu_reset_minimum_hold",1,dut.core_reset);
         clocks(1);
         if(dut.core_reset!==1'b0)fail("menu_reset_synchronized_release_after_hold",0,dut.core_reset);
-        if(dut.machine.main_audio_video.main_video.main.reset!==1'b0 ||
-           dut.machine.main_audio_video.main_video.main.reset_na!==1'b1 ||
-           dut.machine.main_audio_video.audio.reset!==1'b0 ||
-           dut.machine.speech.reset!==1'b0 || dut.machine.speech.reset_na!==1'b1)
-            fail("menu_reset_release_reaches_all_game_cpus",0,1);
+        check_cpu_reset(1,1);
         begin : reset_vector_reexecution
             integer fetch_wait;
             fetch_wait=0;
@@ -170,6 +198,17 @@ module mister_shell_tb;
             end
             if(fetch_wait==128)fail("menu_reset_cpu_restarts_at_reset_vector",15'h0000,
                 dut.machine.main_audio_video.main_video.main.address);
+        end
+        for(integer prime_edge=1;prime_edge<=TEST_PRIME_CYCLES;prime_edge=prime_edge+1)begin
+            clocks(1);check_cpu_reset(prime_edge<TEST_PRIME_CYCLES,1);
+        end
+        clocks(1);check_cpu_reset(0,1);
+        $display("BDSM {\"status\":\"INFO\",\"label\":\"cpu_reset_prime_contract\",\"observed\":\"All three CPUs: immediate assertion, tail reassertion, exact four-edge release and idle checked\"}");
+        // Optional focused invocation for the reset proof. The normal shell
+        // check continues through every original assertion below.
+        if($test$plusargs("reset_contract_only"))begin
+            $display("BDSM {\"status\":\"PASS\",\"label\":\"cpu_reset_prime_contract\",\"observed\":\"All three CPUs satisfy the exact four-edge reset contract\"}");
+            $finish(0);
         end
         menu_buttons[1]=1;#1;
         if(dut.core_reset!==1'b1)fail("user_button_reset_assertion",1,dut.core_reset);

@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
         dac<<"seconds,audio_cpu_cycle,address,value\n"<<std::fixed<<std::setprecision(9);
         irq<<"seconds,command,trigger,irq,intack,ii\n"<<std::fixed<<std::setprecision(9);
         Wav mix(output+"/mix.wav"), wav8(output+"/dac8.wav"), wav4(output+"/dac4.wav");
-        m.clk=0;m.reset=1;m.reset_na=0;m.dl_wr=0;
+        m.clk=0;m.core_reset=1;m.dl_wr=0;
         m.dl_addr=0;m.dl_data=0;m.command_wr=0;m.command_data=0;m.eval();
         auto tick=[&]() {
             m.clk=0;m.eval();context.timeInc(8729);
@@ -80,7 +80,7 @@ int main(int argc, char** argv) {
         m.dl_wr=0;
         for(uint64_t i=0;i<reset_edges;++i) tick();
         m.clk=0;m.eval();context.timeInc(release_ps);
-        m.reset=0;m.reset_na=1;m.eval();
+        m.core_reset=0;m.eval();
         uint64_t cycles=0, event_count=0, first_ce=0, reads=0;
         size_t next=0;
         unsigned last_irq=~0u;

@@ -12,7 +12,7 @@ from check_ghdl import emit
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--seed', type=int, default=1)
-    parser.add_argument('--mode', choices=['main_connected','video_connected','s2636_connected','character_connected','assembly_connected','bootstrap_connected','startup_connected','audio_connected','speech_connected','tms5100_connected','speech_machine_connected','full_connected','mister_shell_connected','mister_shell_behavior_connected','av_connected','cold_connected'], default='main_connected')
+    parser.add_argument('--mode', choices=['main_connected','video_connected','s2636_connected','character_connected','assembly_connected','bootstrap_connected','startup_connected','audio_connected','speech_connected','tms5100_connected','speech_machine_connected','full_connected','mister_shell_connected','mister_shell_behavior_connected','reset_boot_connected','av_connected','cold_connected'], default='main_connected')
     args = parser.parse_args()
     build_id = Path('build_id.v')
     if not build_id.exists() or '`define BUILD_ID ' not in build_id.read_text():
@@ -154,7 +154,7 @@ def main():
                     'rtl/machine/cvs_tms5100_engine.sv','rtl/machine/cvs_tms5100_rate.sv','rtl/machine/cvs_tms5100_control.sv',
                     'rtl/machine/cvs_tms5100_frames.sv','rtl/machine/cvs_tms5100_sequence.sv',
                     'rtl/machine/cvs_tms5100_lattice.sv','rtl/machine/cvs_tms5100_pcm.sv','rtl/vendor/tms5100/cvs_tms5100_tables.sv']
-    if args.mode in ('mister_shell_connected','mister_shell_behavior_connected'):
+    if args.mode in ('mister_shell_connected','mister_shell_behavior_connected','reset_boot_connected'):
         top='emu'
         sources=['sys/arcade_video.v','sim/bdsm/mister_shell_stubs.sv','Arcade-Hunchback.sv',
                  *sorted(str(p) for p in Path('rtl/machine').glob('*.sv')),
@@ -162,9 +162,31 @@ def main():
         if args.mode=='mister_shell_behavior_connected':
             top='mister_shell_tb'
             sources.append('sim/cpu/mister_shell_tb.sv')
-    if args.mode not in ('mister_shell_connected','mister_shell_behavior_connected'):
+    if args.mode=='reset_boot_connected':
+        top='cvs_reset_boot_tb'
+        sources.append('sim/cpu/cvs_reset_boot_tb.sv')
+    if args.mode not in ('mister_shell_connected','mister_shell_behavior_connected','reset_boot_connected'):
         sources += ['sim/cpu/'+top+'.sv']
-    defines=['-DMISTER_FB=1'] if args.mode in ('mister_shell_connected','mister_shell_behavior_connected') else []
+    defines=['-DMISTER_FB=1'] if args.mode in ('mister_shell_connected','mister_shell_behavior_connected','reset_boot_connected') else []
+    if args.mode=='reset_boot_connected':
+        # Default Verilator two-state power-up, with no CPU/register patches.
+        command=['verilator','--binary','--timing','-j','32','-Wno-fatal',
+                 '--top-module',top,'--Mdir',str(work/'obj'),'-I'+str(Path.cwd()),
+                 *defines,str(cpu_file),*sources]
+        compiled=subprocess.run(command,capture_output=True,text=True)
+        (work/'compile.log').write_text(compiled.stdout+compiled.stderr)
+        if compiled.returncode:
+            emit('ERROR',reason='Zero-power-up shell compilation failed',diagnostics=[str(work/'compile.log')])
+            return 2
+        ran=subprocess.run([str(work/'obj'/('V'+top))],cwd=work,capture_output=True,text=True)
+        (work/'run.log').write_text(ran.stdout+ran.stderr)
+        events=[json.loads(line[5:]) for line in ran.stdout.splitlines() if line.startswith('BDSM ')]
+        if ran.returncode or not events or events[-1]['status'] not in ('PASS','FAIL'):
+            emit('ERROR',reason='Zero-power-up shell run failed or omitted result',diagnostics=[str(work/'run.log')])
+            return 2
+        # Keep all compiler findings. These are not blanket-reviewed lint PASS.
+        emit(**events[-1],diagnostics=[str(work/'synth.log'),str(work/'compile.log'),str(work/'run.log')])
+        return 0 if events[-1]['status']=='PASS' else 1
     compile_run=subprocess.run(['iverilog','-g2012','-Wall','-I',str(Path.cwd()),*defines,'-s',top,'-o',str(work/'test.vvp'),
                                 str(cpu_file),*sources],capture_output=True,text=True)
     (work/'compile.log').write_text(compile_run.stdout+compile_run.stderr)
