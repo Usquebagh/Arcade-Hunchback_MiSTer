@@ -29,13 +29,15 @@ framebuffer writer uses MiSTer's DDRAM interface, and its `video_rotated`
 state is fed back to HPS_IO so the OSD follows the game image. The MRA already
 declares `<rotation>vertical</rotation>`. MAME's Hunchback map reads DSW3 at
 extended port 6 and DSW2 at port 7;
-the shell maps Coin A, Coin B, Lives and Meter Pulses to DSW2/port 7, and
-Cabinet, Bonus Life, Registration and Registration Length to DSW3/port 6.
-The MAME `hunchbak` input definition includes Registration and Registration
-Length through `cvs_registration`; these are not inherited inert settings. Its
-DSW2 bit 5 is labelled Unknown by MAME, with a comment identifying it as
-"Meter Pulses" and values 2/5, so the OSD exposes that switch under the
-documented circuit label. Other unused DSW bits remain fixed at their MAME
+the shell maps Coin A, Coin B and Lives to DSW2/port 7, and Cabinet and
+Bonus Life to DSW3/port 6. The MAME `hunchbak` input definition also has
+Registration and Registration Length (DSW3 bits 0–1, through
+`cvs_registration`) and DSW2 bit 5, which MAME labels Unknown with a
+"Meter Pulses" 2/5 comment. At the user's request these three are not in
+the OSD (2026-10-18). They are fixed at MAME's defaults: Registration On,
+length 3, 2 meter pulses. The former status bits 10, 11 and 13 are ignored,
+so a stale saved configuration cannot change them; the behavioral shell
+check asserts this. Other unused DSW bits remain fixed at their MAME
 defaults. The [MAME CVS driver](https://github.com/mamedev/mame/blob/master/src/mame/misc/cvs.cpp)
 is the compatibility reference. The behavioral shell check verifies the raw
 bytes at the HPS boundary. Physical positions and electrical polarity of the

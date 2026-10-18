@@ -37,10 +37,7 @@ module emu #(
         "O[5],Lives,3,5;",
         "O[7],Cabinet,Upright,Cocktail;",
         "O[9:8],Bonus life,10k,20k,40k,80k;",
-        "O[10],Registration,On,Off;",
-        "O[11],Registration length,3,10;",
         "O[12],Orientation,Rotate CW,Rotate CCW;",
-        "O[13],Meter pulses,2,5;",
         "O[14],Audio Probe,Off,On;",
         "O[15],Probe page,Audio,Speech;",
         "O[17:16],Audio mix,Normal,Speech only,Effects only;",
@@ -95,8 +92,11 @@ module emu #(
                       status[4:3]==2'd2 ? 2'b10 : 2'b00;
     wire [1:0] bonus=status[9:8]==2'd0 ? 2'b11 : status[9:8]==2'd1 ? 2'b01 :
                      status[9:8]==2'd2 ? 2'b10 : 2'b00;
-    wire [7:0] mame_dsw2={2'b11,status[13],status[5],coin_b,status[2:1]};
-    wire [7:0] mame_dsw3={3'b111,status[7],bonus,~status[11],~status[10]};
+    // Meter Pulses (DSW2 bit 5), Registration and Registration Length (DSW3
+    // bits 0..1) are not in the OSD; they stay at MAME's defaults (2, On, 3)
+    // so stale saved status bits 10, 11 and 13 have no effect.
+    wire [7:0] mame_dsw2={2'b11,1'b0,status[5],coin_b,status[2:1]};
+    wire [7:0] mame_dsw3={3'b111,status[7],bonus,2'b11};
 
     reg [16:0] sense_divider=0;
     reg sense_380=0;

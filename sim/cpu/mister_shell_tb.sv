@@ -159,13 +159,16 @@ module mister_shell_tb;
 
         menu_status=0;
         menu_status[2:1]=2'b01;menu_status[4:3]=2'b10;menu_status[5]=1;
-        menu_status[7]=1;menu_status[9:8]=2'b10;menu_status[11]=1;
+        menu_status[7]=1;menu_status[9:8]=2'b10;
         #1;
         if(dut.machine.dsw1!==8'hd9)fail("mame_dsw2_machine_port",8'hd9,dut.machine.dsw1);
-        if(dut.machine.dsw2!==8'hf9)fail("mame_dsw3_machine_port",8'hf9,dut.machine.dsw2);
-        menu_status[13]=1;#1;
-        if(dut.machine.dsw1!==8'hf9)fail("mame_meter_pulses_dsw2_bit5",8'hf9,dut.machine.dsw1);
-        menu_status[13]=0;
+        if(dut.machine.dsw2!==8'hfb)fail("mame_dsw3_machine_port",8'hfb,dut.machine.dsw2);
+        // Registration, Registration Length and Meter Pulses left the OSD:
+        // stale saved bits 10, 11 and 13 must not reach the DIP ports.
+        menu_status[10]=1;menu_status[11]=1;menu_status[13]=1;#1;
+        if(dut.machine.dsw1!==8'hd9)fail("mame_meter_pulses_fixed_default",8'hd9,dut.machine.dsw1);
+        if(dut.machine.dsw2!==8'hfb)fail("mame_registration_fixed_default",8'hfb,dut.machine.dsw2);
+        menu_status[10]=0;menu_status[11]=0;menu_status[13]=0;
 
         menu_status[0]=1;clocks(1);
         if(dut.core_reset!==1'b1)fail("menu_reset_assertion",1,dut.core_reset);
