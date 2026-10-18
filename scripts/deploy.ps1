@@ -1,0 +1,90 @@
+<#
+.SYNOPSIS
+Copy the engineering RBF and MRA to a MiSTer over SSH and launch the core.
+
+.DESCRIPTION
+Stub: not yet exercised against real hardware. Enforces the card rules from
+docs/STATUS.md: exactly one hunchback* RBF in _Arcade/cores, named after the
+MRA <rbf> element; the previous card copy is backed up locally to
+results/card-backups (never on the card); the SHA-256 is verified after copying.
+Only the hunchback* glob is listed on the card, never the whole _Arcade tree.
+
+Uses key-based SSH login (BatchMode, so it never stops at a password prompt).
+
+.EXAMPLE
+powershell -File scripts/deploy.ps1
+powershell -File scripts/deploy.ps1 -MisterHost 192.168.75.57 -NoLoad
+#>
+param(
+    [string]$MisterHost = '192.168.75.57',
+    [string]$User = 'root',
+    [string]$Rbf = 'output_files/Arcade-Hunchback.rbf',
+    [string]$Mra = 'releases/Hunchback (CVS).mra',
+    [switch]$NoLoad,
+    [switch]$NoBackup
+)
+$ErrorActionPreference = 'Stop'
+$root = Split-Path -Parent $PSScriptRoot
+Set-Location $root
+
+$target = "$User@$MisterHost"
+$cores = '/media/fat/_Arcade/cores'
+$arcade = '/media/fat/_Arcade'
+
+foreach ($f in @($Rbf, $Mra)) {
+    if (-not (Test-Path -LiteralPath $f)) { throw "Missing $f" }
+}
+[xml]$mraXml = Get-Content -LiteralPath $Mra -Raw
+$rbfName = [string]$mraXml.misterromdescription.rbf
+if (-not $rbfName) { throw "No <rbf> element in $Mra" }
+$rbfName = "$rbfName.rbf"
+$mraName = Split-Path -Leaf $Mra
+$localHash = (Get-FileHash -LiteralPath $Rbf -Algorithm SHA256).Hash.ToLower()
+$buildId = 'unknown'
+if (Test-Path build_id.v) {
+    $m = Select-String -Path build_id.v -Pattern '"([^"]+)"'
+    if ($m) { $buildId = $m.Matches[0].Groups[1].Value }
+}
+Write-Host "RBF $Rbf -> $cores/$rbfName"
+Write-Host "    sha256 $localHash, build $buildId"
+
+function Invoke-Remote([string]$cmd) {
+    $out = & ssh -o BatchMode=yes -o ConnectTimeout=10 $target $cmd
+    if ($LASTEXITCODE -ne 0) { throw "ssh failed ($LASTEXITCODE): $cmd" }
+    return $out
+}
+
+# 1. Precheck: only the expected hunchback RBF (or none) may exist.
+$existing = @(Invoke-Remote "ls -1 $cores/hunchback* 2>/dev/null; true" | Where-Object { $_ })
+$others = @($existing | Where-Object { (Split-Path -Leaf $_) -ne $rbfName })
+if ($others.Count -gt 0) {
+    throw "Other hunchback RBFs on the card; remove them by hand first:`n$($others -join "`n")"
+}
+
+# 2. Back up the card copy locally.
+if ($existing.Count -gt 0 -and -not $NoBackup) {
+    $backup = Join-Path $root ("results/card-backups/" + (Get-Date -Format 'yyyyMMddTHHmmss'))
+    New-Item -ItemType Directory -Force $backup | Out-Null
+    & scp -o BatchMode=yes "${target}:$cores/$rbfName" "$backup/"
+    if ($LASTEXITCODE -ne 0) { throw 'Backup failed' }
+    Write-Host "Backed up card RBF to $backup"
+}
+
+# 3. Upload to /tmp (no spaces in remote paths), then move into place.
+Copy-Item -LiteralPath $Mra -Destination "$env:TEMP\hunchback-deploy.mra" -Force
+& scp -o BatchMode=yes $Rbf "$env:TEMP\hunchback-deploy.mra" "${target}:/tmp/"
+if ($LASTEXITCODE -ne 0) { throw 'Upload failed' }
+$rbfBase = Split-Path -Leaf $Rbf
+$remote = "mv -f '/tmp/$rbfBase' '$cores/$rbfName' && " +
+          "mv -f /tmp/hunchback-deploy.mra '$arcade/$mraName' && sync && " +
+          "sha256sum '$cores/$rbfName'"
+$sum = (Invoke-Remote $remote) -split '\s+' | Select-Object -First 1
+if ($sum -ne $localHash) { throw "SHA-256 mismatch: card $sum, local $localHash" }
+Write-Host "Card SHA-256 verified."
+
+# 4. Launch through the MRA.
+if (-not $NoLoad) {
+    Invoke-Remote "echo 'load_core $arcade/$mraName' > /dev/MiSTer_cmd" | Out-Null
+    Write-Host "Loaded $mraName."
+}
+Write-Host "Confirm the OSD version line shows $buildId before trusting any result."
