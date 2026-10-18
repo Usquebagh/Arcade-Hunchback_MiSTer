@@ -5,8 +5,11 @@
 The latest engineering diagnostic image is `v261018-001032`, deployed as
 `M:\\_Arcade\\cores\\hunchback_20261017.rbf`. Its SHA-256 is
 `201A2C14D014C560E438E35F3B19470DFCC2A3C5B26D74A070A6FCA0DA4A418A`.
-The paired MRA still resolves to `hunchback_20261017`. The OSD Audio Probe is
-selectable and defaults Off.
+The published RBF at `releases/hunchback_20261017.rbf` is synchronized to this
+same image. The paired MRA still resolves to `hunchback_20261017`. This is an
+engineering diagnostic image with the OSD Audio Probe option present and
+defaulting Off; bell, walking, and jumping effects are still not working on
+hardware.
 
 ## Hardware observation
 
