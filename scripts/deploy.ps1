@@ -14,12 +14,15 @@ Uses key-based SSH login (BatchMode, so it never stops at a password prompt).
 .EXAMPLE
 powershell -File scripts/deploy.ps1
 powershell -File scripts/deploy.ps1 -MisterHost 192.168.75.57 -NoLoad
+.EXAMPLE
+powershell -File scripts/deploy.ps1 -Rbf results/x.rbf -BuildId v261019-152733
 #>
 param(
     [string]$MisterHost = '192.168.75.57',
     [string]$User = 'root',
     [string]$Rbf = 'output_files/Arcade-Hunchback.rbf',
     [string]$Mra = 'releases/Hunchback (CVS).mra',
+    [string]$BuildId = '',
     [switch]$NoLoad,
     [switch]$NoBackup,
     # For a renamed release: back up differently named hunchback* RBFs
@@ -43,13 +46,21 @@ if (-not $rbfName) { throw "No <rbf> element in $Mra" }
 $rbfName = "$rbfName.rbf"
 $mraName = Split-Path -Leaf $Mra
 $localHash = (Get-FileHash -LiteralPath $Rbf -Algorithm SHA256).Hash.ToLower()
-$buildId = 'unknown'
-if (Test-Path build_id.v) {
-    $m = Select-String -Path build_id.v -Pattern '"([^"]+)"'
-    if ($m) { $buildId = $m.Matches[0].Groups[1].Value }
+$resolvedBuildId = $BuildId
+if (-not $resolvedBuildId) {
+    $rbfDir = Split-Path -Parent (Resolve-Path -LiteralPath $Rbf).Path
+    if ((Split-Path -Leaf $rbfDir) -eq 'output_files') {
+        $buildIdPath = Join-Path (Split-Path -Parent $rbfDir) 'build_id.v'
+        if (Test-Path -LiteralPath $buildIdPath) {
+            $m = Select-String -LiteralPath $buildIdPath -Pattern '"([^"]+)"' | Select-Object -First 1
+            if ($m) { $resolvedBuildId = $m.Matches[0].Groups[1].Value }
+        }
+    }
 }
+$buildLabel = 'unknown'
+if ($resolvedBuildId) { $buildLabel = $resolvedBuildId }
 Write-Host "RBF $Rbf -> $cores/$rbfName"
-Write-Host "    sha256 $localHash, build $buildId"
+Write-Host "    sha256 $localHash, build $buildLabel"
 
 function Invoke-Remote([string]$cmd) {
     $out = & ssh -o BatchMode=yes -o ConnectTimeout=10 $target $cmd
@@ -100,4 +111,8 @@ if (-not $NoLoad) {
     Invoke-Remote "echo 'load_core $arcade/$mraName' > /dev/MiSTer_cmd" | Out-Null
     Write-Host "Loaded $mraName."
 }
-Write-Host "Confirm the OSD version line shows $buildId before trusting any result."
+if ($resolvedBuildId) {
+    Write-Host "Confirm the OSD version line shows $resolvedBuildId before trusting any result."
+} else {
+    Write-Host "Build ID unknown for this RBF: read the OSD version line and record it before trusting any result (pass -BuildId to check it)."
+}
