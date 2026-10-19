@@ -174,6 +174,17 @@ waiting for a hardware test.
 
 ## Low priority
 
+- **Intermittent F12 won't open the OSD** (reported 2026-10-19 on
+  `v261018-213253`). On the MiSTer, F12 did not open the menu (0 of 20 in
+  gameplay), but it closed an open menu, and the joypad menu button worked.
+  Other cores opened normally. After a MiSTer reboot, the same RBF opened and
+  closed the menu with F12 normally, and it has not been reproduced since.
+  **No core change was made; the cause is unconfirmed.** `hps_io` reports
+  `F12KEYMOD=0`; `hps_io.sv` and `osd.v` equal upstream; no failing timing
+  path is in `sys_top`, `hps_io` or `osd`. No input map changed between the
+  failing and working tests. If users report it again, ask for their
+  Main_MiSTer version and whether a power-cycle fixes it.
+
 - **`sys/` template drift** (found 2026-10-19). `sys/` matches upstream
   Template_MiSTer `f35083f` (2026-05-13), except it lacks three later
   commits: `9c8eadb` (framebuffer `LFB_*` ports in `emu_ports.vh` and
