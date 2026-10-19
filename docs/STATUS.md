@@ -172,6 +172,19 @@ waiting for a hardware test.
    value is an estimate). It is irrelevant unless the game uses it.
 5. The timing report discrepancy, then timing closure.
 
+## Low priority
+
+- **`sys/` template drift** (found 2026-10-19). `sys/` matches upstream
+  Template_MiSTer `f35083f` (2026-05-13), except it lacks three later
+  commits: `9c8eadb` (framebuffer `LFB_*` ports in `emu_ports.vh` and
+  `sys_top.v`), `afd7808` (analog audio pins from `clk_audio` registers;
+  MCP23009 mode bit read twice; `sys_analog.tcl`) and `5dda373` (`yc_out`
+  sine register). `hps_io.sv` and `osd.v` equal upstream HEAD. One local edit:
+  `sys/build_id.tcl` emits `` `BUILD_ID "vYYMMDD-HHMMSS" `` instead of
+  `BUILD_DATE`. None of this touches OSD, HPS or input, and it did not cause
+  the 2026-10-19 F12 report. A refresh needs a full rebuild plus a hardware
+  check.
+
 ## Lessons that cost the most time
 
 - Stale binaries: verify the card SHA-256 and the OSD build ID every time.
